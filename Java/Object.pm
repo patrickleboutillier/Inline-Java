@@ -49,7 +49,7 @@ sub __new {
 		eval {
 			$this->__get_private()->{proto}->CreateJavaObject($java_class, $proto, $args) ;
 		} ;		
-		croak "In method new of class $class: $@" if $@ ;
+		croak $@ if $@ ;
 	}
 	else{
 		$this->__get_private()->{id} = $objid ;

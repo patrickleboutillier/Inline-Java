@@ -40,18 +40,19 @@ sub new {
 		
 		my $debug = (Inline::Java::get_DEBUG() ? "true" : "false") ;
 
-		my $shared_jvm = ($o->get_java_config('SHARED_JVM') ? "true" : "false") ;
+		my $shared_jvm = ($o->get_java_config('SHARED_JVM') ? "true" : "false") ;	
 		my $port = $o->get_java_config('PORT') ;
 
 		$this->{port} = $port ;
+		$this->{host} = "localhost" ;
 
 		# Check if JVM is already running
-		if ($shared_jvm){
+		if ($shared_jvm eq "true"){
 			eval {
 				$this->reconnect() ;
 			} ;
 			if (! $@){
-				Inline::Java::debug("  Connected to already running JVM!") ;			
+				Inline::Java::debug("  Connected to already running JVM!") ;
 				return $this ;
 			}
 		}
@@ -59,7 +60,7 @@ sub new {
 		my $java = $o->get_java_config('BIN') . "/java" . Inline::Java::portable("EXE_EXTENSION") ;
 		my $pjava = Inline::Java::portable("RE_FILE", $java) ;
 
-		my $cmd = "\"$pjava\" InlineJavaServer $debug $port $shared_jvm" ;
+		my $cmd = "\"$pjava\" InlineJavaServer $debug $this->{port} $shared_jvm" ;
 		Inline::Java::debug($cmd) ;
 
 		if ($o->get_config('UNTAINT')){
@@ -77,7 +78,8 @@ sub new {
 
 		$this->{pid} = $pid ;
 		$this->{socket}	= $this->setup_socket(
-			$port, 
+			$this->{host}, 
+			$this->{port}, 
 			$o->get_java_config('STARTUP_DELAY'),
 			0
 		) ;
@@ -129,6 +131,7 @@ sub DESTROY {
 
 sub setup_socket {
 	my $this = shift ;
+	my $host = shift ;
 	my $port = shift ;
 	my $timeout = shift ;
 	my $one_shot = shift ;
@@ -153,7 +156,7 @@ sub setup_socket {
 
 		while (1){
 			$socket = new IO::Socket::INET(
-				PeerAddr => 'localhost',
+				PeerAddr => $host,
 				PeerPort => $port,
 				Proto => 'tcp') ;
 			if (($socket)||($one_shot)){
@@ -178,7 +181,7 @@ sub setup_socket {
 	}
 
 	if (! $socket){
-		croak "Can't connect to JVM: $!" ;
+		croak "Can't connect to JVM at ($host:$port): $!" ;
 	}
 
 	$socket->autoflush(1) ;
@@ -201,6 +204,7 @@ sub reconnect {
 	}
 
 	my $socket = $this->setup_socket(
+		$this->{host}, 
 		$this->{port}, 
 		0,
 		1

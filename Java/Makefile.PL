@@ -70,6 +70,10 @@ if ($JNI_BUILD){
 			"information.\n" ;
 	}
 
+	print "\nNote: In order for Inline::Java to use the JNI extension, you " .
+		"will need to set the PERL_INLINE_JAVA_JNI environment variable to " .
+		"a true value. See README.JNI for more information.\n" ;
+
 	print "\n" ;
 }
 else{
