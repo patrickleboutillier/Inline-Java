@@ -57,7 +57,8 @@ print
 	"allows Inline::Java to run the JVM in the default (separate process)\n" .
 	"fashion.\n" .
 	"Note: You need a C compiler to build the extension.\n" ;
-	"Note: You must build the extension if you wish to use PerlNatives.\n" ;
+	"Note: You must build the extension if you wish to use PerlNatives or\n" .
+	"      PerlInterpreter.\n" ;
 
 if (($build_jni || AskYN("Do you wish to build the JNI extension?", 'y'))){
 	print "\nBuilding JNI extension.\n\n" ;
@@ -137,7 +138,7 @@ on all platforms. See documentation for more details.
 Note: PerlNatives requires J2SDK 1.4 or greater.
 TXT
 			if (AskYN("Do you wish to build the PerlNatives extension?", 'n')){
-				push @{$DIR}, 'Natives' ;
+				push @{$DIR}, 'PerlNatives' ;
 			}
 			print "\n" ;
 

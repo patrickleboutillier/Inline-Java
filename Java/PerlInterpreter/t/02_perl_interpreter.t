@@ -4,7 +4,7 @@ use Test ;
 use File::Spec ;
 
 BEGIN {
-    plan(tests => 6) ;
+    plan(tests => 7) ;
 }
 
 
@@ -74,7 +74,7 @@ class Tests extends InlineJavaPerlInterpreter {
 	public static void main(String args[]){
 		try {
 			init("test") ;
-			InlineJavaPerlInterpreter pi = InlineJavaPerlInterpreter.getInstance() ; 
+			InlineJavaPerlInterpreter pi = InlineJavaPerlInterpreter.create() ; 
 
 			pi.require("t/Tests.pl") ;
 			ok("1", "1") ;
@@ -84,6 +84,9 @@ class Tests extends InlineJavaPerlInterpreter {
 			ok(sum, new Integer(90)) ;
 			String name = (String)pi.CallPerlSub("whats_your_name", null, String.class) ;
 			ok(name, "perl") ;
+
+			pi.destroy() ;
+			ok("1", "1") ;
 		}
 		catch (Exception e){
 			e.printStackTrace() ;
