@@ -7,7 +7,7 @@ package Inline::Java ;
 
 use strict ;
 
-$Inline::Java::VERSION = '0.21' ;
+$Inline::Java::VERSION = '0.22' ;
 
 
 # DEBUG is set via the DEBUG config
@@ -69,15 +69,17 @@ my $COMMAND_COM =
 sub done {
 	my $signal = shift ;
 
+	# To preserve the passed exit code...
+	# Thanks Maria
+	my $ec = $? ;
+
 	$DONE = 1 ;
 
-	my $ec = 0 ;
 	if (! $signal){
 		Inline::Java::debug("killed by natural death.") ;
 	}
 	else{
 		Inline::Java::debug("killed by signal SIG$signal.") ;
-		$ec = 1 ;
 	}
 
 	if ($JVM){
@@ -150,38 +152,38 @@ sub _validate {
 		croak "Inline::Java does not currently support multiple Inline sections" ;
 	}
 
-	if (! exists($o->{Java}->{PORT})){
-		$o->{Java}->{PORT} = 7890 ;
+	if (! exists($o->{ILSM}->{PORT})){
+		$o->{ILSM}->{PORT} = 7890 ;
 	}
-	if (! exists($o->{Java}->{STARTUP_DELAY})){
-		$o->{Java}->{STARTUP_DELAY} = 15 ;
+	if (! exists($o->{ILSM}->{STARTUP_DELAY})){
+		$o->{ILSM}->{STARTUP_DELAY} = 15 ;
 	}
-	if (! exists($o->{Java}->{DEBUG})){
-		$o->{Java}->{DEBUG} = 0 ;
+	if (! exists($o->{ILSM}->{DEBUG})){
+		$o->{ILSM}->{DEBUG} = 0 ;
 	}
-	if (! exists($o->{Java}->{JNI})){
-		$o->{Java}->{JNI} = 0 ;
+	if (! exists($o->{ILSM}->{JNI})){
+		$o->{ILSM}->{JNI} = 0 ;
 	}
-	if (! exists($o->{Java}->{CLASSPATH})){
-		$o->{Java}->{CLASSPATH} = '' ;
+	if (! exists($o->{ILSM}->{CLASSPATH})){
+		$o->{ILSM}->{CLASSPATH} = '' ;
 	}
-	if (! exists($o->{Java}->{WARN_METHOD_SELECT})){
-		$o->{Java}->{WARN_METHOD_SELECT} = '' ;
+	if (! exists($o->{ILSM}->{WARN_METHOD_SELECT})){
+		$o->{ILSM}->{WARN_METHOD_SELECT} = '' ;
 	}
-	if (! exists($o->{Java}->{AUTOSTUDY})){
-		$o->{Java}->{AUTOSTUDY} = 0 ;
+	if (! exists($o->{ILSM}->{AUTOSTUDY})){
+		$o->{ILSM}->{AUTOSTUDY} = 0 ;
 	}
 
 	while (@_) {
 		my ($key, $value) = (shift, shift) ;
 		if ($key eq 'BIN'){
-		    $o->{Java}->{$key} = $value ;
+		    $o->{ILSM}->{$key} = $value ;
 		}
 		elsif ($key eq 'CLASSPATH'){
-		    $o->{Java}->{$key} = $value ;
+		    $o->{ILSM}->{$key} = $value ;
 		}
 		elsif ($key eq 'WARN_METHOD_SELECT'){
-		    $o->{Java}->{$key} = $value ;
+		    $o->{ILSM}->{$key} = $value ;
 		}
 		elsif (
 			($key eq 'PORT')||
@@ -193,20 +195,20 @@ sub _validate {
 			if (! $value){
 				croak "config '$key' can't be zero" ;
 			}
-			$o->{Java}->{$key} = $value ;
+			$o->{ILSM}->{$key} = $value ;
 		}
 		elsif ($key eq 'DEBUG'){
-			$o->{Java}->{$key} = $value ;
+			$o->{ILSM}->{$key} = $value ;
 			$Inline::Java::DEBUG = $value ;
 		}
 		elsif ($key eq 'JNI'){
-			$o->{Java}->{$key} = $value ;
+			$o->{ILSM}->{$key} = $value ;
 		}
 		elsif ($key eq 'AUTOSTUDY'){
-			$o->{Java}->{$key} = $value ;
+			$o->{ILSM}->{$key} = $value ;
 		}
 		elsif ($key eq 'STUDY'){
-			$o->{Java}->{$key} = $o->check_config_array(
+			$o->{ILSM}->{$key} = $o->check_config_array(
 				$key, $value,
 				"Java class names") ;
 		}
@@ -218,7 +220,7 @@ sub _validate {
 	}
 
 	if (defined($ENV{PERL_INLINE_JAVA_JNI})){
-		$o->{Java}->{JNI} = $ENV{PERL_INLINE_JAVA_JNI} ;
+		$o->{ILSM}->{JNI} = $ENV{PERL_INLINE_JAVA_JNI} ;
 	}
 
 	$o->set_java_bin() ;
@@ -248,12 +250,43 @@ sub check_config_array {
 }
 
 
+sub get_java_config {
+	my $o = shift ;
+	my $param = shift ;
+
+	return $o->{ILSM}->{$param} ;
+}
+
+
+# In theory we shouldn't need to use this, but it seems
+# it's not all accessible by the API yet.
+sub get_config {
+	my $o = shift ;
+	my $param = shift ;
+
+	if (defined($param)){
+		return $o->{CONFIG}->{$param} ;
+	}
+	else{
+		return %{$o->{CONFIG}} ;
+	}
+}
+
+
+sub get_api {
+	my $o = shift ;
+	my $param = shift ;
+
+	return $o->{API}->{$param} ;
+}
+
+
 sub set_java_bin {
 	my $o = shift ;
 
 	my $sep = portable("PATH_SEP_RE") ;
 
-	my $cjb = $o->{Java}->{BIN} ;
+	my $cjb = $o->{ILSM}->{BIN} ;
 	my $ejb = $ENV{PERL_INLINE_JAVA_BIN} ;
 	if ($cjb){
 		$cjb =~ s/$sep+$// ;
@@ -261,7 +294,7 @@ sub set_java_bin {
 	}
 	elsif ($ejb) {
 		$ejb =~ s/$sep+$// ;
-		$o->{Java}->{BIN} = $ejb ;
+		$o->{ILSM}->{BIN} = $ejb ;
 		return $o->find_java_bin([$ejb]) ;
 	}
 
@@ -279,7 +312,7 @@ sub find_java_bin {
 
 	my $path = $o->find_file_in_path([$java, $javac], $paths) ;
 	if (defined($path)){
-		$o->{Java}->{BIN} = $path ;
+		$o->{ILSM}->{BIN} = $path ;
 	}
 	else{
 		croak
@@ -345,17 +378,17 @@ sub find_file_in_path {
 sub build {
 	my $o = shift ;
 
-	if ($o->{Java}->{built}){
+	if ($o->{ILSM}->{built}){
 		return ;
 	}
 
-	my $code = $o->{code} ;
+	my $code = $o->get_api('code') ;
 	my $study_only = ($code eq 'STUDY') ;
 
-	$o->write_java($study_only) ;
+	$o->write_java($study_only, $code) ;
 	$o->compile($study_only) ;
 
-	$o->{Java}->{built} = 1 ;
+	$o->{ILSM}->{built} = 1 ;
 }
 
 
@@ -363,12 +396,12 @@ sub build {
 sub write_java {
 	my $o = shift ;
 	my $study_only = shift ;
+	my $code = shift ;
 
-	my $build_dir = $o->{build_dir} ;
-	my $modfname = $o->{modfname} ;
-	my $code = $o->{code} ;
+	my $build_dir = $o->get_api('build_dir') ;
+	my $modfname = $o->get_api('modfname') ;
 
-	$o->mkpath($o->{build_dir}) ;
+	$o->mkpath($build_dir) ;
 
 	if (! $study_only){
 		open(JAVA, ">$build_dir/$modfname.java") or
@@ -391,23 +424,25 @@ sub compile {
 	my $o = shift ;
 	my $study_only = shift ;
 
-	my $build_dir = $o->{build_dir} ;
-	my $modpname = $o->{modpname} ;
-	my $modfname = $o->{modfname} ;
-	my $suffix = $o->{ILSM_suffix} ;
-	my $install_lib = $o->{install_lib} ;
+	my $build_dir = $o->get_api('build_dir') ;
+	my $modpname = $o->get_api('modpname') ;
+	my $modfname = $o->get_api('modfname') ;
+	my $suffix = $o->get_api('suffix') ;
+	my $install_lib = $o->get_api('install_lib') ;
 
 	my $install = "$install_lib/auto/$modpname" ;
+	my $pinstall = portable("RE_FILE", $install) ;
 
 	$o->mkpath("$install") ;
+	$o->set_classpath($pinstall) ;
 
-	my $javac = $o->{Java}->{BIN} . "/javac" . portable("EXE_EXTENSION") ;
+	my $javac = $o->{ILSM}->{BIN} . "/javac" . portable("EXE_EXTENSION") ;
 
 	my $predir = portable("IO_REDIR") ;
 	my $pjavac = portable("RE_FILE", $javac) ;
 
 	my $cwd = Cwd::cwd() ;
-	if ($o->{config}->{UNTAINT}){
+	if ($o->get_config('UNTAINT')){
 		($cwd) = $cwd =~ /(.*)/ ;
 	}
 
@@ -447,14 +482,13 @@ sub compile {
 				}
 			}
 			else{
-				if ($o->{config}->{UNTAINT}){
+				if ($o->get_config('UNTAINT')){
 					($cmd) = $cmd =~ /(.*)/ ;
 				}
 
 				Inline::Java::debug("$cmd") ;
 				my $res = system($cmd) ;
 				$res and do {
-					$o->error_copy ;
 					croak $o->compile_error_msg($cmd, $cwd) ;
 				} ;
 			}
@@ -463,9 +497,8 @@ sub compile {
 		}
 	}
 
-	if ($o->{config}->{CLEAN_AFTER_BUILD} and
-		not $o->{config}->{REPORTBUG}){
-		$o->rmpath($o->{config}->{DIRECTORY} . 'build/', $modpname) ;
+	if ($o->get_api('cleanup')){
+		$o->rmpath('', $build_dir) ;
 	}
 
 	Inline::Java::debug("compile done.") ;
@@ -477,17 +510,18 @@ sub compile_error_msg {
 	my $cmd = shift ;
 	my $cwd = shift ;
 
-	my $build_dir = $o->{build_dir} ;
+	my $build_dir = $o->get_api('build_dir') ;
 	my $error = '' ;
 	if (open(CMD, "<cmd.out")){
 		$error = join("", <CMD>) ;
 		close(CMD) ;
 	}
 
+	my $lang = $o->get_api('language') ;
 	return <<MSG
 
 A problem was encountered while attempting to compile and install your Inline
-$o->{language} code. The command that failed was:
+$lang code. The command that failed was:
   $cmd
 
 The build directory was:
@@ -507,9 +541,9 @@ sub copy_classes {
 	my $o = shift ;
 	my $install = shift ;
 
-	my $build_dir = $o->{build_dir} ;
-	my $modpname = $o->{modpname} ;
-	my $install_lib = $o->{install_lib} ;
+	my $build_dir = $o->get_api('build_dir') ;
+	my $modpname = $o->get_api('modpname') ;
+	my $install_lib = $o->get_api('install_lib') ;
 	my $pinstall = portable("RE_FILE", $install) ;
 
 	my $src_dir = $build_dir ;
@@ -529,7 +563,7 @@ sub copy_classes {
 	}
 
 	foreach my $file (@flist){
-		if ($o->{config}->{UNTAINT}){
+		if ($o->get_config('UNTAINT')){
 			($file) = $file =~ /(.*)/ ;
 		}
 		Inline::Java::debug("copy_classes: $file, $dest_dir/$file") ;
@@ -561,18 +595,18 @@ sub touch_file {
 sub load {
 	my $o = shift ;
 
-	if ($o->{Java}->{loaded}){
+	if ($o->{ILSM}->{loaded}){
 		return ;
 	}
 
-	my $install_lib = $o->{install_lib} ;
-	my $modfname = $o->{modfname} ;
-	my $modpname = $o->{modpname} ;
+	my $install_lib = $o->get_api('install_lib') ;
+	my $modfname = $o->get_api('modfname') ;
+	my $modpname = $o->get_api('modpname') ;
 	my $install = "$install_lib/auto/$modpname" ;
 	my $pinstall = portable("RE_FILE", $install) ;
 
 	# Make sure the default options are set.
-	$o->_validate(1, %{$o->{config}}) ;
+	$o->_validate(1, $o->get_config()) ;
 
 	# If the JVM is not running, we need to start it here.
 	if (! $JVM){
@@ -584,11 +618,11 @@ sub load {
 	$INLINES->{$modfname} = $o ;
 
 	$o->_study() ;
-	if ((defined($o->{Java}->{STUDY}))&&(scalar($o->{Java}->{STUDY}))){
-		$o->_study($o->{Java}->{STUDY}) ;
+	if ((defined($o->{ILSM}->{STUDY}))&&(scalar($o->{ILSM}->{STUDY}))){
+		$o->_study($o->{ILSM}->{STUDY}) ;
 	}
 
-	$o->{Java}->{loaded} = 1 ;
+	$o->{ILSM}->{loaded} = 1 ;
 }
 
 
@@ -601,8 +635,8 @@ sub set_classpath {
 	if (defined($ENV{CLASSPATH})){
 		push @list, $ENV{CLASSPATH} ;
 	}
-	if (defined($o->{Java}->{CLASSPATH})){
-		push @list, $o->{Java}->{CLASSPATH} ;
+	if (defined($o->{ILSM}->{CLASSPATH})){
+		push @list, $o->{ILSM}->{CLASSPATH} ;
 	}
 	if (defined($path)){
 		push @list, $path ;
@@ -642,10 +676,10 @@ sub report {
 	my $o = shift ;
 	my $classes = shift ;
 
-	my $install_lib = $o->{install_lib} ;
-	my $modpname = $o->{modpname} ;
-	my $modfname = $o->{modfname} ;
-	my $suffix = $o->{ILSM_suffix} ;
+	my $install_lib = $o->get_api('install_lib') ;
+	my $modpname = $o->get_api('modpname') ;
+	my $modfname = $o->get_api('modfname') ;
+	my $suffix = $o->get_api('suffix') ;
 	my $install = "$install_lib/auto/$modpname" ;
 	my $pinstall = portable("RE_FILE", $install) ;
 
@@ -669,7 +703,7 @@ sub report {
 	foreach my $class (@{$classes}){
 		$class = Inline::Java::Class::ValidateClass($class) ;
 
-		if (! Inline::Java::known_to_perl($o->{pkg}, $class)){
+		if (! Inline::Java::known_to_perl($o->get_api('pkg'), $class)){
 			push @new_classes, $class ;
 		}
 	}
@@ -679,7 +713,7 @@ sub report {
 	}
 
 	my $resp = undef ;
-	if (($use_cache)&&(! $o->{Java}->{built})){
+	if (($use_cache)&&(! $o->{ILSM}->{built})){
 		# Since we didn't build the module, this means that 
 		# it was up to date. We can therefore use the data 
 		# from the cache
@@ -701,7 +735,7 @@ sub report {
 		$resp = $pc->Report(join(" ", @new_classes)) ;
 	}
 
-	if (($use_cache)&&($o->{Java}->{built})){
+	if (($use_cache)&&($o->{ILSM}->{built})){
 		# Update the cache.
 		Inline::Java::debug("updating jdat cache") ;
 		if (open(CACHE, ">$install/$modfname.$suffix")){
@@ -729,12 +763,12 @@ sub load_jdat {
 
 	# We need an array here since the same object can have many 
 	# load sessions.
-	if (! defined($o->{Java}->{data})){
-		$o->{Java}->{data} = [] ;
+	if (! defined($o->{ILSM}->{data})){
+		$o->{ILSM}->{data} = [] ;
 	}
 	my $d = {} ;
-	my $data_idx = scalar(@{$o->{Java}->{data}}) ;
-	push @{$o->{Java}->{data}}, $d ;
+	my $data_idx = scalar(@{$o->{ILSM}->{data}}) ;
+	push @{$o->{ILSM}->{data}}, $d ;
 	
 	my $re = '[\w.\$\[;]+' ;
 
@@ -745,7 +779,7 @@ sub load_jdat {
 		if ($line =~ /^class ($re)$/){
 			# We found a class definition
 			my $java_class = $1 ;
-			$current_class = Inline::Java::java2perl($o->{pkg}, $java_class) ;
+			$current_class = Inline::Java::java2perl($o->get_api('pkg'), $java_class) ;
 			$d->{classes}->{$current_class} = {} ;
 			$d->{classes}->{$current_class}->{java_class} = $java_class ;
 			$d->{classes}->{$current_class}->{constructors} = {} ;
@@ -813,7 +847,7 @@ sub bind_jdat {
 	my $d = shift ;
 	my $idx = shift ;
 
-	my $modfname = $o->{modfname} ;
+	my $modfname = $o->get_api('modfname') ;
 
 	if (! defined($d->{classes})){
 		return ;
@@ -864,7 +898,7 @@ sub new {
 	my \@args = \@_ ;
 
 	my \$o = Inline::Java::get_INLINE('$modfname') ;
-	my \$d = \$o->{Java}->{data}->[$idx] ;
+	my \$d = \$o->{ILSM}->{data}->[$idx] ;
 	my \$signatures = \$d->{classes}->{'$class'}->{constructors} ;
 	my (\$proto, \$new_args, \$static) = \$class->__validate_prototype('new', [\@args], \$signatures, \$o) ;
 
@@ -909,7 +943,7 @@ sub bind_method {
 	my $method = shift ;
 	my $static = shift ;
 
-	my $modfname = $o->{modfname} ;
+	my $modfname = $o->get_api('modfname') ;
 	
 	my $code = <<CODE;
 
@@ -918,7 +952,7 @@ sub $method {
 	my \@args = \@_ ;
 
 	my \$o = Inline::Java::get_INLINE('$modfname') ;
-	my \$d = \$o->{Java}->{data}->[$idx] ;
+	my \$d = \$o->{ILSM}->{data}->[$idx] ;
 	my \$signatures = \$d->{classes}->{'$class'}->{methods}->{'$method'} ;
 	my (\$proto, \$new_args, \$static) = \$this->__validate_prototype('$method', [\@args], \$signatures, \$o) ;
 
@@ -946,7 +980,7 @@ sub get_fields {
 	my $class = shift ;
 
 	my $fields = {} ;
-	my $data_list = $o->{Java}->{data} ;
+	my $data_list = $o->{ILSM}->{data} ;
 
 	foreach my $d (@{$data_list}){
 		if (exists($d->{classes}->{$class})){
@@ -965,18 +999,18 @@ sub info {
 	my $o = shift;
 
 	# Make sure the default options are set.
-	$o->_validate(1, %{$o->{config}}) ;
+	$o->_validate(1, $o->get_config()) ;
 
-	if ((! $o->{mod_exists})&&(! $o->{Java}->{built})){
+	if ((! $o->get_api('mod_exists'))&&(! $o->{ILSM}->{built})){
 		$o->build ;
 	}
 
-	if (! $o->{Java}->{loaded}){
+	if (! $o->{ILSM}->{loaded}){
 		$o->load ;
 	}
 
 	my $info = '' ;
-	my $data_list = $o->{Java}->{data} ;
+	my $data_list = $o->{ILSM}->{data} ;
 
 	foreach my $d (@{$data_list}){
 		if (! defined($d->{classes})){
@@ -1143,7 +1177,7 @@ sub portable {
 			IO_REDIR			=>  ($COMMAND_COM ? '' : undef),
 			GOT_ALARM			=>  0,
 			COMMAND_COM			=>	$COMMAND_COM,
-		}
+		},
 	} ;
 
 	if (! defined($defmap->{$key})){
@@ -1155,7 +1189,7 @@ sub portable {
 			if (defined($val)){
 				my $f = $map->{$^O}->{$key}->[0] ;
 				my $t = $map->{$^O}->{$key}->[1] ;
-				$val =~ s/$f/$t/eg ;
+				$val =~ s/$f/$t/g ;
 				Inline::Java::debug("portable: $key => $val for $^O is '$val'") ;
 				return $val ;
 			}
