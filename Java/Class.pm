@@ -58,6 +58,9 @@ $RANGE->{long} = $RANGE->{'java.lang.Long'} ;
 $RANGE->{float} = $RANGE->{'java.lang.Float'} ;
 $RANGE->{double} = $RANGE->{'java.lang.Double'} ;
 
+# java.lang.Number support. We allow the widest range
+# i.e. Double
+$RANGE->{'java.lang.Number'} = $RANGE->{'java.lang.Double'} ;
 
 
 # This method makes sure that the class we are asking for
@@ -273,6 +276,12 @@ sub CastArgument {
 			Inline::Java::debug("Type cast match!") ;
 			$ret[1] = 10 ;
 		}
+		else{
+			# We have casted to something that doesn't exactly match
+			# any of the available types. 
+			# For now we don't allow this.
+			croak "Cast ($proto) doesn't exactly match prototype ($proto_ori)" ;
+		}
 	}
 
 	return @ret ;
@@ -289,6 +298,7 @@ sub ClassIsNumeric {
 		java.lang.Long
 		java.lang.Float
 		java.lang.Double
+		java.lang.Number
 		byte
 		short
 		int
@@ -525,28 +535,33 @@ class InlineJavaClass {
 		// reference types.
 		boolean num = ClassIsNumeric(p) ;
 		if ((num)||(ClassIsString(p))){
+			Class ap = p ;
+			if (ap == java.lang.Number.class){
+				ijs.debug(" specializing java.lang.Number to java.lang.Double") ;
+				ap = java.lang.Double.class ;
+			}
+
 			if (type.equals("undef")){
 				if (num){
-					ijs.debug("  args is undef -> forcing to " + p.getName() + " 0") ;
-					ret = ijp.CreateObject(p, new Object [] {"0"}, new Class [] {String.class}) ;
+					ijs.debug("  args is undef -> forcing to " + ap.getName() + " 0") ;
+					ret = ijp.CreateObject(ap, new Object [] {"0"}, new Class [] {String.class}) ;
 					ijs.debug("    result is " + ret.toString()) ;
 				}
 				else{
 					ret = null ;
-					ijs.debug("  args is undef -> forcing to " + p.getName() + " " + ret) ;
+					ijs.debug("  args is undef -> forcing to " + ap.getName() + " " + ret) ;
 					ijs.debug("    result is " + ret) ;
-					// ijp.CreateObject(p, new Object [] {""}, new Class [] {String.class}) ;
 				}
 			}
 			else if (type.equals("scalar")){
 				String arg = ijp.pack((String)tokens.get(1)) ;
-				ijs.debug("  args is scalar -> forcing to " + p.getName()) ;
-				try	{							
-					ret = ijp.CreateObject(p, new Object [] {arg}, new Class [] {String.class}) ;
+				ijs.debug("  args is scalar -> forcing to " + ap.getName()) ;
+				try	{
+					ret = ijp.CreateObject(ap, new Object [] {arg}, new Class [] {String.class}) ;
 					ijs.debug("    result is " + ret.toString()) ;
 				}
 				catch (NumberFormatException e){
-					throw new InlineJavaCastException("Can't convert " + arg + " to " + p.getName()) ;
+					throw new InlineJavaCastException("Can't convert " + arg + " to " + ap.getName()) ;
 				}
 			}
 			else{
@@ -776,6 +791,7 @@ class InlineJavaClass {
 			java.lang.Long.class,
 			java.lang.Float.class,
 			java.lang.Double.class,
+			java.lang.Number.class,
 			byte.class,
 			short.class,
 			int.class,
