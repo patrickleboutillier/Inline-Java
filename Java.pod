@@ -27,14 +27,6 @@ Inline::Java - Write Perl classes in Java.
 
 =for comment
 
-=head1 WARNING 
-
-THIS IS ALPHA SOFTWARE. It is incomplete and possibly unreliable. 
-It is also possible that some elements of the interface (API) will 
-change in future releases.
-   Z<>
-
-
 =head1 DESCRIPTION
 
 The C<Inline::Java> module allows you to put Java source code
@@ -143,6 +135,19 @@ behavior of C<Inline::Java>:
       'use Inline Java' call inside a Perl script, since all other calls 
       make use of the same JVM.
 
+   EMBEDDED_JNI:
+      Same as JNI, except C<Inline::Java> expects the JVM to already be
+      loaded and to have loaded the Perl interpreter that is running the
+      script. This is an advanced feature that should only be need in
+      very specific circumstances.
+      Ex: EMBEDDED_JNI => 1
+      Note: This can also be set globally by setting the 
+      PERL_INLINE_JAVA_EMBEDDED_JNI environment variable to 1.
+      Note: The EMBEDDED_JNI option sets the JNI option.
+      Note: This configuration option only has an effect on the first
+      'use Inline Java' call inside a Perl script, since all other calls 
+      make use of the same JVM.
+
    SHARED_JVM:
       This mode enables mutiple processes to share the same JVM. It was 
       created mainly in order to be able to use C<Inline::Java> under 
@@ -186,6 +191,9 @@ behavior of C<Inline::Java>:
 
    PERL_INLINE_JAVA_JNI:
       Same as the JNI option.
+
+   PERL_INLINE_JAVA_EMBEDDED_JNI:
+      Same as the EMBEDDED_JNI option.
 
    PERL_INLINE_SHARED_JVM:
       Same as the SHARED_JVM option.
@@ -989,7 +997,7 @@ Brian Ingerson <ingy@cpan.org> is the author of Inline.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002, Patrick LeBoutillier.
+Copyright (c) 2001-2003, Patrick LeBoutillier.
 
 All Rights Reserved. This module is free software. It may be used,
 redistributed and/or modified under the terms of the Perl Artistic

@@ -107,18 +107,10 @@ sub register {
 }
 
 
-sub validate {
-	my $o = shift ;
-
-	return $o->_validate(0, @_) ;
-}
-
-
 # Here validate is overridden because some of the config options are needed
 # at load as well.
-sub _validate {
+sub validate {
 	my $o = shift ;
-	my $ignore_other_configs = shift ;
 
 	if (! exists($o->{ILSM}->{PORT})){
 		$o->{ILSM}->{PORT} = 7890 ;
@@ -188,11 +180,6 @@ sub _validate {
 			$o->{ILSM}->{$key} = $o->check_config_array(
 				$key, $value,
 				"Java class names") ;
-		}
-		else{
-			if (! $ignore_other_configs){
-				croak "'$key' is not a valid config option for Inline::Java";
-			}
 		}
 	}
 
@@ -590,7 +577,7 @@ sub load {
 	my $install = File::Spec->catdir($install_lib, "auto", $modpname) ;
 
 	# Make sure the default options are set.
-	$o->_validate(1, $o->get_config()) ;
+	# $o->_validate(1, $o->get_config()) ;
 
 	# If the JVM is not running, we need to start it here.
 	if (! $JVM){
@@ -1042,12 +1029,9 @@ sub get_fields {
 
 # Return a small report about the Java code.
 sub info {
-	my $o = shift;
+	my $o = shift ;
 
-	# Make sure the default options are set.
-	$o->_validate(1, $o->get_config()) ;
-
-	if ((! $o->get_api('mod_exists'))&&(! $o->{ILSM}->{built})){
+	if (! $o->{INLINE}->{object_ready})&&(! $o->{ILSM}->{built})){
 		$o->build ;
 	}
 

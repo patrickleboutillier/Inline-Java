@@ -68,9 +68,10 @@ second time you test loading of an already built module.
 -------------------------------------------------------------------------------
 FEATURES:
 
-WARNING: THIS IS ALPHA SOFTWARE. It is incomplete and possibly unreliable. 
-         It is also possible that some elements of the interface (API) will 
-         change in future releases.
+Inline::Java version 0.34 is a minor upgrade that includes:
++ Patch by Doug MacEachern to allow running under servlet engines
++ Other minor bug fixes and documentation corrections
++ Moved to Beta status
 
 Inline::Java version 0.33 is a minor upgrade that includes:
 + Improved and more flexible debug output
@@ -140,4 +141,4 @@ Inline::Java's home page is http://inline.perl.org/java/.
 
 Please send questions and comments to Patrick LeBoutillier <patl@cpan.org>.
 
-Copyright (c) 2001-2002, Patrick LeBoutillier. All Rights Reserved.  
+Copyright (c) 2001-2003, Patrick LeBoutillier. All Rights Reserved.  

@@ -1,6 +1,11 @@
 Revision history for Perl extension Inline::Java
 ------------------------------------------------
 
+0.34  
+    - Patch by Doug MacEachern to allow running under servlet engines
+    - Other minor bug fixes and documentation corrections
+    - Moved to Beta status
+
 0.33  Mon Jun 17 13:50:14 EDT 2002
     - Improved and more flexible debug output
     - Auto loading of thread libraries under Solaris

@@ -51,13 +51,13 @@ print
 	"allows Inline::Java to run the JVM in the default (separate process)\n" .
 	"fashion. Note: You need a C compiler to build the extension.\n\n" ;
 
-if (($build_jni || AskYN("Do you wish to build the JNI extension?"))){
+if (($build_jni || AskYN("Do you wish to build the JNI extension", 'n'))){
 	print "\nBuilding JNI extension.\n\n" ;
 
 	rename("JNI.xs_", "JNI.xs") ;
 
 	$jdk_dir = ($jdk_dir || AskSub("Enter the path to your Java 2 SDK installation",
-		sub {((-d $_[0]) ? 1 : (print("Directory '$_[0]' does not exist.\n") && 0))})) ;
+		sub {((($_[0]) && (-d $_[0])) ? 1 : (print("Directory '$_[0]' does not exist.\n") && 0))})) ;
 	print "\n" ;
 
 	my $type = FindDefaultVMType() ;
@@ -238,10 +238,11 @@ sub Ask {
 # Gets yes/no from stdin
 sub AskYN {
 	my $ques = shift ;
+	my $def = shift ;
 
-	$ques .= " [yn]" ;
+	$ques .= " [yn]?" ;
 
-	my $ans = AskSub($ques, sub {$_[0] =~ /^(y|n)$/i}) ;
+	my $ans = AskSub($ques, sub {((! $_[0])||($_[0] =~ /^(y|n)$/i))}) ;
 
 	return (($ans eq "y") ? 1 : 0) ;
 }
@@ -251,19 +252,15 @@ sub AskSub {
 	my $ques = shift ;
 	my $sub = shift ;
 
-	my $str = $ques . ": " ;
-	print $str ;
+	my $str = $ques . ":" ;
 
-	while (<STDIN>){
-		my $ans = $_ ;
-		chomp($ans) ;
+	while (1){
+		my $ans = prompt($str) ;
 		if (! $sub){
 			return $ans ;
 		}
 		elsif ($sub->($ans)){
 			return $ans ;
 		}
-
-		print $str ;
 	}
 }

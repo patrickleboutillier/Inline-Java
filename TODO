@@ -1,6 +1,4 @@
 CODE:
-- Check INFO flag vs. PRINT_INFO (shortcuts not working?)
-- MAkefile.PL: ExtUtils::MakeMaker::prompt
 
 TEST:
 - Alpha
