@@ -1,6 +1,6 @@
 Revision history for Perl extension Inline::Java
 ------------------------------------------------
-0.48  
+0.49  
     - Added PerlInterpreter: require/eval Perl code directly from Java
     - Renamed PerlNatives stuff
     - Split and updated documentation

@@ -90,13 +90,7 @@ Destroys the Perl interpreter.
 
 =back
 
-=head1 BUGS AND DEFICIENCIES
 
-Presently, C<Inline::Java::PerlInterpreter> compiles only using the gcc
-C compiler. Any help on porting it to other platforms is appreciated.
-   Z<>
-
-     
 =head1 SEE ALSO
 
 L<Inline::Java>, L<Inline::Java::Callback>, L<Inline::Java::PerlNatives>.
