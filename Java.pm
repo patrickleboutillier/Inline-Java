@@ -1005,9 +1005,11 @@ sub study_classes {
 	my $package = shift || caller() ;
 
 	my $o = undef ;
+	my %pkgs = () ;
 	foreach (@INLINES){
 		my $i = $_ ;
 		my $pkg = $i->get_api('pkg') || 'main' ;
+		$pkgs{$pkg} = 1 ;
 		if ($pkg eq $package){
 			$o = $i ;
 			last ;
@@ -1018,12 +1020,11 @@ sub study_classes {
 		$o->_study($classes, 0) ;
 	}
 	else {
-		my $msg = "Can't place studied classes under package since Inline::Java was not used there. Valid packages are:\n" ;
-		foreach (@INLINES){
-			my $i = $_ ;
-			my $pkg = $i->get_api('pkg') || 'main' ;
+		my $msg = "Can't place studied classes under package '$package' since Inline::Java was not used there. Valid packages are:\n" ;
+		foreach my $pkg (keys %pkgs){
 			$msg .= "  $pkg\n" ;
 		}
+		croak($msg) ;
 	}
 }
 

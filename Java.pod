@@ -160,7 +160,8 @@ behavior of C<Inline::Java>:
    EXTRA_JAVA_ARGS:
    EXTRA_JAVAC_ARGS:
       Specify extra command line parameters to be passed to, respectively,  
-      the JVM and the Java compiler.
+      the JVM and the Java compiler. Use with caution as some options may 
+      alter normal C<Inline::Java> behavior.
       Ex: EXTRA_JAVA_ARGS => '-Xmx96m'
       Note: EXTRA_JAVA_ARGS only has an effect on the first
       'use Inline Java' call inside a Perl script, since all other calls 
