@@ -31,6 +31,8 @@ Java/sources/InlineJavaThrown.java
 Java/sources/InlineJavaUserClassLink.java
 Java/sources/InlineJavaUserClassLoader.java
 Java/sources/InlineJavaUtils.java
+Java/sources/InlineJavaCallback.java
+Java/sources/InlineJavaCallbackQueue.java
 t/01_init.t
 t/02_primitives.t
 t/03_objects.t
