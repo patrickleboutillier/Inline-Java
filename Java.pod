@@ -989,8 +989,6 @@ rebuilt to match the Perl code.
 
 Patrick LeBoutillier <patl@cpan.org> is the author of Inline::Java.
 
-Brendan W. McAdams <bwmcadams@cpan.org> is a contributor.
-
 Brian Ingerson <ingy@cpan.org> is the author of Inline.
    Z<>
 
