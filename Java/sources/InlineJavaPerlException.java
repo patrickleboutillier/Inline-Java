@@ -1,13 +1,11 @@
-/*
-	This object can have user visibility and therefore
-	must have public methods.
-*/
-
-class InlineJavaPerlException extends Exception {
-	private Object obj = null ;
+package org.perl.inline.java ;
 
 
-	InlineJavaPerlException(Object o) {
+public class InlineJavaPerlException extends Exception {
+	private Object obj ;
+
+
+	public InlineJavaPerlException(Object o){
 		obj = o ;
 	}
 

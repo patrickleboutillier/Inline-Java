@@ -1,3 +1,5 @@
+package org.perl.inline.java ;
+
 import java.util.* ;
 import java.lang.reflect.* ;
 
@@ -11,7 +13,7 @@ class InlineJavaProtocol {
 	private InlineJavaClass ijc ;
 	private InlineJavaArray ija ;
 	private String cmd ;
-	private String response ;
+	private String response = null ;
 
 
 	InlineJavaProtocol(InlineJavaServer _ijs, String _cmd) {
@@ -39,6 +41,9 @@ class InlineJavaProtocol {
 		else if (c.equals("get_member")){
 			GetJavaMember(st) ;
 		}		
+		else if (c.equals("add_classpath")){
+			AddClassPath(st) ;
+		}
 		else if (c.equals("server_type")){
 			ServerType(st) ;
 		}
@@ -130,6 +135,15 @@ class InlineJavaProtocol {
 		}
 
 		SetResponse(pw.toString()) ;
+	}
+
+
+	void AddClassPath(StringTokenizer st) throws InlineJavaException {
+		while (st.hasMoreTokens()){
+			String path = Decode(st.nextToken()) ;
+			InlineJavaServer.GetInstance().GetUserClassLoader().AddClassPath(path) ;
+		}
+		SetResponse(null) ;
 	}
 
 
@@ -233,7 +247,7 @@ class InlineJavaProtocol {
 			Object p[] = (Object [])f.get(1) ;
 
 			try {
-				Object ret = m.invoke(o, p) ;
+				Object ret = InlineJavaServer.GetInstance().GetUserClassLoader().invoke(m, o, p) ;
 				SetResponse(ret) ;
 			}
 			catch (IllegalAccessException e){
@@ -285,7 +299,7 @@ class InlineJavaProtocol {
 			String msg = "For array of type " + c.getName() + ", element " + member + ": " ;
 			try {
 				Object elem = ijc.CastArgument(type, arg) ;
-				Array.set(o, idx, elem) ;
+				InlineJavaServer.GetInstance().GetUserClassLoader().array_set(o, idx, elem) ;
 				SetResponse(null) ;
 			}
 			catch (InlineJavaCastException e){
@@ -302,7 +316,7 @@ class InlineJavaProtocol {
 			Object p = (Object)fl.get(1) ;
 
 			try {
-				f.set(o, p) ;
+				InlineJavaServer.GetInstance().GetUserClassLoader().set(f, o, p) ;
 				SetResponse(null) ;
 			}
 			catch (IllegalAccessException e){
@@ -335,7 +349,8 @@ class InlineJavaProtocol {
 
 		if (ijc.ClassIsArray(c)){
 			int idx = Integer.parseInt(member) ;
-			SetResponse(Array.get(o, idx)) ;
+			Object ret = InlineJavaServer.GetInstance().GetUserClassLoader().array_get(o, idx) ;
+			SetResponse(ret) ;
 		}
 		else{
 			ArrayList fl = ValidateMember(c, member, st) ;
@@ -343,7 +358,7 @@ class InlineJavaProtocol {
 			Field f = (Field)fl.get(0) ;
 			String name = f.getName() ;
 			try {
-				Object ret = f.get(o) ;
+				Object ret = InlineJavaServer.GetInstance().GetUserClassLoader().get(f, o) ;
 				SetResponse(ret) ;
 			}
 			catch (IllegalAccessException e){
@@ -377,14 +392,7 @@ class InlineJavaProtocol {
 		String name = p.getName() ;
 		Object ret = null ;
 		try {
-			// This will allow usage of the default no-arg constructor
-			if (proto.length == 0){
-				ret = p.newInstance() ;
-			}
-			else{
-				Constructor con = (Constructor)p.getConstructor(proto) ;
-				ret = con.newInstance(args) ;
-			}
+			ret = InlineJavaServer.GetInstance().GetUserClassLoader().create(p, args, proto) ;
 		}
 		catch (NoSuchMethodException e){
 			throw new InlineJavaException("Constructor for class " + name + " with signature " + InlineJavaUtils.CreateSignature(proto) + " not found: " + e.getMessage()) ;

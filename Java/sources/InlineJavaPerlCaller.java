@@ -1,9 +1,9 @@
+package org.perl.inline.java ;
+
 /*
 	Callback to Perl...
-
-	This class has user visibility so methods must be public.
 */
-class InlineJavaPerlCaller {
+public class InlineJavaPerlCaller {
 	public InlineJavaPerlCaller(){
 	}
 
@@ -14,6 +14,6 @@ class InlineJavaPerlCaller {
 
 
 	public Object CallPerl(String pkg, String method, Object args[], String cast) throws InlineJavaException, InlineJavaPerlException {
-		return InlineJavaServer.instance.Callback(pkg, method, args, cast) ;
+		return InlineJavaServer.GetInstance().Callback(pkg, method, args, cast) ;
 	}
 }

@@ -23,14 +23,21 @@ foreach my $arg (@ARGV){
 @ARGV = @new_args ;
 
 if (! $jdk_dir){
-	print <<NO_J2SDK;
+	my $def_pl = File::Spec->catfile('Java', 'DefaultJ2SDK.pl') ;
+	if (-e $def_pl){
+		require File::Spec->catfile('Java', 'DefaultJ2SDK.pl') ;
+		$jdk_dir = Inline::Java::get_default_j2sdk() ;
+	}
+	else{
+		print <<NO_J2SDK;
 A Java 2 SDK is required to install and use Inline::Java. Please 
 specify your Java 2 SDK installation directory using the J2SDK 
 option to Makefile.PL as such:
 
     perl Makefile.PL J2SDK=/path/to/your/j2sdk/installation
 NO_J2SDK
-	exit(1) ;
+		exit(1) ;
+	}
 }
 elsif (! -d $jdk_dir){
 	print <<BAD_J2SDK;
@@ -87,19 +94,34 @@ my $jar = File::Spec->catfile($jdk_dir, 'bin', 'jar' . $ext) ;
 my $src_dir = File::Spec->catdir('Java', 'sources') ;
 my $src = File::Spec->catfile($src_dir, '*.java') ;
 my $obj_dir = File::Spec->catdir('Java', 'classes') ;
-my $arch_dir = File::Spec->catdir('Java', 'jar') ;
-my $arch = File::Spec->catfile($arch_dir, 'InlineJava.jar') ;
+my $server_arch = File::Spec->catfile('Java', 'InlineJavaServer.jar') ;
+my $user_arch = File::Spec->catfile('Java', 'InlineJavaUser.jar') ;
+
+sub MY::top_targets {
+	my $this = shift ;
+
+	my $make = <<MAKE ;
+# Added by Inline::Java installation
+# pure_all :: java
+MAKE
+
+	return $make . $this->MM::top_targets() ;
+}
+
 
 sub MY::postamble {
-	<<MAKE;
-pure_all :: java
+	my $this = shift ;
 
+	my $make = <<MAKE ;
+# Added by Inline::Java installation
 java ::
 	\@\$(MKPATH) $obj_dir
-	\@\$(MKPATH) $arch_dir
 	"$javac" -d $obj_dir $src
-	"$jar" cf $arch -C $obj_dir .
+	"$jar" cf $server_arch -C $obj_dir org
+	"$jar" cf $user_arch -C $obj_dir InlineJavaUserClassLink.class
 MAKE
+
+	return $make ;
 }
 
 
@@ -125,9 +147,10 @@ WriteMakefile(
 	PM => {
 		'Java.pm' => File::Spec->catfile('$(INST_LIBDIR)', 'Java.pm'),
 		'Java.pod'=> File::Spec->catfile('$(INST_LIBDIR)', 'Java.pod'),
-		$arch => File::Spec->catfile('$(INST_LIBDIR)', $arch),
+		$server_arch => File::Spec->catfile('$(INST_LIBDIR)', $server_arch),
+		$user_arch => File::Spec->catfile('$(INST_LIBDIR)', $user_arch),
 	},
-	clean => {FILES => "$def_jdk _Inline_test $obj_dir $arch_dir"},
+	clean => {FILES => "$def_jdk _Inline_test $obj_dir $server_arch $user_arch"},
 ) ;
 
 

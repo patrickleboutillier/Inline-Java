@@ -1,7 +1,7 @@
 package Inline::Java::Portable ;
 @Inline::Java::Portable::ISA = qw(Exporter) ;
 
-@EXPORT = qw(portable make_classpath get_jar) ;
+@EXPORT = qw(portable make_classpath get_server_jar get_user_jar) ;
 
 
 use strict ;
@@ -12,6 +12,7 @@ $Inline::Java::Portable::VERSION = '0.40' ;
 use Exporter ;
 use Carp ;
 use Config ;
+use Cwd ;
 use File::Find ;
 use File::Spec ;
 
@@ -61,12 +62,12 @@ sub make_classpath {
 		$p = portable("SUB_FIX_CLASSPATH", $p) ;
 	}
 
-	# Remove duplicates, but preserve order
+	# Remove duplicates, remove invalids but preserve order
 	my @fcp = () ;
 	my %cp = map {$_ => 1} @cp ;
 	foreach my $p (@cp){
-		if (($p)&&($cp{$p})){
-			push @fcp, $p ;
+		if (($p)&&($cp{$p})&&(-e $p)){
+			push @fcp, (-d $p ? Cwd::abs_path($p) : $p) ;
 			delete $cp{$p} ;
 		}
 	}
@@ -78,11 +79,20 @@ sub make_classpath {
 }
 
 
-sub get_jar {
-	return File::Spec->catfile(
+sub get_jar_dir {
+	return File::Spec->catdir(
 		(File::Spec->splitpath($INC{"Inline/Java.pm"}))[0,1], 
-		'Java', 'jar', 'InlineJava.jar'
-	) ;
+		'Java') ;
+}
+
+
+sub get_server_jar {
+	return File::Spec->catfile(get_jar_dir(), 'InlineJavaServer.jar') ;
+}
+
+
+sub get_user_jar {
+	return File::Spec->catfile(get_jar_dir(), 'InlineJavaUser.jar') ;
 }
 
 

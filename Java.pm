@@ -52,10 +52,6 @@ my $JVM = undef ;
 my $INLINES = {} ;
 
 
-# Add the directory where our jar file is to the classpath
-$ENV{CLASSPATH} = Inline::Java::Portable::make_classpath(get_jar()) ;
-
-
 # This stuff is to control the termination of the Java Interpreter
 sub done {
 	my $signal = shift ;
@@ -174,19 +170,25 @@ sub set_option {
 	if (! exists($o->{ILSM}->{$name})){
 		my $val = undef ;
 		if (($env_or)&&(exists($ENV{"PERL_INLINE_JAVA_$name"}))){
-			$val = $ENV{"PERL_INLINE_JAVA_$name"} || '' ;
+			$val = $ENV{"PERL_INLINE_JAVA_$name"} ;
 		}
 		elsif (exists($opts->{$name})){
-			$val = $opts->{$name} || '' ;
+			$val = $opts->{$name} ;
 		}
 		else{
 			$val = $default ;
 		}
 
 		if ($type eq 'b'){
+			if (! defined($val)){
+				$val = 0 ;
+			}
 			$val = ($val ? 1 : 0) ;
 		}
 		elsif ($type eq 'i'){
+			if ((! defined($val))||($val !~ /\d/)){
+				$val = 0 ;
+			}
 			$val = int($val) ;
 		}
 
@@ -272,6 +274,8 @@ sub build {
 		"javac" . portable("EXE_EXTENSION")) ;
 		my $redir = portable("IO_REDIR") ;
 
+		my $cp = $ENV{CLASSPATH} || '' ;
+		$ENV{CLASSPATH} = make_classpath($o->get_java_config('CLASSPATH'), get_server_jar()) ;
 		my $cmd = "\"$javac\" -d \"$install_dir\" $source > cmd.out $redir" ;
 		if ($o->get_config('UNTAINT')){
 			($cmd) = $cmd =~ /(.*)/ ;
@@ -281,6 +285,7 @@ sub build {
 		$res and do {
 			croak $o->compile_error_msg($cmd) ;
 		} ;
+		$ENV{CLASSPATH} = $cp ;
 
 		# When we run the commands, we quote them because in WIN32 you need it if
 		# the programs are in directories which contain spaces. Unfortunately, in
@@ -300,6 +305,15 @@ sub build {
 			}
 		}
 	}
+	my $modfname = $o->get_api('modfname') ;
+	my $suffix = $o->get_api('suffix') ;
+
+	# Touch the .jdat file.
+	my $jdat = File::Spec->catfile($install_dir, $o->get_api('modfname') . '.' . $o->get_api('suffix')) ;
+	if (! open(Inline::Java::TOUCH, ">$jdat")){
+		croak "Can't create file $jdat" ;
+	}
+	close(Inline::Java::TOUCH) ;
 
 	# Go back and clean up
 	chdir $cwd ;
@@ -358,16 +372,17 @@ sub load {
 		'auto', $o->get_api('modpname')) ;
 
 	# If the JVM is not running, we need to start it here.
-	my $cp = $ENV{CLASSPATH} ;
-	my @cp = make_classpath() ;
 	if (! $JVM){
-		$ENV{CLASSPATH} = '' ;
-		$ENV{CLASSPATH} = make_classpath(get_jar()) ;
+		my $cp = $ENV{CLASSPATH} || '' ;
+		$ENV{CLASSPATH} = get_server_jar() ;
 		$JVM = new Inline::Java::JVM($o) ;
-	
-		# Add classpath entries + install to the JVM
+		$ENV{CLASSPATH}	= $cp ;
 
+		# Add CLASSPATH entries + user jar + $install_dir to the JVM classpath
+		my @cp = make_classpath($o->get_java_config('CLASSPATH'), get_user_jar()) ;
 		my $pc = new Inline::Java::Protocol(undef, $o) ;
+		$pc->AddClassPath(@cp, $install_dir) ;
+
 		my $st = $pc->ServerType() ;
 		if ((($st eq "shared")&&(! $o->get_java_config('SHARED_JVM')))||
 			(($st eq "private")&&($o->get_java_config('SHARED_JVM')))){
@@ -375,10 +390,12 @@ sub load {
 		}
 	}
 	else{
-		# Add $install entry to the JVM.
+		# Add $install_dir entry to the JVM classpath.
+		my $pc = new Inline::Java::Protocol(undef, $o) ;
+		$pc->AddClassPath($install_dir) ;
 	}
 
-	# Add our Inline object to the list.
+	my $study_module_classes = 1 ;
 	my $prev_o = $INLINES->{$modfname} ;
 	if (defined($prev_o)){
 		Inline::Java::debug(2, "module '$modfname' was already loaded, importing binding into new instance") ;
@@ -386,15 +403,17 @@ sub load {
 			$o->{ILSM}->{data} = [] ;
 		}
 		push @{$o->{ILSM}->{data}}, @{$prev_o->{ILSM}->{data}} ;		
+		$study_module_classes = 0 ;
 	}
 
+	# Add our Inline object to the list.
 	$INLINES->{$modfname} = $o ;
 
 	my $classes = [] ;
 	if ((defined($o->get_java_config('STUDY')))&&(scalar($o->get_java_config('STUDY')))){
-		$classes = $o->_study($o->get_java_config('STUDY')) ;
+		$classes = $o->get_java_config('STUDY') ;
 	}
-	$o->_study($classes, 1) ;
+	$o->_study($classes, $study_module_classes) ;
 
 	$o->set_java_config('loaded', 1) ;
 	Inline::Java::debug(1, "load done.") ;
@@ -406,10 +425,11 @@ sub load {
 sub _study {
 	my $o = shift ;
 	my $classes = shift ;
+	my $study_module = shift ;
 
 	# Then we ask it to give us the public symbols from the classes
 	# that we got.
-	my @lines = $o->report($classes) ;
+	my @lines = $o->report($classes, $study_module) ;
 
 	# Now we read up the symbols and bind them to Perl.
 	$o->bind_jdat($o->load_jdat(@lines)) ;
@@ -421,32 +441,32 @@ sub _study {
 sub report {
 	my $o = shift ;
 	my $classes = shift ;
-	my $load = shift || 0 ;
+	my $study_module = shift || 0 ;
 
 	my $install_dir = File::Spec->catdir($o->get_api('install_lib'), 
 		'auto', $o->get_api('modpname')) ;
 	my $cache = $o->get_api('modfname') . '.' . $o->get_api('suffix') ;
 
-	# If search_dir is valid that means that we are really at module load time,
-	# or else we are just studying a specific class via AUTOSTUDY.
-	if (($load)&&(! $o->get_java_config('built'))){
+	if (($study_module)&&(! $o->get_java_config('built'))){
 		# Since we didn't build the module, this means that 
 		# it was up to date. We can therefore use the data 
 		# from the cache
 		Inline::Java::debug(1, "using jdat cache") ;
 		my $p = File::Spec->catfile($install_dir, $cache) ;
-		if (open(Inline::Java::CACHE, "<$p")){
-			my $resp = join("", <Inline::Java::CACHE>) ;
-			close(Inline::Java::CACHE) ;
-			return split("\n", $resp) ;
-		}
-		else{
-			croak "Can't open $p for reading: $!" ;
+		my $size = (-s $p) || 0 ;
+		if ($size > 0){
+			if (open(Inline::Java::CACHE, "<$p")){
+				my $resp = join("", <Inline::Java::CACHE>) ;
+				close(Inline::Java::CACHE) ;
+				return split("\n", $resp) ;
+			}
+			else{
+				croak "Can't open $p for reading: $!" ;
+			}
 		}
 	}
 
-	# Ok, we really have some classes to study.
-	if ($load){
+	if ($study_module){
 		# We need to add the classes that are in the directory or under...
 		my @cl = Inline::Java::Portable::find_classes_in_dir($install_dir) ;
 		foreach my $class (@cl){
@@ -467,12 +487,13 @@ sub report {
 	if (! scalar(@new_classes)){
 		return () ;
 	}
-
+	
+	# Ok, there are some classes in there that we don't know about.
 	# Ask for the info on the classes
 	my $pc = new Inline::Java::Protocol(undef, $o) ;
 	my $resp = $pc->Report(join(" ", @new_classes)) ;
 
-	if (($load)&&($o->get_java_config('built'))){
+	if (($study_module)&&($o->get_java_config('built'))){
 		# Update the cache.
 		Inline::Java::debug(1, "updating jdat cache") ;
 		my $p = File::Spec->catfile($install_dir, $cache) ;

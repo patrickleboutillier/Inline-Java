@@ -1,3 +1,5 @@
+package org.perl.inline.java ;
+
 import java.util.* ;
 
 
@@ -22,7 +24,7 @@ class InlineJavaClass {
 		}
 
 		try {
-			Class c = Class.forName(name) ;
+			Class c = Class.forName(name, true, InlineJavaServer.GetInstance().GetUserClassLoader()) ;
 			return c ;
 		}
 		catch (ClassNotFoundException e){

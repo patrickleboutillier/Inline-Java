@@ -1,5 +1,8 @@
+package org.perl.inline.java ;
+
+
 class InlineJavaThrown {
-	Throwable t = null ;
+	Throwable t ;
 
 	InlineJavaThrown(Throwable _t){
 		t = _t ;

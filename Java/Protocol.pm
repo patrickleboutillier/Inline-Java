@@ -9,6 +9,8 @@ use Inline::Java::Object ;
 use Inline::Java::Array ;
 use Carp ;
 
+my %CLASSPATH_ENTRIES = () ;
+
 
 sub new {
 	my $class = shift ;
@@ -21,6 +23,28 @@ sub new {
 
 	bless($this, $class) ;
 	return $this ;
+}
+
+
+sub AddClassPath {
+	my $this = shift ;
+	my @paths = @_ ;
+
+	@paths = map {
+		my $e = $_ ;
+		if ($CLASSPATH_ENTRIES{$e}){
+			return () ;
+		}
+		else{
+			Inline::Java::debug(1, "adding to classpath: '$e'") ;
+			$CLASSPATH_ENTRIES{$e} = 1 ;
+		}
+		$e ;
+	} @paths ;
+
+	my $data = "add_classpath " . join(" ", map {encode($_)} @paths) ;
+
+	return $this->Send($data, 1) ;
 }
 
 
@@ -342,7 +366,7 @@ sub DeserializeObject {
 				if (Inline::Java::Class::ClassIsReference($elem_class)){
 					if (! Inline::Java::known_to_perl($pkg, $elem_class)){
 						if (($thrown)||($inline->get_java_config('AUTOSTUDY'))){
-							$inline->_study([$elem_class]) ;
+							$inline->_study([$elem_class], 0) ;
 						}
 						else{	
 							# Object is not known to Perl, it lives as a 
@@ -370,7 +394,7 @@ sub DeserializeObject {
 
 			if ($thrown){
 				Inline::Java::debug(3, "throwing stub...") ;
-				my ($msg, $score) = $obj->__isa('IJPerlException') ;
+				my ($msg, $score) = $obj->__isa('org.perl.inline.java.InlineJavaPerlException') ;
 				if ($msg){
 					die $obj ;
 				}

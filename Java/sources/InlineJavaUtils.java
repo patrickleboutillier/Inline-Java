@@ -1,3 +1,5 @@
+package org.perl.inline.java ;
+
 import java.util.* ;
 
 
@@ -35,6 +37,13 @@ class InlineJavaUtils {
 			System.err.println("[java][" + level + "]" + sb.toString() + s) ;
 			System.err.flush() ;
 		}
+	}
+
+
+	static void Fatal(String msg){
+		System.err.println(msg) ;
+		System.err.flush() ;
+		System.exit(1) ;
 	}
 
 

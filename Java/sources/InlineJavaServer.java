@@ -1,3 +1,5 @@
+package org.perl.inline.java ;
+
 import java.net.* ;
 import java.io.* ;
 import java.util.* ;
@@ -8,10 +10,9 @@ import java.util.* ;
 	objects.
 */
 public class InlineJavaServer {
-	static InlineJavaServer instance = null ;
+	private static InlineJavaServer instance = null ;
 	private int port = 0 ;
 	private boolean shared_jvm = false ;
-
 
 	private InlineJavaUserClassLoader ijucl = null ;
 	private HashMap thread_objects = new HashMap() ;
@@ -28,25 +29,25 @@ public class InlineJavaServer {
 
 	// This constructor is used in server mode
 	public InlineJavaServer(String[] argv){
-		init(new Integer(argv[1]).intValue()) ;
+		init(new Integer(argv[0]).intValue()) ;
 
-		port = Integer.parseInt(argv[2]) ;
-		shared_jvm = new Boolean(argv[3]).booleanValue() ;
+		port = Integer.parseInt(argv[1]) ;
+		shared_jvm = new Boolean(argv[2]).booleanValue() ;
 
 		ServerSocket ss = null ;
 		try {
 			ss = new ServerSocket(port) ;	
 		}
 		catch (IOException e){
-			System.err.println("Can't open server socket on port " + String.valueOf(port) +
+			InlineJavaUtils.Fatal("Can't open server socket on port " + String.valueOf(port) +
 				": " + e.getMessage()) ;
-			System.err.flush() ;
-			System.exit(1) ;
 		}
 
 		while (true){
 			try {
-				InlineJavaServerThread ijt = new InlineJavaServerThread(this, ss.accept()) ;
+				// For now we pass our own InlineJavaUserClassLoader, but later we can implement
+				// privacy by creating a new one.
+				InlineJavaServerThread ijt = new InlineJavaServerThread(this, ss.accept(), ijucl) ;
 				ijt.start() ;
 				if (! shared_jvm){
 					try {
@@ -75,6 +76,26 @@ public class InlineJavaServer {
 	}
 
 	
+	static InlineJavaServer GetInstance(){
+		if (instance == null){
+			InlineJavaUtils.Fatal("No instance of InlineJavaServer has been created!") ;
+		}
+
+		return instance ;
+	}
+
+
+	InlineJavaUserClassLoader GetUserClassLoader(){
+		Thread t = Thread.currentThread() ;
+		if (t instanceof InlineJavaServerThread){
+			return ((InlineJavaServerThread)t).GetUserClassLoader() ;
+		}
+		else{
+			return ijucl ;
+		}
+	}
+
+
 	String GetType(){
 		return (shared_jvm ? "shared" : "private") ;
 	}
@@ -220,10 +241,10 @@ public class InlineJavaServer {
 				if (t instanceof InlineJavaServerThread){
 					// Client-server mode
 					InlineJavaServerThread ijt = (InlineJavaServerThread)t ;
-					ijt.bw.write(cmd + "\n") ;
-					ijt.bw.flush() ;
+					ijt.GetWriter().write(cmd + "\n") ;
+					ijt.GetWriter().flush() ;
 
-					resp = ijt.br.readLine() ;
+					resp = ijt.GetReader().readLine() ;
 				}
 				else{
 					// JNI mode

@@ -1,23 +1,43 @@
+package org.perl.inline.java ;
+
 import java.io.* ;
 import java.net.* ;
 import java.util.* ;
 
 
 class InlineJavaServerThread extends Thread {
-	InlineJavaServer ijs ;
-	Socket client ;
-	BufferedReader br ;
-	BufferedWriter bw ;
+	private InlineJavaServer ijs ;
+	private Socket client ;
+	private BufferedReader br ;
+	private BufferedWriter bw ;
+	private InlineJavaUserClassLoader ijucl ;
 
-	InlineJavaServerThread(InlineJavaServer _ijs, Socket _client) throws IOException {
+
+	InlineJavaServerThread(InlineJavaServer _ijs, Socket _client, InlineJavaUserClassLoader _ijucl) throws IOException {
 		super() ;
 		client = _client ;
 		ijs = _ijs ;
+		ijucl = _ijucl ;
 
 		br = new BufferedReader(
 			new InputStreamReader(client.getInputStream())) ;
 		bw = new BufferedWriter(
 			new OutputStreamWriter(client.getOutputStream())) ;
+	}
+
+
+	BufferedReader GetReader(){
+		return br ;
+	}
+
+
+	BufferedWriter GetWriter(){
+		return bw ;
+	}
+
+
+	InlineJavaUserClassLoader GetUserClassLoader(){
+		return ijucl ;
 	}
 
 

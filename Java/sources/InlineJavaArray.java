@@ -1,3 +1,5 @@
+package org.perl.inline.java ;
+
 import java.util.* ;
 import java.lang.reflect.Array ;
 

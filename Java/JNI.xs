@@ -180,15 +180,17 @@ new(CLASS, classpath, embedded, debug)
 
 
 	/* Load the classes that we will use */
-	RETVAL->ijs_class = (*(env))->FindClass(env, "InlineJavaServer") ;
+	RETVAL->ijs_class = (*(env))->FindClass(env, "org/perl/inline/java/InlineJavaServer") ;
 	check_exception(env, "Can't find class InlineJavaServer") ;
 	RETVAL->string_class = (*(env))->FindClass(env, "java/lang/String") ;
 	check_exception(env, "Can't find class java.lang.String") ;
 	
 	/* Get the method ids that are needed later */
-	RETVAL->jni_main_mid = (*(env))->GetStaticMethodID(env, RETVAL->ijs_class, "jni_main", "(I)LInlineJavaServer;") ;
+	RETVAL->jni_main_mid = (*(env))->GetStaticMethodID(env, RETVAL->ijs_class, "jni_main", 
+		"(I)Lorg/perl/inline/java/InlineJavaServer;") ;
 	check_exception(env, "Can't find method jni_main in class InlineJavaServer") ;
-	RETVAL->process_command_mid = (*(env))->GetMethodID(env, RETVAL->ijs_class, "ProcessCommand", "(Ljava/lang/String;)Ljava/lang/String;") ;
+	RETVAL->process_command_mid = (*(env))->GetMethodID(env, RETVAL->ijs_class, "ProcessCommand", 
+		"(Ljava/lang/String;)Ljava/lang/String;") ;
 	check_exception(env, "Can't find method ProcessCommand in class InlineJavaServer") ;
 
 	/* Register the callback function */

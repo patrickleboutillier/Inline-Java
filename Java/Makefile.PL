@@ -127,7 +127,6 @@ sub search {
 	if ($File::Find::dir =~ /jre/){
 		if ($file =~ /\.$ext$/){
 			my $dir = File::Spec->canonpath($File::Find::dir) ;
-			print "---> $File::Find::dir\n" ;
 			$so_dirs{$dir} = 1 ;
 		}
 	}
@@ -208,7 +207,7 @@ sub Choose {
 		}
 		print "$cnt- $f\n" ;
 	}
-	my $idx = AskSub("Please select from the above list (using the corresponding number) which '$f' to use",
+	my $idx = AskSub("Please select from the above list (using the corresponding number) which '$f' to use:",
 		$def, sub {(($_[0] >= 1)&&($_[0] <= $cnt))}) ;
 
 	$o->{selected} = $o->{choices}->[int($idx) - 1] ;
