@@ -1,6 +1,15 @@
 use strict ;
 use Test ;
 
+
+BEGIN {
+	if ($ENV{PERL_INLINE_JAVA_JNI}){
+		plan(tests => 0) ;
+		exit ;
+	}
+}
+
+
 use Inline Config => 
            DIRECTORY => './_Inline_test' ;
 
@@ -10,24 +19,15 @@ use Inline (
 ) ;
 
 
+
+if (! Inline::Java::Portable::portable('GOT_FORK')){
+	plan(tests => 0) ;
+	exit ;
+}
+
+
 my $nb = 10 ;
-
-my $JNI = Inline::Java::__get_JVM()->{JNI} ;
-my $fork = Inline::Java::portable('GOT_FORK') ;
-plan(tests => ($JNI ? 1 : ($fork ? $nb + 1 : 1))) ;
-
-
-if ($JNI){
-	skip("JNI", 1) ;
-	Inline::Java::shutdown_JVM() ;
-	exit ;
-}
-
-if (! $fork){
-	skip("fork", 1) ;
-	Inline::Java::shutdown_JVM() ;
-	exit ;
-}
+plan(tests => $nb + 1) ;
 
 
 $t13::i = 0 ;

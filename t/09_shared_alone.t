@@ -1,6 +1,18 @@
 use strict ;
 use Test ;
 
+
+BEGIN {
+	if ($ENV{PERL_INLINE_JAVA_JNI}){
+		plan(tests => 0) ;
+		exit ;
+	}
+	else{
+		plan(tests => 3) ;
+	}
+}
+
+
 use Inline Config => 
            DIRECTORY => './_Inline_test' ;
 
@@ -8,17 +20,6 @@ use Inline (
 	Java => 'DATA',
 	SHARED_JVM => 1,
 ) ;
-
-
-my $JNI = Inline::Java::__get_JVM()->{JNI} ;
-plan(tests => ($JNI ? 1 : 3)) ;
-
-
-if ($JNI){
-	skip("JNI", 1) ;
-	Inline::Java::shutdown_JVM() ;
-	exit ;
-}
 
 
 my $t = new t9() ;

@@ -4,25 +4,25 @@ use strict ;
 use Test ;
 
 
+BEGIN {
+	if ($ENV{PERL_INLINE_JAVA_JNI}){
+		plan(tests => 0) ;
+		exit ;
+	}
+	else{
+		plan(tests => 8) ;
+	}
+}
+
+
 use Inline Config => 
            DIRECTORY => './_Inline_test' ;
-
 
 use Inline (
 	Java => 't/shared.java',
 	SHARED_JVM => 1,
 	NAME => 't10',
 ) ;
-
-my $JNI = Inline::Java::__get_JVM()->{JNI} ;
-plan(tests => ($JNI ? 1 : 8)) ;
-
-if ($JNI){
-	skip("JNI", 1) ;
-	Inline::Java::shutdown_JVM() ;
-	exit ;
-}
-
 
 
 eval <<CODE1;
