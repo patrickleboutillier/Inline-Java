@@ -44,7 +44,7 @@ if ($shared_jvm_test::t::i == $sum){
 	print STDERR "Test succeeded\n" ;
 }
 else{
-	print STDERR "Test failed\n" ;
+	print STDERR "Test failed ($shared_jvm_test::t::i != $sum)\n" ;
 }
 
 
@@ -69,7 +69,7 @@ __Java__
 
 import java.util.* ;
 
-class t extends InlineJavaPerlCaller {
+class t {
 	static public int i = 0 ;
 
 	public t(){
