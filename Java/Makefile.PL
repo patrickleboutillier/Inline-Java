@@ -97,7 +97,7 @@ if (($build_jni || AskYN("Do you wish to build the JNI extension?"))){
 				VERSION_FROM => 'JNI.pm',
 				INC => "-I" . $files->{'jni.h'}->{selected} . " -I" . $files->{'jni_md.h'}->{selected},
 				LIBS => ["-L" . $files->{$jvm_lib}->{selected} . " -ljvm"],
-				CCFLAGS => '-D_REENTRANT',
+				# CCFLAGS => '-D_REENTRANT',
 			) ;
 
 			print
