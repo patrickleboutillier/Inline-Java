@@ -109,31 +109,6 @@ jstring JNICALL jni_callback(JNIEnv *env, jobject obj, jstring cmd){
 }
 
 
-/* This function loads up a Perl Interpreter */
-static PerlInterpreter *my_perl ;
-JNIEXPORT void JNICALL Java_org_perl_inline_java_InlineJavaPerlInterpreter_jni_1load_1perl_1interpreter(JNIEnv *env, jobject obj){
-	JNINativeMethod nm ;
-	jclass ijs_class ;
-	char *embedding[] = { "", "-e", "0" } ;
-
-    /* Register the callback function */
-	ijs_class = (*(env))->FindClass(env, "org/perl/inline/java/InlineJavaServer") ;
-	check_exception(env, "Can't find class InlineJavaServer") ;
-
-    nm.name = "jni_callback" ;
-    nm.signature = "(Ljava/lang/String;)Ljava/lang/String;" ;
-    nm.fnPtr = jni_callback ;
-    (*(env))->RegisterNatives(env, ijs_class, &nm, 1) ;
-    check_exception(env, "Can't register method jni_callback in class InlineJavaServer") ;
-
-	my_perl = perl_alloc() ;
-	perl_construct(my_perl) ;
-                                                                                             
-	perl_parse(my_perl, NULL, 3, embedding, NULL) ;
-	perl_run(my_perl) ;
-}
-
-
 
 MODULE = Inline::Java::JNI   PACKAGE = Inline::Java::JNI
 

@@ -107,7 +107,8 @@ sub new {
 			"java" . Inline::Java::portable("EXE_EXTENSION")) ;
 
 		my $shared = ($this->{shared} ? "true" : "false") ;
-		my $cmd = Inline::Java::portable("SUB_FIX_CMD_QUOTES", "\"$java\" $args org.perl.inline.java.InlineJavaServer $debug $this->{port} $shared") ;
+		my $priv = ($this->{private} ? "true" : "false") ;
+		my $cmd = Inline::Java::portable("SUB_FIX_CMD_QUOTES", "\"$java\" $args org.perl.inline.java.InlineJavaServer $debug $this->{port} $shared $priv") ;
 		Inline::Java::debug(2, $cmd) ;
 		if ($o->get_config('UNTAINT')){
 			($cmd) = $cmd =~ /(.*)/ ;
@@ -289,8 +290,6 @@ sub setup_socket {
 	}
 
 	$socket->autoflush(1) ;
-
-	print $socket (($this->{private} ? "private" : "public") . "\n") ;
 	
 	return $socket ;
 }

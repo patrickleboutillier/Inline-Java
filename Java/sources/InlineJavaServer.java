@@ -13,6 +13,7 @@ public class InlineJavaServer {
 	private static InlineJavaServer instance = null ;
 	private int port = 0 ;
 	private boolean shared_jvm = false ;
+	private boolean priv = false ;
 
 	private InlineJavaUserClassLoader ijucl = null ;
 	private HashMap thread_objects = new HashMap() ;
@@ -38,6 +39,7 @@ public class InlineJavaServer {
 		jni = false ;
 		port = Integer.parseInt(argv[1]) ;
 		shared_jvm = new Boolean(argv[2]).booleanValue() ;
+		priv = new Boolean(argv[3]).booleanValue() ;
 
 		ServerSocket ss = null ;
 		try {
@@ -51,7 +53,8 @@ public class InlineJavaServer {
 		while (true){
 			try {
 				String name = "IJST-#" + thread_count++ ;
-				InlineJavaServerThread ijt = new InlineJavaServerThread(name, this, ss.accept(), ijucl) ;
+				InlineJavaServerThread ijt = new InlineJavaServerThread(name, this, ss.accept(),
+					(priv ? new InlineJavaUserClassLoader() : ijucl)) ;
 				ijt.start() ;
 				if (! shared_jvm){
 					try {

@@ -23,11 +23,6 @@ class InlineJavaServerThread extends Thread {
 			new InputStreamReader(client.getInputStream())) ;
 		bw = new BufferedWriter(
 			new OutputStreamWriter(client.getOutputStream())) ;
-
-		String security_type = br.readLine() ;
-		if (security_type.equals("private")){
-			ijucl = new InlineJavaUserClassLoader() ;
-		}
 	}
 
 
