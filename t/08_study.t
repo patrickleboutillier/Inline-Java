@@ -8,6 +8,7 @@ use Inline(
 	Java => 'STUDY',
 	AUTOSTUDY => 1,
 ) ;
+use Inline::Java qw(study_classes) ;
 
 
 
@@ -16,7 +17,7 @@ BEGIN {
 }
 
 
-Inline::Java::study_it(['t.types']) ;
+study_classes(['t.types']) ;
 
 my $t = new t::types() ;
 ok($t->func(), "study") ;

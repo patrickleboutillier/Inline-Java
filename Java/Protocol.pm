@@ -3,7 +3,7 @@ package Inline::Java::Protocol ;
 
 use strict ;
 
-$Inline::Java::Protocol::VERSION = '0.20' ;
+$Inline::Java::Protocol::VERSION = '0.21' ;
 
 use Inline::Java::Object ;
 use Inline::Java::Array ;
