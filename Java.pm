@@ -2,12 +2,12 @@ package Inline::Java ;
 @Inline::Java::ISA = qw(Inline Exporter) ;
 
 # Export the cast function if wanted
-@EXPORT_OK = qw(cast study_classes) ;
+@EXPORT_OK = qw(cast study_classes caught) ;
 
 
 use strict ;
 
-$Inline::Java::VERSION = '0.30' ;
+$Inline::Java::VERSION = '0.31' ;
 
 
 # DEBUG is set via the DEBUG config
@@ -49,6 +49,10 @@ my $JVM = undef ;
 
 # This hash will store the $o objects...
 my $INLINES = {} ;
+
+
+# Stores the last uncaught exception
+my $UNCAUGHT_EXCEPTION = undef ;
 
 
 # Here is some code to figure out if we are running on command.com
@@ -198,6 +202,9 @@ sub _validate {
 			}
 			$o->{ILSM}->{$key} = $value ;
 		}
+		elsif ($key eq 'REMOTE_HOST'){
+			$o->{ILSM}->{$key} = $value ;
+		}
 		elsif ($key eq 'SHARED_JVM'){
 			$o->{ILSM}->{$key} = $value ;
 		}
@@ -237,6 +244,12 @@ sub _validate {
 
 	if (($o->{ILSM}->{JNI})&&($o->{ILSM}->{SHARED_JVM})){
 		croak("You can't use the 'SHARED_JVM' option in 'JNI' mode") ;
+	}
+	if (($o->{ILSM}->{JNI})&&($o->{ILSM}->{REMOTE_HOST})){
+		croak("You can't use the 'REMOTE_HOST' option in 'JNI' mode") ;
+	}
+	if (($o->{ILSM}->{REMOTE_HOST})&&($o->{ILSM}->{SHARED_JVM})){
+		croak("You can't use the 'REMOTE_HOST' option in combination with the 'SHARED_JVM' option") ;
 	}
 
 	$o->set_java_bin() ;
@@ -1344,6 +1357,71 @@ sub study_classes {
 	return $o->_study($classes) ;
 }
 
+
+sub try (&){
+	my $coderef = shift ;
+	eval {
+		$coderef->() ;
+	} ;
+	my $e = $@ ;
+	if ($e){
+		if (! UNIVERSAL::isa($e, "Inline::Java::Object")){
+			die $e ;
+		}
+
+		$UNCAUGHT_EXCEPTION = $@ ;
+		$@ = undef ;
+	}
+}
+
+
+sub catch ($$){
+	my $class = shift ;
+	my $coderef = shift ;
+
+	$class = Inline::Java::Class::ValidateClass($class) ;
+
+	my $e = $UNCAUGHT_EXCEPTION ;
+	if ($e){
+		if (UNIVERSAL::isa($e, "Inline::Java::Object")){
+			my ($msg, $score) = $e->__isa($class) ;
+			if ($msg){
+				croak $msg ;
+			}
+			$coderef->($e) ;
+			# clear $@ for other blocks that follow
+			$UNCAUGHT_EXCEPTION = undef ;
+		}
+	}
+}
+
+
+sub caught {
+	my $class = shift ;
+
+	my $e = $@ ;
+
+	$class = Inline::Java::Class::ValidateClass($class) ;
+
+	my $ret = 0 ;
+	if (($e)&&(UNIVERSAL::isa($e, "Inline::Java::Object"))){
+		my ($msg, $score) = $e->__isa($class) ;
+		if ($msg){
+			croak $msg ;
+		}
+		$ret = 1 ;
+	}
+	$@ = $e ;
+
+	return $ret ;
+}
+
+
+sub with (&){
+	my $coderef = shift ;
+
+	return $coderef ;
+}
 
 
 1 ;
