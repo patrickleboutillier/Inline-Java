@@ -20,6 +20,53 @@ When run, this complete program prints:
 
     Just Another Inline Hacker
 
+-------------------------------------------------------------------------------
+JNI (JAVA NATIVE INTERFACE) EXTENSION:
+
+When you do 'perl Makefile.PL', Makefile.PL will ask you if you want to 
+build the JNI extension.
+
+The JNI extension that allows you to load the Java virtual machine as a 
+shared object instead of running it as a separate process. Building the JNI 
+extension does not force you to use it, it simply gives you that option. 
+
+To use it, you must use the USE_JNI config option or the 
+PERL_INLINE_JAVA_USE_JNI environment variable.
+
+The JNI extension has been built and tested on:
+- Solaris 2.5.1
+- Windows 2000
+- Windows 95
+
+Depending on your platform, the build is more or less complex:
+
+MSWin32:
+- Follow the instructions provided by Makefile.PL. Don't forget to add to
+  your PATH the directory where jvm.dll is located.
+
+Solaris:
+- In order to get the JNI extension running on Solaris, you will 
+  most probably need to recompile Perl. At the end of the Perl
+  configuration, you will be asked if you want to edit the config.sh 
+  file. Say 'yes' and look for the following lines:
+
+    libs='...'
+       Change this to:
+         libs='-lthread ...'
+
+    usemymalloc='...'
+       Change this to:
+         usemymalloc='n'
+
+- Then finish building Perl as usual.
+- Note: On my setup, 'make test' failed one test: pragma/warnings #179.
+  But when I followed the instructions:
+    ### Since most tests were successful, you have a good chance to
+    ### get information with better granularity by running
+    ###     ./perl harness 
+    ### in directory ./t.
+  all tests where successful.
+
 
 -------------------------------------------------------------------------------
 INSTALLATION:
@@ -34,7 +81,7 @@ To install Inline::Java do this:
 
 perl Makefile.PL
 make
-make test (see Note 2)
+make test (see Note 2, 3)
 make install
 
 You have to 'make install' before you can run it successfully. 
@@ -51,6 +98,10 @@ directory to your Java binaries in either your PATH environment variable
 or in the PERL_INLINE_JAVA_BIN environment variable. 'make test' will remind you 
 if you don't do this.
 
+Note 3: If you have built the JNI extension and want the test suite to use 
+it, set the PERL_INLINE_JAVA_USE_JNI environment variable to a true value
+before running 'make test'.
+
 
 -------------------------------------------------------------------------------
 FEATURES:
@@ -59,8 +110,16 @@ WARNING: THIS IS ALPHA SOFTWARE. It is incomplete and possibly unreliable.
          It is also possible that some elements of the interface (API) will 
          change in future releases.
 
-Inline::Java version 0.01 includes:
+Inline::Java version 0.20 includes:
++ All public member variables are now exported to Perl.
++ Arrays can now be passed as method parameters and assigned to 
+  member variables.
++ Type casting is now available to force the selection of specific
+  method signatures.
++ Optional JNI (Java Native Interface) extension improves performance
+  dramatically.
 
+Inline::Java version 0.01 includes:
 + All classes and their public methods are exported to Perl, relative
   to your current package.
 + All objects (except arrays) and primitive Java types are supported as
