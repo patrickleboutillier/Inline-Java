@@ -8,9 +8,13 @@ use strict ;
 if (! defined($main::JNI_BUILD)){
 	$main::JNI_BUILD = 0 ;
 }
+if (! defined($main::JNI_VM)){
+	$main::JNI_VM = "classic" ;
+}
 
 
 my $JNI_BUILD = $main::JNI_BUILD ;
+my $JNI_VM = $main::JNI_VM ;
 
 
 # Define these variables with the correct values to bypass the
@@ -32,7 +36,7 @@ if ($JNI_BUILD){
 		(! defined($java_include_os))&&
 		(! defined($java_lib))&&
 		(! defined($java_so))){
-		print "\nBuilding JNI extension.\n" ;
+		print "\nBuilding JNI extension, $JNI_VM VM.\n" ;
 
 		# We need to find the files in order to be able to build
 		my $q = "\nEnter the path to your Java 2 SDK installation" ;
@@ -71,8 +75,9 @@ if ($JNI_BUILD){
 	}
 
 	print "\nNote: In order for Inline::Java to use the JNI extension, you " .
-		"will need to set the PERL_INLINE_JAVA_JNI environment variable to " .
-		"a true value. See README.JNI for more information.\n" ;
+		"will need to use the JNI configuration option or set the " .
+		"PERL_INLINE_JAVA_JNI environment variable to a true value. " .
+		"See README.JNI for more information.\n" ;
 
 	print "\n" ;
 }
@@ -112,15 +117,19 @@ sub wanted {
 		$java_include_os = $File::Find::dir ;
 	}
 	if ($file eq $jvm_lib){
-		print "Found $jvm_lib in $File::Find::dir...\n" ;
-		$java_lib = $File::Find::dir ;
+		if ($File::Find::dir =~ /$JNI_VM/){
+			print "Found $jvm_lib in $File::Find::dir...\n" ;
+			$java_lib = $File::Find::dir ;
+		}
 	}
 	if ($file eq $jvm_so){
-		print "Found $jvm_so in $File::Find::dir...\n" ;
-		if (! defined($java_so)){
-			$java_so = [] ;
+		if ($File::Find::dir =~ /$JNI_VM/){
+			print "Found $jvm_so in $File::Find::dir...\n" ;
+			if (! defined($java_so)){
+				$java_so = [] ;
+			}
+			push @{$java_so}, $File::Find::dir ;
 		}
-		push @{$java_so}, $File::Find::dir ;
 	}
 }
 

@@ -213,6 +213,7 @@ sub ValidateMember {
 sub ValidateArgs {
 	my $this = shift ;
 	my $args = shift ;
+	my $callback = shift ;
 
 	my @ret = () ;
 	foreach my $arg (@{$args}){
@@ -221,7 +222,12 @@ sub ValidateArgs {
 		}
 		elsif (ref($arg)){
 			if ((! UNIVERSAL::isa($arg, "Inline::Java::Object"))&&(! UNIVERSAL::isa($arg, "Inline::Java::Array"))){
-				croak "A Java method or member can only have Java objects, Java arrays or scalars as arguments" ;
+				if (! $callback){
+					croak "A Java method or member can only have Java objects, Java arrays or scalars as arguments" ;
+				}
+				else{
+					croak "A Java callback function can only return Java objects, Java arrays or scalars" ;
+				}
 			}
 
 			my $obj = $arg ;
@@ -259,23 +265,44 @@ sub Send {
 	my $data = shift ;
 	my $const = shift ;
 
-	my $resp = Inline::Java::get_JVM()->process_command($data) ;
+	my $inline = Inline::Java::get_INLINE($this->{module}) ;
+	my $resp = Inline::Java::get_JVM()->process_command($inline, $data) ;
 
 	if ($resp =~ /^error scalar:([\d.]*)$/){
 		my $msg = pack("C*", split(/\./, $1)) ;
 		Inline::Java::debug("  packet recv error: $msg") ;
 		croak $msg ;
 	}
-	elsif ($resp =~ /^ok scalar:([\d.]*)$/){
+	elsif ($resp =~ s/^ok //){
+		return $this->DeserializeObject($const, $resp) ;
+	}
+
+	croak "Malformed response from server: $resp" ;
+}
+
+
+sub DeserializeObject {
+	my $this = shift ;
+	my $const = shift ;
+	my $resp = shift ;
+
+	if ($resp =~ /^scalar:([\d.]*)$/){
 		return pack("C*", split(/\./, $1)) ; 
 	}
-	elsif ($resp =~ /^ok undef:$/){
+	elsif ($resp =~ /^undef:$/){
 		return undef ;
 	}
-	elsif ($resp =~ /^ok object:(\d+):(.*)$/){
+	elsif ($resp =~ /^object:([01]):(\d+):(.*)$/){
 		# Create the Perl object wrapper and return it.
-		my $id = $1 ;
-		my $class = $2 ;
+		my $thrown = $1 ;
+		my $id = $2 ;
+		my $class = $3 ;
+
+		if ($thrown){
+			# If we receive a thrown object, we jump out of 'constructor
+			# mode' and process the returned object.
+			$const = 0 ;
+		}
 
 		if ($const){
 			$this->{obj_priv}->{java_class} = $class ;
@@ -299,7 +326,7 @@ sub Send {
 			my $perl_class = Inline::Java::java2perl($pkg, $elem_class) ;
 			if (Inline::Java::Class::ClassIsReference($elem_class)){
 				if (! Inline::Java::known_to_perl($pkg, $elem_class)){
-					if ($inline->get_java_config('AUTOSTUDY')){
+					if (($thrown)||($inline->get_java_config('AUTOSTUDY'))){
 						$inline->_study([$elem_class]) ;
 					}
 					else{
@@ -323,9 +350,18 @@ sub Send {
 				$obj = $perl_class->__new($class, $inline, $id) ;
 			}
 
-			Inline::Java::debug("returning stub...") ;
-			return $obj ;
+			if ($thrown){
+				Inline::Java::debug("throwing stub...") ;
+				die $obj ;
+			}
+			else{
+				Inline::Java::debug("returning stub...") ;
+				return $obj ;
+			}
 		}
+	}
+	else{
+		croak "Malformed response from server: $resp" ;
 	}
 }
 
@@ -350,11 +386,11 @@ __DATA__
 	the request type and then we proceed to serve it.
 */
 class InlineJavaProtocol {
-	InlineJavaServer ijs ;
-	InlineJavaClass ijc ;
-	InlineJavaArray ija ;
-	String cmd ;
-	String response ;
+	private InlineJavaServer ijs ;
+	private InlineJavaClass ijc ;
+	private InlineJavaArray ija ;
+	private String cmd ;
+	private String response ;
 
 	InlineJavaProtocol(InlineJavaServer _ijs, String _cmd) {
 		ijs = _ijs ;
@@ -500,8 +536,13 @@ class InlineJavaProtocol {
 			Object p[] = (Object [])f.get(1) ;
 			Class clist[] = (Class [])f.get(2) ;
 
-			Object o = CreateObject(c, p, clist) ;
-			SetResponse(o) ;
+			try {
+				Object o = CreateObject(c, p, clist) ;
+				SetResponse(o) ;
+			}
+			catch (InlineJavaInvocationTargetException ite){
+				SetResponse(new InlineJavaServerThrown(ite.getThrowable())) ;
+			}
 		}
 		else{
 			// Here we send the type of array we want, but CreateArray
@@ -568,8 +609,8 @@ class InlineJavaProtocol {
 				Throwable t = e.getTargetException() ;
 				String type = t.getClass().getName() ;
 				String msg = t.getMessage() ;
-				throw new InlineJavaException(
-					"Method " + name + " in class " + class_name + " threw exception " + type + ": " + msg) ;
+				ijs.debug("Method " + name + " in class " + class_name + " threw exception " + type + ": " + msg) ;
+				SetResponse(new InlineJavaServerThrown(t)) ;
 			}
 		}
 	}
@@ -718,8 +759,9 @@ class InlineJavaProtocol {
 			Throwable t = e.getTargetException() ;
 			String type = t.getClass().getName() ;
 			String msg = t.getMessage() ;
-			throw new InlineJavaException(
-				"Constructor for class " + name + " with signature " + ijs.CreateSignature(proto) + " threw exception " + type + ": " + msg) ;
+			throw new InlineJavaInvocationTargetException(
+				"Constructor for class " + name + " with signature " + ijs.CreateSignature(proto) + " threw exception " + type + ": " + msg,
+				t) ;
 		}
 
 		return ret ;
@@ -881,25 +923,36 @@ class InlineJavaProtocol {
 		script
 	*/
 	void SetResponse (Object o) throws InlineJavaException {
+		response = "ok " + SerializeObject(o) ;
+	}
+
+
+	String SerializeObject(Object o) throws InlineJavaException {
 		if (o == null){
-			response = "ok undef:" ;
+			return "undef:" ;
 		}
 		else if ((ijc.ClassIsNumeric(o.getClass()))||(ijc.ClassIsChar(o.getClass()))||(ijc.ClassIsString(o.getClass()))){
-			response = "ok scalar:" + unpack(o.toString()) ;
+			return "scalar:" + unpack(o.toString()) ;
 		}
 		else if (ijc.ClassIsBool(o.getClass())){
 			String b = o.toString() ;
-			response = "ok scalar:" + unpack((b.equals("true") ? "1" : "0")) ;
+			return "scalar:" + unpack((b.equals("true") ? "1" : "0")) ;
 		}
 		else {
 			// Here we need to register the object in order to send
 			// it back to the Perl script.
+			boolean thrown = false ;
+			if (o instanceof InlineJavaServerThrown){ 
+				thrown = true ;
+				o = ((InlineJavaServerThrown)o).getThrowable() ;
+			}			
 			int id = ijs.objid ;
 			ijs.PutObject(id, o) ;
-			response = "ok object:" + String.valueOf(id) +
+			return "object:" + (thrown ? "1" : "0") + ":" + String.valueOf(id) +
 				":" + o.getClass().getName() ;
 		}
 	}
+
 
 
 	/* Equivalent to Perl pack */
