@@ -25,8 +25,6 @@ sub new {
 	if ($o->get_java_config('JNI')){
 		Inline::Java::debug("  JNI mode") ;
 
-		require Inline::Java::JNI ;
-
 		my $jni = new Inline::Java::JNI(
 			$ENV{CLASSPATH} || "",
 			(Inline::Java::get_DEBUG() ? 1 : 0),
@@ -216,35 +214,39 @@ sub reconnect {
 
 sub process_command {
 	my $this = shift ;
+	my $inline = shift ;
 	my $data = shift ;
 
-	Inline::Java::debug("  packet sent is $data") ;
-
 	my $resp = undef ;
-	if ($this->{socket}){
-		my $sock = $this->{socket} ;
-		print $sock $data . "\n" or
-			croak "Can't send packet to JVM: $!" ;
+	while (1){
+		Inline::Java::debug("  packet sent is $data") ;
 
-		$resp = <$sock> ;
-		if (! $resp){
-			croak "Can't receive packet from JVM: $!" ;
+		if ($this->{socket}){
+			my $sock = $this->{socket} ;
+			print $sock $data . "\n" or
+				croak "Can't send packet to JVM: $!" ;
+
+			$resp = <$sock> ;
+			if (! $resp){
+				croak "Can't receive packet from JVM: $!" ;
+			}
+		}
+		if ($this->{JNI}){
+			$Inline::Java::JNI::INLINE_HOOK = $inline ;
+			$resp = $this->{JNI}->process_command($data) ;
+		}
+
+		Inline::Java::debug("  packet recv is $resp") ;
+
+		# We got an answer from the server. Is it a callback?
+		if ($resp =~ /^callback/){
+			$data = Inline::Java::Callback::InterceptCallback($inline, $resp) ;
+			next ;
+		}
+		else{
+			last ;
 		}
 	}
-	if ($this->{JNI}){
-		$resp = $this->{JNI}->process_command($data) ;
-	}
-
-	# We got an answer from the server. Is it a callback?
-	if ($resp =~ s/^callback //){
-		print "Callback!!! ($resp)\n" ;
-	}
-
-
-
-
-
-	Inline::Java::debug("  packet recv is $resp") ;
 
 	return $resp ;
 }

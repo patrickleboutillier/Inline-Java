@@ -636,8 +636,8 @@ __DATA__
 
 
 class InlineJavaArray {
-	InlineJavaServer ijs ;
-	InlineJavaClass ijc ;
+	private InlineJavaServer ijs ;
+	private InlineJavaClass ijc ;
 
 
 	InlineJavaArray(InlineJavaServer _ijs, InlineJavaClass _ijc){

@@ -10,7 +10,7 @@ use Inline(
 
 
 BEGIN {
-	plan(tests => 14) ;
+	plan(tests => 15) ;
 }
 
 
@@ -47,6 +47,10 @@ my $t = new types3() ;
 	
 	# Return a scalar hidden in an object.
 	ok($t->_olong(), 12345) ;
+
+	# Pass a non-Java object.
+	my $d = bless({}, "Inline::Java::dummy") ;
+	eval {$t->_Object($d)} ; ok($@, qr/Can't convert/) ;
 }
 
 ok($t->__get_private()->{proto}->ObjectCount(), 1) ;

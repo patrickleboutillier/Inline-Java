@@ -3,6 +3,7 @@ use ExtUtils::MakeMaker;
 
 # So that the the sub dir Makefile.PL will see it...
 $main::JNI_BUILD = 0 ;
+$main::JNI_VM = "classic" ;
 
 
 # In case we had built differently a previous time
@@ -15,8 +16,11 @@ foreach my $arg (@ARGV){
 	$a =~ s/^\s+// ;
 	$a =~ s/\s+$// ;
 
-	if ($a =~ /^JNI$/i){
+	if ($a =~ /^JNI(:(\w+))?$/i){
 		$JNI_BUILD = 1 ;
+		if ($2){
+			$main::JNI_VM = $2 ;			
+		}
 	}
 	elsif ($a =~ /^FIX$/i){
 		$fix_makefile = 1 ;

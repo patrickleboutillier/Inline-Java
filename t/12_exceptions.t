@@ -110,7 +110,10 @@ my $t = new t9(0) ;
 		$t2->len(undef) ;
 	} ;
 	if ($@){
-		if (caught("java.lang.Exception")){
+		if (caught("java.lang.IOException")){
+			$msg = "io" ;
+		}
+		elsif (caught("java.lang.Exception")){
 			$msg = "null" ;
 		}
 		else{

@@ -36,6 +36,9 @@ sub DumpServerJavaCode {
 	$java =~ s/<INLINE_JAVA_CLASS>/$java_class/g ;
 	$java =~ s/<INLINE_JAVA_PROTOCOL>/$java_proto/g ;
 
+	my $so = $Inline::Java::JNI::SO || '' ;
+	$java =~ s/<INLINE_JAVA_JNI_SO>/$so/g ;
+
 	print $fh $java ;
 }
 
@@ -96,6 +99,7 @@ public class InlineJavaServer {
 		}
 		catch (IOException e){
 			System.err.println("Can't open server socket on port " + String.valueOf(port)) ;
+			System.err.flush() ;
 			System.exit(1) ;
 		}
 
@@ -114,6 +118,7 @@ public class InlineJavaServer {
 			}
 			catch (IOException e){
 				System.err.println("IO error: " + e.getMessage()) ;
+				System.err.flush() ;
 			}
 		}
 
@@ -131,6 +136,10 @@ public class InlineJavaServer {
 		it's best if it doesn't throw any exceptions.
 	*/
 	private String ProcessCommand(String cmd) {
+		return ProcessCommand(cmd, true) ;
+	}
+
+	private String ProcessCommand(String cmd, boolean addlf) {
 		debug("  packet recv is " + cmd) ;
 
 		String resp = null ;
@@ -139,12 +148,12 @@ public class InlineJavaServer {
 			try {
 				ijp.Do() ;
 				debug("  packet sent is " + ijp.response) ;
-				resp = ijp.response + "\n" ;
+				resp = ijp.response ;
 			}
 			catch (InlineJavaException e){
 				String err = "error scalar:" + ijp.unpack(e.getMessage()) ;
 				debug("  packet sent is " + err) ;
-				resp = err + "\n" ;
+				resp = err ;
 			}
 		}
 		else{
@@ -157,6 +166,10 @@ public class InlineJavaServer {
 				debug("  Lost connection with client in shared JVM mode.") ;
 				return null ;
 			}
+		}
+
+		if (addlf){
+			resp = resp + "\n" ;
 		}
 
 		return resp ;
@@ -242,38 +255,63 @@ public class InlineJavaServer {
 
 
 	public Object Callback(String pkg, String method, Object args[]) throws InlineJavaException {
+		Object ret = null ;
+
 		try {
-			Thread t = Thread.currentThread() ;
-			if (t instanceof InlineJavaThread){
-				// Client-server mode
-				InlineJavaProtocol ijp = new InlineJavaProtocol(this, null) ;
-				StringBuffer cmd = new StringBuffer("callback " + pkg + " " + method) ;
-				if (args != null){
-					for (int i = 0 ; i < args.length ; i++){
-						 cmd.append(" " + ijp.SerializeObject(args[i])) ;
-					}
+			InlineJavaProtocol ijp = new InlineJavaProtocol(this, null) ;
+			InlineJavaClass ijc = new InlineJavaClass(this, ijp) ;
+			StringBuffer cmdb = new StringBuffer("callback " + pkg + " " + method) ;
+			if (args != null){
+				for (int i = 0 ; i < args.length ; i++){
+					 cmdb.append(" " + ijp.SerializeObject(args[i])) ;
 				}
-				System.out.println("Callback command: " + cmd.toString()) ;
-				debug("Callback command: " + cmd.toString()) ;
-
-				InlineJavaThread ijt = (InlineJavaThread)t ;
-				ijt.bw.write(cmd.toString() + "\n") ;
-				ijt.bw.flush() ;			
-
-				String resp = ijt.br.readLine() ;
-
-				System.out.println("Callback response: " + resp) ;
 			}
-			else{
-				// JNI mode
+			String cmd = cmdb.toString() ;
+			debug(" callback command: " + cmd) ;
+
+			Thread t = Thread.currentThread() ;
+			String resp = null ;
+			while (true) {			
+				debug("  packet sent (callback) is " + cmd) ;
+				if (t instanceof InlineJavaThread){
+					// Client-server mode
+					InlineJavaThread ijt = (InlineJavaThread)t ;
+					ijt.bw.write(cmd + "\n") ;
+					ijt.bw.flush() ;
+
+					resp = ijt.br.readLine() ;
+				}
+				else{
+					// JNI mode
+					resp = jni_callback(cmd) ;
+				}
+				debug(" packet recv (callback) is " + resp) ;
+
+				StringTokenizer st = new StringTokenizer(resp, " ") ;
+				String c = st.nextToken() ;
+				if (c.equals("callback")){
+					String arg = st.nextToken() ;
+					ret = ijc.CastArgument(java.lang.Object.class, arg) ;
+					break ;
+				}	
+				else{
+					// Pass it on through the regular channel...
+					debug(" packet is not callback response: " + resp) ;
+					cmd = ProcessCommand(resp, false) ;
+
+					continue ;
+				}
 			}
 		}
 		catch (IOException e){
 			throw new InlineJavaException("IO error: " + e.getMessage()) ;
 		}
 
-		return null ;
+		return ret ;
 	}
+
+
+	native private String jni_callback(String cmd) ;
 
 
 	/*
@@ -314,6 +352,24 @@ public class InlineJavaServer {
 
 
 	public static InlineJavaServer jni_main(boolean debug) {
+		String so = "<INLINE_JAVA_JNI_SO>" ;
+		if (! so.equals("")){
+			try {
+				System.load(so) ;
+			}
+			catch (UnsatisfiedLinkError e){
+				System.err.println("Can't load shared object '" + so + "' required for callbacks") ;
+				System.err.flush() ;
+				System.exit(1) ;
+			}
+		}
+		else{
+			System.err.println("JNI shared object not specified (required for callbacks)") ;
+			System.err.println("Perhaps your Java code was not initially built in JNI mode") ;
+			System.err.flush() ;
+			System.exit(1) ;
+		}
+
 		return new InlineJavaServer(debug) ;
 	}
 	

@@ -6,6 +6,7 @@ TODO
 Makefile.PL
 shared_jvm_server.pl
 shared_jvm_test.pl
+swing_gui_test.pl
 Java.pm
 Java.pod
 Java/Init.pm
@@ -28,10 +29,8 @@ t/06_static.t
 t/07_polymorph.t
 t/08_study.t
 t/09_exceptions.t
-t/___pod.t
+t/10_callbacks.t
 t/types.java
 t/types.class
 t/no_const.java
 t/no_const.class
-
-

@@ -242,6 +242,12 @@ sub _validate {
 
 	$o->set_java_bin() ;
 
+	# Moved the require here so that $Inline::Java::JNI::SO will
+	# be set in time for the generation of the Init.pm Java code.
+	if ($o->{ILSM}->{JNI}){
+		require Inline::Java::JNI ;
+	}
+
 	Inline::Java::debug("validate done.") ;
 }
 
@@ -1364,9 +1370,11 @@ sub caught {
 	if (($e)&&(UNIVERSAL::isa($e, "Inline::Java::Object"))){
 		my ($msg, $score) = $e->__isa($class) ;
 		if ($msg){
-			croak $msg ;
+			$ret = 0 ;
 		}
-		$ret = 1 ;
+		else{
+			$ret = 1 ;
+		}
 	}
 	$@ = $e ;
 

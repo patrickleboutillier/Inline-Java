@@ -22,6 +22,45 @@ void debug_ex(InlineJavaJNIVM *this){
 }
 
 
+JNIEXPORT jstring JNICALL Java_InlineJavaServer_jni_1callback(
+	JNIEnv *env, jobject obj, jstring cmd){
+
+	dSP ;
+	jstring resp = NULL ;
+	char *c = (char *)((*(env))->GetStringUTFChars(env, cmd, NULL)) ;
+	char *r = NULL ;
+	int count = 0 ;
+
+	ENTER ;
+	SAVETMPS ;
+
+	PUSHMARK(SP) ;
+	XPUSHs(&PL_sv_undef) ;
+	XPUSHs(sv_2mortal(newSVpv(c, 0))) ;
+	PUTBACK ;
+
+	count = perl_call_pv("Inline::Java::Callback::InterceptCallback", 
+		G_SCALAR) ;
+
+	SPAGAIN ;
+
+	if (count != 1){
+		croak("Invalid return value from Inline::Java::Callback::InterceptCallback: %d",
+			count) ;
+	}
+
+	r = (char *)POPp ;
+	resp = (*(env))->NewStringUTF(env, r) ;
+
+	PUTBACK ;
+	FREETMPS ;
+	LEAVE ;
+
+	return resp ;
+}
+
+
+
 MODULE = Inline::Java::JNI   PACKAGE = Inline::Java::JNI
 
 
@@ -87,11 +126,19 @@ create_ijs(this)
 
 	CODE:
 	this->ijs_class = (*(this->env))->FindClass(this->env, "InlineJavaServer") ;
+	if ((*(this->env))->ExceptionOccurred(this->env)){
+		(*(this->env))->ExceptionDescribe(this->env) ;
+		croak("Exception occured") ;
+	}
 	if (this->ijs_class == NULL){
 		croak("Can't find class InlineJavaServer") ;
 	}
 
 	mid = (*(this->env))->GetStaticMethodID(this->env, this->ijs_class, "jni_main", "(Z)LInlineJavaServer;") ;
+	if ((*(this->env))->ExceptionOccurred(this->env)){
+		(*(this->env))->ExceptionDescribe(this->env) ;
+		croak("Exception occured") ;
+	}
 	if (mid == NULL) {
 		croak("Can't find method jni_main in class InlineJavaServer") ;
 	}
@@ -115,6 +162,10 @@ process_command(this, data)
 
 	CODE:
 	mid = (*(this->env))->GetMethodID(this->env, this->ijs_class, "ProcessCommand", "(Ljava/lang/String;)Ljava/lang/String;") ;
+	if ((*(this->env))->ExceptionOccurred(this->env)){
+		(*(this->env))->ExceptionDescribe(this->env) ;
+		croak("Exception occured") ;
+	}
 	if (mid == NULL) {
 		croak("Can't find method ProcessCommand in class InlineJavaServer") ;
 	}
@@ -157,11 +208,19 @@ report(this, module, classes, nb_classes)
 
 	CODE:
 	mid = (*(this->env))->GetMethodID(this->env, this->ijs_class, "Report", "([Ljava/lang/String;I)V") ;
+	if ((*(this->env))->ExceptionOccurred(this->env)){
+		(*(this->env))->ExceptionDescribe(this->env) ;
+		croak("Exception occured") ;
+	}
 	if (mid == NULL) {
 		croak("Can't find method Report in class InlineJavaServer") ;
 	}
 
 	class = (*(this->env))->FindClass(this->env, "java/lang/String") ;
+	if ((*(this->env))->ExceptionOccurred(this->env)){
+		(*(this->env))->ExceptionDescribe(this->env) ;
+		croak("Exception occured") ;
+	}
 	if (class == NULL){
 		croak("Can't find class java.lang.String") ;
 	}

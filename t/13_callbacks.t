@@ -14,10 +14,7 @@ use Inline::Java qw(caught) ;
 
 
 BEGIN {
-	print STDERR "\nWARNING: Callbacks are still experimental and are possibly unstable!\n" ;
-	print STDERR "WARNING: Callback API can still change and might not be backwards compatible!\n" ;
-
-	plan(tests => 9) ;
+	plan(tests => 12) ;
 }
 
 my $t = new t10() ;
@@ -32,7 +29,24 @@ my $t = new t10() ;
 		ok($t->silly_mul_via_perl(3, 2), 6) ;
 
 		ok(add_via_java(3, 4), 7) ;
+
 		ok($t->add_via_perl_via_java(3, 4), 7) ;
+		ok($t->silly_mul_via_perl_via_java(10, 9), 90) ;
+
+		eval {$t->death_via_perl()} ; ok($@, qr/death/) ;
+
+		my $msg = '' ;
+		eval {$t->except()} ; 
+		if ($@) {
+			if (caught('InlineJavaPerlCaller$InlineJavaPerlCallerException')){
+				$msg = $@->getMessage() ;
+			}
+			else{
+				die $@ ;
+			}
+		}
+		ok($msg, "test") ;
+	
 	} ;
 	if ($@){
 		if (caught("java.lang.Throwable")){
@@ -71,6 +85,12 @@ sub add_via_java {
 	return $t->add($i, $j) ;
 }
 
+
+sub death {
+	die("death") ;
+}
+
+
 __END__
 
 __Java__
@@ -103,7 +123,7 @@ class t10 extends InlineJavaPerlCaller {
 		for (int i = 0 ; i < b ; i++){
 			ret = add_via_perl(ret, a) ;
 		}
-		return a * b ;
+		return ret ;
 	}
 
 
@@ -112,6 +132,15 @@ class t10 extends InlineJavaPerlCaller {
 			new Object [] {new Integer(a), new Integer(b)}) ;
 
 		return new Integer(val).intValue() ;
+	}
+
+	public void death_via_perl() throws InlineJavaPerlCallerException {		
+		InlineJavaPerlCaller c = new InlineJavaPerlCaller() ;
+		c.CallPerl("main", "death", null) ;
+	}
+
+	public void except() throws InlineJavaPerlCallerException {		
+		throw new InlineJavaPerlCaller.InlineJavaPerlCallerException("test") ;
 	}
 
 	public int mul_via_perl(int a, int b) throws InlineJavaPerlCallerException {
@@ -126,6 +155,16 @@ class t10 extends InlineJavaPerlCaller {
 			new Object [] {new Integer(a), new Integer(b)}) ;
 
 		return new Integer(val).intValue() ;
+	}
+
+	public int silly_mul_via_perl_via_java(int a, int b) throws InlineJavaPerlCallerException {
+		int ret = 0 ;
+		for (int i = 0 ; i < b ; i++){
+			String val = (String)CallPerl("main", "add_via_java", 
+				new Object [] {new Integer(ret), new Integer(a)}) ;
+			ret = new Integer(val).intValue() ;
+		}
+		return ret ;
 	}
 }
 
