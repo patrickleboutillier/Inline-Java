@@ -29,7 +29,6 @@ my $ARRAYS = {} ;
 sub new {
 	my $class = shift ;
 	my $java_class = shift ;
-	my $inline = shift ;
 
 	if (! Inline::Java::Class::ClassIsArray($java_class)){
 		croak "Can't create Inline::Java::Array object for non-array class $java_class" ;
@@ -44,7 +43,6 @@ sub new {
 		array => $this,
 		class => $class,
 		java_class => $java_class,
-		module => $inline->{modfname},
 		map => {},
 	} ;
 
@@ -61,7 +59,6 @@ sub new {
 sub __init_from_array {
 	my $this = shift ;
 	my $ref = shift ;
-	my $inline = shift ;
 	my $level = shift ;
 
 	$this->__validate_array($ref, 1) ;
@@ -69,7 +66,7 @@ sub __init_from_array {
 	# Now that we now that this array is valid, we need to carry
 	# over the stuff in $ref into ourselves.
 	# sub arrays into array_objects
-	$this->__import_from_array($ref, $inline, $level) ;
+	$this->__import_from_array($ref, $level) ;
 
 	if (! $level){
 		Inline::Java::debug_obj($ARRAYS->{$this}) ;
@@ -80,7 +77,6 @@ sub __init_from_array {
 sub __import_from_array {
 	my $this = shift ;
 	my $ref = shift ;
-	my $inline = shift ;
 	my $level = shift ;
 
 	my $extra = $ARRAYS->{$this} ;
@@ -93,8 +89,8 @@ sub __import_from_array {
 
 			# We need top drop the array by 1 dimension
 			$java_class =~ s/^\[// ;
-			my $obj = new Inline::Java::Array($java_class, $inline) ;
-			$obj->__init_from_array($elem, $inline, $level + 1) ;
+			my $obj = new Inline::Java::Array($java_class) ;
+			$obj->__init_from_array($elem, $level + 1) ;
 			$elem = $obj ;
 		}
 		my $nb = scalar(@{$this}) ;
@@ -107,7 +103,6 @@ sub __init_from_flat {
 	my $this = shift ;
 	my $dims = shift ;
 	my $list = shift ;
-	my $inline = shift ;
 	my $level = shift ;
 
 	my $extra = $ARRAYS->{$this} ;
@@ -138,8 +133,8 @@ sub __init_from_flat {
 
 			my @dims = @{$dims} ;
 			shift @dims ;
-			my $obj = new Inline::Java::Array($java_class, $inline) ;
-			$obj->__init_from_flat(\@dims, \@sub, $inline, $level + 1) ;
+			my $obj = new Inline::Java::Array($java_class) ;
+			$obj->__init_from_flat(\@dims, \@sub, $level + 1) ;
 			$elem = $obj ;
 		}
 		my $nb = scalar(@{$this}) ;
