@@ -400,7 +400,7 @@ sub compile {
 
 	my $cwd = Cwd::getcwd() ;
 	if ($o->{config}->{UNTAINT}){
-	    ($cwd) = $cwd =~ /(.*)/ ;
+		($cwd) = $cwd =~ /(.*)/ ;
 	}
 
 	my $debug = ($Inline::Java::DEBUG ? "true" : "false") ;
@@ -438,7 +438,7 @@ sub compile {
 			}
 			else{
 				if ($o->{config}->{UNTAINT}){
-				    ($cmd) = $cmd =~ /(.*)/ ;
+					($cmd) = $cmd =~ /(.*)/ ;
 				}
 
 				debug("$cmd") ;
@@ -566,7 +566,7 @@ sub load {
 
 		if ($o->{config}->{UNTAINT}){
 			foreach my $cmd (@cmd){
-			    ($cmd) = $cmd =~ /(.*)/ ;
+				($cmd) = $cmd =~ /(.*)/ ;
 			}
 		}
 
