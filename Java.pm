@@ -592,8 +592,8 @@ sub load {
 		my $st = $pc->ServerType() ;
 		if ((($st eq "shared")&&(! $o->get_java_config('SHARED_JVM')))||
 			(($st eq "private")&&($o->get_java_config('SHARED_JVM')))){
-				croak "JVM type mismatch on port " . $o->get_java_config('PORT') ;
-			}
+			croak "JVM type mismatch on port " . $o->get_java_config('PORT') ;
+		}
 	}
 
 	# Add our Inline object to the list.

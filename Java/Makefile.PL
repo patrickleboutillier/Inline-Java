@@ -5,7 +5,6 @@ use strict ;
 use File::Spec ;
 
 require "Portable.pm" ;
-Inline::Java::Portable::use_alone() ;
 
 # Some shortcuts while developing
 my $jdk_dir = undef ;

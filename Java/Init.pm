@@ -96,7 +96,8 @@ public class InlineJavaServer {
 			ss = new ServerSocket(port) ;	
 		}
 		catch (IOException e){
-			System.err.println("Can't open server socket on port " + String.valueOf(port)) ;
+			System.err.println("Can't open server socket on port " + String.valueOf(port) +
+				": " + e.getMessage()) ;
 			System.err.flush() ;
 			System.exit(1) ;
 		}
@@ -126,15 +127,6 @@ public class InlineJavaServer {
 
 	private void init(){
 		instance = this ;
-
-		try {
-			System.out.close() ;
-			System.in.close() ;
-		}
-		catch (IOException e){
-			System.err.println("IO error: " + e.getMessage()) ;
-			System.err.flush() ;
-		}
 	}
 
 	

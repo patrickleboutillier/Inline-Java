@@ -102,7 +102,6 @@ sub launch {
 	my $this = shift ;
 	my $cmd = shift ;
 
-
 	local $SIG{__WARN__} = sub {} ;
 
 	my $dn = File::Spec->devnull() ;
@@ -152,7 +151,7 @@ sub fork_launch {
 		}
 		close($c2p) ;
 		Inline::Java::set_DONE() ;
-		exit() ;
+		CORE::exit() ;
 	}
 	else{
 		# Parent

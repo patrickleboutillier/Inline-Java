@@ -29,9 +29,11 @@ my $COMMAND_COM =
 	) || 0 ;
 
 
-# Used when this module is used by itself, this stubs the requirements
-sub use_alone {
-	*Inline::Java::debug = sub {} ;
+
+sub debug {
+	if (Inline::Java->can("debug")){
+		return Inline::Java::debug(@_) ;
+	}
 }
 
 
@@ -126,11 +128,11 @@ sub portable {
 				my $f = $map->{$^O}->{$key}->[0] ;
 				my $t = $map->{$^O}->{$key}->[1] ;
 				$val =~ s/$f/$t/g ;
-				Inline::Java::debug("portable: $key => $val for $^O is '$val'") ;
+				Inline::Java::Portable::debug("portable: $key => $val for $^O is '$val'") ;
 				return $val ;
 			}
 			else{
-				Inline::Java::debug("portable: $key for $^O is 'undef'") ;
+				Inline::Java::Portable::debug("portable: $key for $^O is 'undef'") ;
 				return undef ;
 			}
 		}
@@ -138,7 +140,7 @@ sub portable {
 			my $sub = $map->{$^O}->{$key} ;
 			if (defined($sub)){
 				$val = $sub->($val) ;
-				Inline::Java::debug("portable: $key => $val for $^O is '$val'") ;
+				Inline::Java::Portable::debug("portable: $key => $val for $^O is '$val'") ;
 				return $val ;
 			}
 			else{
@@ -146,21 +148,21 @@ sub portable {
 			}
 		}
 		else{
-			Inline::Java::debug("portable: $key for $^O is '$map->{$^O}->{$key}'") ;
+			Inline::Java::Portable::debug("portable: $key for $^O is '$map->{$^O}->{$key}'") ;
 			return $map->{$^O}->{$key} ;
 		}
 	}
 	else{
 		if ($key =~ /^RE_/){
-			Inline::Java::debug("portable: $key => $val for $^O is default '$val'") ;
+			Inline::Java::Portable::debug("portable: $key => $val for $^O is default '$val'") ;
 			return $val ;
 		}
 		if ($key =~ /^SUB_/){
-			Inline::Java::debug("portable: $key => $val for $^O is default '$val'") ;
+			Inline::Java::Portable::debug("portable: $key => $val for $^O is default '$val'") ;
 			return $val ;
 		}
 		else{
-			Inline::Java::debug("portable: $key for $^O is default '$defmap->{$key}'") ;
+			Inline::Java::Portable::debug("portable: $key for $^O is default '$defmap->{$key}'") ;
 			return $defmap->{$key} ;
 		}
 	}
