@@ -71,6 +71,27 @@ WARNING: THIS IS ALPHA SOFTWARE. It is incomplete and possibly unreliable.
          change in future releases.
 
 Inline::Java version 0.40 is a major upgrade that includes:
++ Patch by Doug MacEachern to allow running under servlet engines.
++ Patch by John Kinsley for handling empty arrays.
++ Custom ClassLoader allows for better isolation of user code and
+  dynamic 'CLASSPATH' (multiple sections/clients are now totally
+  independant).
++ Core Java code is now compiled separately (at install time) instead
+  of with the user code (for each script). This dramatically improves
+  build time.
++ Default port number changed to 0 (next available port number). 
+  This allows many multiple users to run concurrently without 
+  clashes.
+  Note: The default port on systems where this feature is not 
+        available has remained 7890.
+  Note: The default port for SHARED_JVM mode it has remained 7890.
++ User code can now be a public class and (optionally) inside a package.
++ Callback classes have changed.
+  Note: These classes are now in the org.perl.inline.java package.
+  Note: PerlException has been renamed InlineJavaPerlException.
+  Note: If you presently use callbacks, your code may now no longer compile.
+        You will need to apply the changes listed above to fix it.
++ Many bug fixes and documentation corrections.
 
 Inline::Java version 0.33 is a minor upgrade that includes:
 + Improved and more flexible debug output

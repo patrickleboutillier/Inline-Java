@@ -452,6 +452,9 @@ sub _study {
 		if ($o->get_config('UNTAINT')){
 			($cwd) = $cwd =~ /(.*)/ ;
 		}
+
+		# We chdir to the install dir, that makes it easier to figure out
+		# the packages for the classes.
 		chdir($install_dir) ;
 		my @fl = Inline::Java::Portable::find_classes_in_dir('.') ;
 		chdir $cwd ;

@@ -107,7 +107,8 @@ sub find_classes_in_dir {
 			my $fdir = $File::Find::dir ;
 			my @dirs = File::Spec->splitdir($fdir) ;
 			# Remove '.'
-			shift @dirs ; 
+			shift @dirs ;
+			# Add an empty dir to get the last '.' (for '.class')
 			if ((! scalar(@dirs))||($dirs[-1] ne '')){
 				push @dirs, '' ;
 			}
