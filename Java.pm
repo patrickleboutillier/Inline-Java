@@ -1071,10 +1071,12 @@ sub info {
 
 			$info .= "    public member variables:\n" ;
 			while (my ($k, $v) = each %{$d->{classes}->{$class}->{fields}}){
-				my $static = ($v->{STATIC} ? "static " : "") ;
-				my $type = $v->{TYPE} ;
+				while (my ($k2, $v2) = each %{$d->{classes}->{$class}->{fields}->{$k}}){
+					my $static = ($v2->{STATIC} ? "static " : "") ;
+					my $type = $v2->{TYPE} ;
 
-				$info .= "      $static$type $k\n" ;
+					$info .= "      $static$type $k\n" ;
+				}
 			}
 		}
 	}
