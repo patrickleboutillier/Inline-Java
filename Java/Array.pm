@@ -1,4 +1,5 @@
 package Inline::Java::Array ;
+@Inline::Java::Array::ISA = qw(Inline::Java::Array::Tie) ;
 
 
 use strict ;
@@ -20,7 +21,7 @@ sub new {
 	my $knot = tie @this, 'Inline::Java::Array::Tie' ;
 	my $this = bless (\@this, $class) ;
 
-	$OBJECTS->{$knot} = [$this, $object] ;
+	$OBJECTS->{$knot} = $object ;
 
 	Inline::Java::debug("this = $this") ; 
 	Inline::Java::debug("knot = $knot") ; 
@@ -32,14 +33,14 @@ sub new {
 sub __get_object {
 	my $this = shift ;
 
-	my $knot = tied @{$this} ;
+	my $knot = tied @{$this} || $this ;
 
 	my $ref = $OBJECTS->{$knot} ;
-	if ((! defined($ref))||(! defined($ref->[1]))){
+	if (! defined($ref)){
 		croak "Unknown Java array reference" ;
 	}
 	
-	return $ref->[1] ;
+	return $ref ;
 }
 
 
@@ -50,7 +51,7 @@ sub length {
 
 	my $ret = undef ;
 	eval {
-		$ret = $obj->{private}->{proto}->CallJavaMethod('getLength', [], []) ;
+		$ret = $obj->__get_private()->{proto}->CallJavaMethod('getLength', [], []) ;
 	} ;
 	croak $@ if $@ ;
 
@@ -71,7 +72,7 @@ sub __get_element {
 
 	my $ret = undef ;
 	eval {
-		$ret = $obj->{private}->{proto}->GetJavaMember($idx, ['java.lang.Object'], [undef]) ;
+		$ret = $obj->__get_private()->{proto}->GetJavaMember($idx, ['java.lang.Object'], [undef]) ;
 	} ;
 	croak $@ if $@ ;
 
@@ -93,7 +94,7 @@ sub __set_element {
 
 	# Now we need to find out if what we are trying to set matches
 	# the array.
-	my $java_class = $obj->{private}->{java_class} ;
+	my $java_class = $obj->__get_private()->{java_class} ;
 	my $elem_class = $java_class ;
 	my $an = new Inline::Java::ArrayNorm($java_class) ;
 	if ($an->{req_nb_dim} > 1){
@@ -105,8 +106,8 @@ sub __set_element {
 
 	my $ret = undef ;
 	eval {
-		my ($new_args, $score) = Inline::Java::Class::CastArguments([$s], [$elem_class], $obj->{private}->{module}) ;
-		$ret = $obj->{private}->{proto}->SetJavaMember($idx, [$elem_class], $new_args) ;
+		my ($new_args, $score) = Inline::Java::Class::CastArguments([$s], [$elem_class], $obj->__get_private()->{module}) ;
+		$ret = $obj->__get_private()->{proto}->SetJavaMember($idx, [$elem_class], $new_args) ;
 	} ;
 	croak $@ if $@ ;
 
@@ -132,7 +133,10 @@ sub AUTOLOAD {
 
 sub DESTROY {
 	my $this = shift ;
+
+	untie @{$this} ;
 }
+
 
 
 
@@ -152,24 +156,10 @@ sub TIEARRAY {
 }
 
 
-sub __get_array {
-	my $this = shift ;
-
-	my $ref = $OBJECTS->{$this} ;
-	if ((! defined($ref))||(! defined($ref->[0]))){
-		croak "Unknown Java array reference" ;
-	}
-	
-	return $ref->[0] ;
-}
-
-
 sub FETCHSIZE { 
  	my $this = shift ;
 
-	my $array = $this->__get_array() ;
-
-	return $array->length() ;  
+	my $array = $this->length() ;
 }
 
 
@@ -178,9 +168,7 @@ sub STORE {
  	my $idx = shift ;
  	my $s = shift ;
 
-	my $array = $this->__get_array() ;
-
-	return $array->__set_element($idx, $s) ;
+	return $this->__set_element($idx, $s) ;
 } 
 
 
@@ -188,9 +176,7 @@ sub FETCH {
  	my $this = shift ;
  	my $idx = shift ;
 
-	my $array = $this->__get_array() ;
-
-	return $array->__get_element($idx) ;
+	return $this->__get_element($idx) ;
 }
 
 

@@ -215,8 +215,8 @@ sub ValidateArgs {
 			if (UNIVERSAL::isa($arg, "Inline::Java::Array")){
 				$arg = $arg->__get_object() ; 
 			}
-			my $class = $arg->{private}->{java_class} ;
-			my $id = $arg->{private}->{id} ;
+			my $class = $arg->__get_private()->{java_class} ;
+			my $id = $arg->__get_private()->{id} ;
 			push @ret, "object:$class:$id" ;
 		}
 		else{
@@ -278,32 +278,31 @@ sub Send {
 		my $id = $1 ;
 		my $class = $2 ;
 
-		my $perl_class = $class ;
-		$perl_class =~ s/[.\$]/::/g ;
-		my $pkg = $inline->{pkg} ;
-		$perl_class = $pkg . "::" . $perl_class ;
-		Inline::Java::debug($perl_class) ;
-
-		my $known = 0 ;
-		{
-			no strict 'refs' ;
-			if (defined(${$perl_class . "::" . "EXISTS"})){
-				Inline::Java::debug("  returned class exists!") ;
-				$known = 1 ;
-			}
-			else{
-				Inline::Java::debug("  returned class doesn't exist!") ;
-			}
-		}
-
 		if ($const){
 			$this->{obj_priv}->{java_class} = $class ;
 			$this->{obj_priv}->{id} = $id ;
-			$this->{obj_priv}->{known_to_perl} = $known ;
 			
 			return undef ;
 		}
 		else{
+			my $perl_class = $class ;
+			$perl_class =~ s/[.\$]/::/g ;
+			my $pkg = $inline->{pkg} ;
+			$perl_class = $pkg . "::" . $perl_class ;
+			Inline::Java::debug($perl_class) ;
+
+			my $known = 0 ;
+			{
+				no strict 'refs' ;
+				if (defined(${$perl_class . "::" . "EXISTS"})){
+					Inline::Java::debug("  returned class exists!") ;
+					$known = 1 ;
+				}
+				else{
+					Inline::Java::debug("  returned class doesn't exist!") ;
+				}
+			}
+
 			my $obj = undef ;
 			if ($known){
 				Inline::Java::debug("creating stub for known object...") ;
@@ -314,8 +313,8 @@ sub Send {
 				Inline::Java::debug("creating stub for unknown object...") ;
 				$obj = Inline::Java::Object->__new($class, $inline, $id) ;
 				Inline::Java::debug("stub created ($obj)...") ;
+				$obj->__get_private()->{known_to_perl} = 0 ;
 			}
-			$obj->{private}->{known_to_perl} = $known ;
 
 			Inline::Java::debug("checking if stub is array...") ;
 			if (Inline::Java::Class::ClassIsArray($class)){
