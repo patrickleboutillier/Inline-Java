@@ -7,29 +7,38 @@ use strict ;
 use CGI ;
 
 use Inline (
-	Java => '/home/patrickl/perl/dev/Inline-Java/t/counter.java',
-	DIRECTORY => '/home/patrickl/perl/dev/Inline-Java/_Inline_web_test',
-	BIN => '/usr/java/jdk1.3.1/bin',
+	Java => '/home/patrickl/DEV/Inline-Java/t/counter.java',
+	DIRECTORY => '/home/patrickl/DEV/Inline-Java/_Inline_web_test',
 	NAME => 't::MOD_PERL',
 	SHARED_JVM => 1,
 ) ;
 
+use Apache::RequestRec ();
+use Apache::RequestIO ();
+  
+use Apache::Const -compile => qw(OK);
 
-Inline::Java::release_JVM() ;
 
 my $cnt = new t::MOD_PERL::counter() ;
 
 
 sub handler {
+	my $r = shift ;
+	
+	$r->content_type('text/html') ;
+
 	my $gnb = $cnt->gincr() ;
 	my $nb = $cnt->incr() ;
 
 	my $q = new CGI() ;
 	print 
 		$q->start_html() .
+	    "Inline-Java " . $Inline::Java::VERSION . "<BR><BR>" .
 		"Inline-Java says this page received $gnb hits!<BR>" .
 		"Inline-Java says this MOD_PERL ($$) served $nb of those hits." .
 		$q->end_html() ;
+
+	return Apache::OK ;
 }
 
 

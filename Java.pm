@@ -8,7 +8,7 @@ package Inline::Java ;
 use strict ;
 require 5.006 ;
 
-$Inline::Java::VERSION = '0.48_91' ;
+$Inline::Java::VERSION = '0.48_92' ;
 
 
 # DEBUG is set via the DEBUG config
@@ -81,6 +81,8 @@ END {
 
 # To export the cast function and others.
 sub import {
+	my $class = shift ;
+
 	foreach my $a (@_){
 		if ($a eq 'jar'){
 			print Inline::Java::Portable::get_server_jar() ;
@@ -98,7 +100,7 @@ sub import {
 			exit() ;
 		}
 	}
-    Inline::Java->export_to_level(1, @_) ;
+    $class->export_to_level(1, $class, @_) ;
 }
 
 
