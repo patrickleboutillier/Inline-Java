@@ -69,11 +69,6 @@ WARNING: THIS IS ALPHA SOFTWARE. It is incomplete and possibly unreliable.
          change in future releases.
 
 Inline::Java version 0.40 is a major upgrade that includes:
-+ Patch by Doug MacEachern to allow running under servlet engines
-+ Patch by John Kinsley for handling empty arrays
-+ Custom ClassLoader allows for better isolation of user code and
-  dynamic 'CLASSPATH'
-+ Many bug fixes and documentation corrections
 
 Inline::Java version 0.33 is a minor upgrade that includes:
 + Improved and more flexible debug output
