@@ -283,7 +283,7 @@ sub new {
 	my $ref = shift ;
 
 	if (! Inline::Java::Class::ClassIsArray($java_class)){
-		croak "Can't create Inline::Java::Array::Normalizer object for non-array class $java_class" ;
+		croak "Can't create Java array of non-array class $java_class" ;
 	}
 
 	my $this = {} ;

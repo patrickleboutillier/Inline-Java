@@ -40,7 +40,7 @@ sub __new {
 	my $priv = Inline::Java::Object::Private->new($class, $java_class, $inline) ;
 	$PRIVATES->{$knot} = $priv ;
 
-	if ($objid <= 0){
+	if ($objid <= -1){
 		eval {
 			$this->__get_private()->{proto}->CreateJavaObject($java_class, $proto, $args) ;
 		} ;		
@@ -64,7 +64,7 @@ sub __get_private {
 
 	my $priv = $PRIVATES->{$knot} ;
 	if (! defined($priv)){
-		croak "Unknown Java object reference" ;
+		croak "Unknown Java object reference $knot" ;
 	}
 
 	return $priv ;
@@ -74,16 +74,24 @@ sub __get_private {
 # Checks to make sure all the arguments can be "cast" to prototype
 # types.
 sub __validate_prototype {
-	my $class = shift ;
+	my $this = shift ;
 	my $method = shift ;
 	my $args = shift ;
-	my $prototypes = shift ;
+	my $protos = shift ;
+	my $static = shift ;
 	my $inline = shift ;
 
 	my $matched_protos = [] ;
 	my $new_arguments = [] ;
 	my $scores = [] ;
 
+	my $prototypes = [] ;
+	foreach my $s (values %{$protos}){
+		if ($static == $s->{STATIC}){
+			push @{$prototypes}, $s->{SIGNATURE} ;
+		}
+	}
+ 
 	my $nb_proto = scalar(@{$prototypes}) ;
 	my @errors = () ;
 	foreach my $proto (@{$prototypes}){
@@ -109,7 +117,7 @@ sub __validate_prototype {
 	}
 
 	if (! scalar(@{$matched_protos})){
-		my $name = (ref($class) ? $class->__get_private()->{class} : $class) ;
+		my $name = $this->__get_private()->{class} ;
 		my $sa = Inline::Java::Protocol->CreateSignature($args) ;
 		my $msg = "In method $method of class $name: Can't find any signature that matches " .
 			"the arguments passed $sa.\nAvailable signatures are:\n"  ;
@@ -158,9 +166,7 @@ sub __get_member {
 	my $fields = $inline->get_fields($this->__get_private()->{java_class}) ;
 
 	if ($fields->{$key}){
-		# Here when the user is requesting a field, we can't know which
-		# one the user wants, so we select the first one.
-		my $proto = $fields->{$key}->[0] ;
+		my $proto = $fields->{$key}->{TYPE} ;
 
 		my $ret = $this->__get_private()->{proto}->GetJavaMember($key, [$proto], [undef]) ;
 		Inline::Java::debug("returning member (" . ($ret || '') . ")") ;
@@ -187,44 +193,12 @@ sub __set_member {
 	my $fields = $inline->get_fields($this->__get_private()->{java_class}) ;
 
 	if ($fields->{$key}){
-		my $list = $fields->{$key} ;
+		my $proto = $fields->{$key}->{TYPE} ;
+		my $new_args = undef ;
+		my $score = undef ;
 
-		my $matched_protos = [] ;
-		my $new_arguments = [] ;
-		my $scores = [] ;
-		foreach my $f (@{$list}){
-			my $new_args = undef ;
-			my $score = undef ;
-			eval {
-				($new_args, $score) = Inline::Java::Class::CastArguments([$value], [$f], $this->__get_private()->{module}) ;
-			} ;
-			if ($@){
-				Inline::Java::debug("Error trying to assign member: $@") ;
-				next ;
-			}
-
-			# We passed!
-			push @{$matched_protos}, [$f] ;
-			push @{$new_arguments}, $new_args ;
-			push @{$scores}, $score ;
-		}
-
-		if (! scalar(@{$matched_protos})){
-			my $name = $this->__get_private()->{class} ;
-			my $msg = "For member $key of class $name: Can't assign passed value $value to variable $key. " .
-				"This variable can accept:\n"  ;
-			foreach my $f (@{$list}){
-				$msg .= "\t$f\n" ;
-			}
-			chomp $msg ;
-			croak $msg ;
-		}
-
-		# Amongst the ones that matched, we need to select the one with the 
-		# highest score. For now, the last one will do.
-
-		my $nb = scalar(@{$matched_protos}) ;
-		$this->__get_private()->{proto}->SetJavaMember($key, $matched_protos->[$nb - 1], $new_arguments->[$nb - 1]) ;
+		($new_args, $score) = Inline::Java::Class::CastArguments([$value], [$proto], $this->__get_private()->{module}) ;
+		$this->__get_private()->{proto}->SetJavaMember($key, [$proto], $new_args) ;
 	}
 	else{
 		my $name = $this->__get_private()->{class} ;
@@ -367,6 +341,55 @@ sub DESTROY {
 	my $this = shift ;
 }
 
+
+
+
+######################## Static Member Methods ########################
+package Inline::Java::Object::StaticMember ;
+@Inline::Java::Object::StaticMember::ISA = qw(Tie::StdScalar) ;
+
+
+use Tie::Scalar ;
+use Carp ;
+
+my $DUMMIES = {} ;
+
+
+sub TIESCALAR {
+	my $class = shift ;
+	my $dummy = shift ;
+	my $name = shift ;
+
+	my $this = $class->SUPER::TIESCALAR(@_) ;
+
+	$DUMMIES->{$this} = [$dummy, $name] ;
+
+	return $this ;
+}
+
+
+sub STORE {
+	my $this = shift ;
+	my $value = shift ;
+
+	my ($obj, $key) = @{$DUMMIES->{$this}} ;
+
+	return $obj->__set_member($key, $value) ;
+}
+
+
+sub FETCH {
+ 	my $this = shift ;
+
+	my ($obj, $key) = @{$DUMMIES->{$this}} ;
+
+	return $obj->__get_member($key) ;
+}
+
+
+sub DESTROY {
+	my $this = shift ;
+}
 
 
 

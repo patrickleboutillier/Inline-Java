@@ -713,10 +713,9 @@ class InlineJavaClass {
 		String name = p.getName() ;
 
 		if ((ClassIsReference(p))&&(name.startsWith("["))){
+			ijs.debug("  class " + name + " is array") ;
 			return true ;
 		}
-
-		ijs.debug("  class " + name + " is array") ;
 
 		return false ;
 	}
