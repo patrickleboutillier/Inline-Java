@@ -7,7 +7,6 @@ use strict ;
 use Exporter ;
 use Carp ;
 use Config ;
-use Cwd ;
 use File::Find ;
 use File::Spec ;
 
@@ -62,7 +61,7 @@ sub make_classpath {
 	foreach my $p (@cp){
 		if (($p)&&(-e $p)){
 			if ($cp{$p}){
-				my $fp = (-d $p ? Cwd::abs_path($p) : $p) ;
+				my $fp = (-d $p ? File::Spec->rel2abs($p) : $p) ;
 				push @fcp, portable("SUB_FIX_CLASSPATH", $fp) ;
 				delete $cp{$p} ;
 			}
@@ -85,7 +84,7 @@ sub get_jar_dir {
 	# This undef for the file should be ok.
 	my $dir = File::Spec->catpath($v, $d, 'Java', undef) ;
 
-	return Cwd::abs_path($dir) ;
+	return File::Spec->rel2abs($dir) ;
 }
 
 
