@@ -244,7 +244,7 @@ class InlineJavaProtocol {
 		if (c.equals("call_static_method")){
 			CallStaticJavaMethod(st) ;
 		}		
-		if (c.equals("call_method")){
+		else if (c.equals("call_method")){
 			CallJavaMethod(st) ;
 		}		
 		else if (c.equals("create_object")){
@@ -253,6 +253,10 @@ class InlineJavaProtocol {
 		else if (c.equals("delete_object")){
 			DeleteJavaObject(st) ;
 		}
+		else if (c.equals("die")){
+			ijs.debug(" received a request to die...") ;
+			System.exit(0) ;
+		}		
 	}
 
 

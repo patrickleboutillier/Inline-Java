@@ -60,13 +60,6 @@ sub done {
 
 	$DONE = 1 ;
 
-	# Close the sockets
-	# I tried to be polite, but it seems to be causing more harm
-	# than gain....
-	# foreach my $o (values %{$Inline::Java::INLINE}){
-	# 	close($o->{Java}->{socket}) ;
-	# }
-
 	my $ec = 0 ;
 	if (! $signal){
 		debug("killed by natural death.") ;
@@ -76,21 +69,39 @@ sub done {
 		$ec = 1 ;
 	}
 
+	# Ask the children to die and close the sockets
+	foreach my $o (values %{$Inline::Java::INLINE}){
+		my $sock = $o->{Java}->{socket} ;
+		# this asks the Java server to stop and die.
+		print $sock "die\n" ;
+		close($o->{Java}->{socket}) ;
+	}
+
 	foreach my $pid (@CHILDREN){
 		my $ok = kill 9, $pid ;
 		debug("killing $pid...", ($ok ? "ok" : "failed")) ;
 	}
 
 	debug("exiting with $ec") ;
+
+	# In Windows, it is possible that the process will hang here if
+	# the children are not all dead. But they should be. Really.
 	exit($ec) ;
 }
+
+
 END {
 	if (! $DONE){
 		done() ;
 	}
 }
+
+
 use sigtrap 'handler', \&done, 'normal-signals' ;
 
+
+
+######################## Inline interface ########################
 
 
 
