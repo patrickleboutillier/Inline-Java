@@ -106,12 +106,7 @@ public class InlineJavaPerlCaller {
 
 
 	public void StopCallbackLoop() throws InlineJavaException {
-		Thread t = Thread.currentThread() ;
-		if (! ijs.IsThreadPerlContact(t)){
-			throw new InlineJavaException("InlineJavaPerlCaller.StopCallbackLoop() can only be called by threads that communicate directly with Perl") ;
-		}
-
-		ArrayList queue = GetQueue(t) ;
+		ArrayList queue = GetQueue(creator) ;
 		stop_loop = true ;
 		queue.notify() ;
 	}
