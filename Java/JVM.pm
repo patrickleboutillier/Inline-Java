@@ -235,6 +235,15 @@ sub process_command {
 		$resp = $this->{JNI}->process_command($data) ;
 	}
 
+	# We got an answer from the server. Is it a callback?
+	if ($resp =~ s/^callback //){
+		print "Callback!!! ($resp)\n" ;
+	}
+
+
+
+
+
 	Inline::Java::debug("  packet recv is $resp") ;
 
 	return $resp ;

@@ -11,10 +11,11 @@ my $ARRAY_DATA = join('', <Inline::Java::Array::DATA>) ;
 my $CLASS_DATA = join('', <Inline::Java::Class::DATA>) ;
 my $PROTO_DATA = join('', <Inline::Java::Protocol::DATA>) ;
 
+my $CALLBACK_DATA = join('', <Inline::Java::Callback::DATA>) ;
+
 
 sub DumpUserJavaCode {
 	my $fh = shift ;
-	my $modfname = shift ;
 	my $code = shift ;
 
 	print $fh $code ;
@@ -23,7 +24,6 @@ sub DumpUserJavaCode {
 
 sub DumpServerJavaCode {
 	my $fh = shift ;
-	my $modfname = shift ;
 
 	my $java = $DATA ;
 	my $java_obj = $OBJECT_DATA ;
@@ -35,6 +35,15 @@ sub DumpServerJavaCode {
 	$java =~ s/<INLINE_JAVA_ARRAY>/$java_array/g ;
 	$java =~ s/<INLINE_JAVA_CLASS>/$java_class/g ;
 	$java =~ s/<INLINE_JAVA_PROTOCOL>/$java_proto/g ;
+
+	print $fh $java ;
+}
+
+
+sub DumpCallbackJavaCode {
+	my $fh = shift ;
+
+	my $java = $CALLBACK_DATA ;
 
 	print $fh $java ;
 }
@@ -57,23 +66,26 @@ import java.lang.reflect.* ;
 	objects.
 */
 public class InlineJavaServer {
-	boolean debug ;
-	int port = 0 ;
-	boolean shared_jvm = false ;
+	static public InlineJavaServer instance = null ;
+	private boolean debug ;
+	private int port = 0 ;
+	private boolean shared_jvm = false ;
 
-	public HashMap thread_objects = new HashMap() ;
-	public int objid = 1 ;
+	private HashMap thread_objects = new HashMap() ;
+	private int objid = 1 ;
 
 	// This constructor is used in JNI mode
 	InlineJavaServer(boolean d) {
+		init() ;
 		debug = d ;
 
-		thread_objects.put(Thread.currentThread().getName(), new HashMap()) ;
+		thread_objects.put(Thread.currentThread().getName(), new HashMap()) ;		
 	}
 
 
 	// This constructor is used in server mode
 	InlineJavaServer(String[] argv) {
+		init() ;
 		debug = new Boolean(argv[0]).booleanValue() ;
 		port = Integer.parseInt(argv[1]) ;
 		shared_jvm = new Boolean(argv[2]).booleanValue() ;
@@ -109,11 +121,16 @@ public class InlineJavaServer {
 	}
 
 
+	private void init(){
+		instance = this ;		
+	}
+
+
 	/*
 		Since this function is also called from the JNI XS extension,
 		it's best if it doesn't throw any exceptions.
 	*/
-	public String ProcessCommand(String cmd) {
+	private String ProcessCommand(String cmd) {
 		debug("  packet recv is " + cmd) ;
 
 		String resp = null ;
@@ -224,15 +241,50 @@ public class InlineJavaServer {
 	}
 
 
+	public Object Callback(String pkg, String method, Object args[]) throws InlineJavaException {
+		try {
+			Thread t = Thread.currentThread() ;
+			if (t instanceof InlineJavaThread){
+				// Client-server mode
+				InlineJavaProtocol ijp = new InlineJavaProtocol(this, null) ;
+				StringBuffer cmd = new StringBuffer("callback " + pkg + " " + method) ;
+				if (args != null){
+					for (int i = 0 ; i < args.length ; i++){
+						 cmd.append(" " + ijp.SerializeObject(args[i])) ;
+					}
+				}
+				System.out.println("Callback command: " + cmd.toString()) ;
+				debug("Callback command: " + cmd.toString()) ;
+
+				InlineJavaThread ijt = (InlineJavaThread)t ;
+				ijt.bw.write(cmd.toString() + "\n") ;
+				ijt.bw.flush() ;			
+
+				String resp = ijt.br.readLine() ;
+
+				System.out.println("Callback response: " + resp) ;
+			}
+			else{
+				// JNI mode
+			}
+		}
+		catch (IOException e){
+			throw new InlineJavaException("IO error: " + e.getMessage()) ;
+		}
+
+		return null ;
+	}
+
+
 	/*
 		Creates a string representing a method signature
 	*/
-	String CreateSignature(Class param[]){
+	public String CreateSignature(Class param[]){
 		return CreateSignature(param, ", ") ;
 	}
 
 
-	String CreateSignature(Class param[], String del){
+	public String CreateSignature(Class param[], String del){
 		StringBuffer ret = new StringBuffer() ;
 		for (int i = 0 ; i < param.length ; i++){
 			if (i > 0){
@@ -293,9 +345,16 @@ public class InlineJavaServer {
 	}
 
 
-	class InlineJavaIOException extends IOException {
-		InlineJavaIOException(String m){
+	class InlineJavaInvocationTargetException extends InlineJavaException {
+		Throwable t = null ;
+
+		InlineJavaInvocationTargetException(String m, Throwable _t){
 			super(m) ;
+			t = _t ;
+		}
+
+		public Throwable getThrowable(){
+			return t ;
 		}
 	}
 
@@ -303,22 +362,24 @@ public class InlineJavaServer {
 	class InlineJavaThread extends Thread {
 		InlineJavaServer ijs ;
 		Socket client ;
+		BufferedReader br ;
+		BufferedWriter bw ;
 
-		InlineJavaThread(InlineJavaServer _ijs, Socket _client){
+		InlineJavaThread(InlineJavaServer _ijs, Socket _client) throws IOException {
 			super() ;
 			client = _client ;
 			ijs = _ijs ;
+
+			br = new BufferedReader(
+				new InputStreamReader(client.getInputStream())) ;
+			bw = new BufferedWriter(
+				new OutputStreamWriter(client.getOutputStream())) ;
 		}
 
 
 		public void run(){
 			try {
 				ijs.thread_objects.put(getName(), new HashMap()) ;
-
-				BufferedReader br = new BufferedReader(
-					new InputStreamReader(client.getInputStream())) ;
-				BufferedWriter bw = new BufferedWriter(
-					new OutputStreamWriter(client.getOutputStream())) ;
 
 				while (true){
 					String cmd = br.readLine() ;
@@ -340,5 +401,21 @@ public class InlineJavaServer {
 				ijs.thread_objects.remove(getName()) ;
 			}
 		}
+
+		public void test(){
+		}
+	}
+}
+
+
+class InlineJavaServerThrown {
+	Throwable t = null ;
+
+	InlineJavaServerThrown(Throwable _t){
+		t = _t ;
+	}
+
+	public Throwable getThrowable(){
+		return t ;
 	}
 }
