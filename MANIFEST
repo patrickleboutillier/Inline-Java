@@ -1,0 +1,11 @@
+CHANGES
+Java.pm
+Java.pod
+MANIFEST
+Makefile.PL
+README
+t/
+Java/private/Init.pm
+Java/private/Object.pm
+Java/private/Protocol.pm
+

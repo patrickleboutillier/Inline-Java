@@ -1,0 +1,12 @@
+- Documentation
+- Code comments
+- Code cleanup
+- Arrays
+- Casting
+
+PORTABILITY ISSUES:
+- find_java_bin (getpwuid)
+- path sep ":"
+- fork, exec
+- makefile stuff
+

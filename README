@@ -1,0 +1,65 @@
+INTRODUCTION:
+
+Inline::Java - Write Perl classes in Java.
+
+Inline::Java lets you write Perl classes in Java.
+
+Example:
+
+    use Inline Java => <<'END',
+	    class JAxH {
+			public JAxH(String x){
+				System.out.println("Just Another " + x + " Hacker") ;
+			}
+	    }
+	END
+    
+    new JAxH('Inline') ;
+
+When run, this complete program prints:
+
+    Just Another Inline Hacker
+
+-------------------------------------------------------------------------------
+INSTALLATION:
+
+This module requires Inline.pm version 0.31 or higher to be installed.
+
+To install Inline::Java do this:
+
+perl Makefile.PL
+make
+make test
+make install
+
+You have to 'make install' before you can run it successfully.
+
+-------------------------------------------------------------------------------
+FEATURES:
+
+Inline::Java version 0.01 includes:
+
++ All classes and their public methods are exported to Perl, relative
+  to your current package.
++ All objects (except arrays) and primitive Java types are supported as
+  method parameters.
+
+-------------------------------------------------------------------------------
+INSTALLATION:
+
+This module requires the Inline module. 
+It also requires a version of Sun's Java2 SDK.
+
+-------------------------------------------------------------------------------
+INFORMATION:
+
+= For more information on Inline::Java, see 'perldoc Inline::Java'.
+= For information about Inline, see 'perldoc Inline'.
+= For information on using Java, visit http://java.sun.org
+
+The Inline::Java mailing list is inline@perl.org. 
+Send email to inline-subscribe@perl.org to subscribe.
+
+Please send questions and comments to "Patrick LeBoutillier" <patrick_leboutillier@hotmail.com>
+
+Copyright (c) 2001, Patrick LeBoutillier. All Rights Reserved.  
