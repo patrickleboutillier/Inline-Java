@@ -20,6 +20,40 @@ class InlineJavaClass {
 		class2jni_code.put(void.class, "V") ;
 	} ;
 
+	static private HashMap class2wrapper = new HashMap() ;
+	static {
+		class2wrapper.put(byte.class, java.lang.Byte.class) ;
+		class2wrapper.put(short.class, java.lang.Short.class) ;
+		class2wrapper.put(int.class, java.lang.Integer.class) ;
+		class2wrapper.put(long.class, java.lang.Long.class) ;
+		class2wrapper.put(float.class, java.lang.Float.class) ;
+		class2wrapper.put(double.class, java.lang.Double.class) ;
+		class2wrapper.put(boolean.class, java.lang.Boolean.class) ;
+		class2wrapper.put(char.class, java.lang.Character.class) ;
+		class2wrapper.put(void.class, java.lang.Void.class) ;
+	} ;
+
+	static private HashMap name2class = new HashMap() ;
+	static {
+		name2class.put("byte", byte.class) ;
+		name2class.put("short", short.class) ;
+		name2class.put("int", int.class) ;
+		name2class.put("long", long.class) ;
+		name2class.put("float", float.class) ;
+		name2class.put("double", double.class) ;
+		name2class.put("boolean", boolean.class) ;
+		name2class.put("char", char.class) ;
+		name2class.put("void", void.class) ;
+		name2class.put("B", byte.class) ;
+		name2class.put("S", short.class) ;
+		name2class.put("I", int.class) ;
+		name2class.put("J", long.class) ;
+		name2class.put("F", float.class) ;
+		name2class.put("D", double.class) ;
+		name2class.put("Z", boolean.class) ;
+		name2class.put("C", char.class) ;
+		name2class.put("V", void.class) ;
+	} ;
 
 
 	InlineJavaClass(InlineJavaServer _ijs, InlineJavaProtocol _ijp){
@@ -248,35 +282,13 @@ class InlineJavaClass {
 	/*
 		Finds the wrapper class for the passed primitive type.
 	*/
-	static Class FindWrapper (Class p){
-		Class [] list = {
-			byte.class,
-			short.class,
-			int.class,
-			long.class,
-			float.class,
-			double.class,
-			boolean.class,
-			char.class,
-		} ;
-		Class [] listw = {
-			java.lang.Byte.class,
-			java.lang.Short.class,
-			java.lang.Integer.class,
-			java.lang.Long.class,
-			java.lang.Float.class,
-			java.lang.Double.class,
-			java.lang.Boolean.class,
-			java.lang.Character.class,
-		} ;
-
-		for (int i = 0 ; i < list.length ; i++){
-			if (p == list[i]){
-				return listw[i] ;
-			}
+	static Class FindWrapper(Class p){
+		Class w = (Class)class2wrapper.get(p) ;
+		if (w == null){
+			w = p ;
 		}
-
-		return p ;
+		
+		return w ;
 	}
 
 
@@ -284,72 +296,23 @@ class InlineJavaClass {
 		Finds the primitive type class for the passed primitive type name.
 	*/
 	static Class FindType (String name){
-		String [] list = {
-			"byte",
-			"short",
-			"int",
-			"long",
-			"float",
-			"double",
-			"boolean",
-			"char",
-			"B",
-			"S",
-			"I",
-			"J",
-			"F",
-			"D",
-			"Z",
-			"C",
-		} ;
-		Class [] listc = {
-			byte.class,
-			short.class,
-			int.class,
-			long.class,
-			float.class,
-			double.class,
-			boolean.class,
-			char.class,
-			byte.class,
-			short.class,
-			int.class,
-			long.class,
-			float.class,
-			double.class,
-			boolean.class,
-			char.class,
-		} ;
-
-		for (int i = 0 ; i < list.length ; i++){
-			if (name.equals(list[i])){
-				return listc[i] ;
-			}
-		}
-
-		return null ;
+		return (Class)name2class.get(name) ;
 	}
 
 
 	static String FindJNICode(Class p){
-		// Strip all the ['s from in front of the class name into some var
-		char name[] = p.getName().toCharArray() ;
-		StringBuffer pref = new StringBuffer() ;
-		for (int i = 0 ; i < name.length ; i++){
-			if (name[i] == '['){
-				pref.append("[") ;
+		if (! Object.class.isAssignableFrom(p)){
+			return (String)class2jni_code.get(p) ;
+		}
+		else {
+			String name = p.getName().replace('.', '/') ;
+			if (p.isArray()){
+				return name ;
 			}
-			else if (name[i] == '.'){
-				name[i] = '/' ;
+			else{
+				return "L" + name + ";" ;
 			}
 		}
-
-		String code = (String)class2jni_code.get(p) ;
-		if (code == null){
-			code = "L"  + new String(name) + ";" ;
-		}
-		
-		return pref + code ;
 	}
 
 
@@ -357,10 +320,10 @@ class InlineJavaClass {
 		String name = p.getName() ;
 
 		if ((ClassIsNumeric(p))||(ClassIsString(p))||(ClassIsChar(p))||(ClassIsBool(p))){
+			InlineJavaUtils.debug(4, "class " + name + " is primitive") ;
 			return true ;
 		}
 
-		InlineJavaUtils.debug(4, "class " + name + " is reference") ;
 		return false ;
 	}
 
