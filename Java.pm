@@ -683,7 +683,8 @@ sub set_classpath {
 	my @cp = split(/$sep/, join($sep, @list)) ;
 	my %cp = map { ($_ !~ /^\s*$/ ? ($_, 1) : ()) } @cp ;
 
-	my $tmp = join($sep, keys %cp) ;
+	# Add dot to CLASSPATH, required when building
+	my $tmp = join($sep, (keys %cp, '.')) ;
 
 	$tmp =~ s/\s*\[PERL_INLINE_JAVA\s*=\s*(.*?)\s*\]\s*/{
 		my $modules = $1 ;
