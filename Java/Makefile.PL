@@ -19,7 +19,6 @@ my $jvm_so = Inline::Java::Portable::portable('JVM_SO') ;
 my %so_dirs = () ;
 
 my @files = (
-	'jvm.cfg',
 	'jni.h',
 	'jni_md.h',
 	$jvm_lib,
@@ -27,6 +26,7 @@ my @files = (
 if ($jvm_so ne $jvm_lib){
 	push @files, $jvm_so ;
 }
+push @files, 'jvm.cfg' ;
 
 my $files = {
 	'jni.h'		=> {
@@ -65,16 +65,18 @@ if (($build_jni || AskYN("Do you wish to build the JNI extension?", 'y'))){
 	find(\&search, $jdk_dir) ;
 
 	my $type = FindDefaultVMType() ;
-	my $cnt = 1 ;
-	foreach my $c (@{$files->{$jvm_lib}->{choices}}){
-		if ($c =~ /$type/){
-			$files->{$jvm_lib}->{default_choice} = $cnt ;
+	if (defined($type)){
+		my $cnt = 1 ;
+		foreach my $c (@{$files->{$jvm_so}->{choices}}){
+			if ($c =~ /$type/){
+				$files->{$jvm_so}->{default_choice} = $cnt ;
+			}
+			$cnt++ ;
 		}
-		$cnt++ ;
 	}
 
 	# We no longer need jvm.cfg from now on...
-	shift @files ;
+	pop @files ;
 
 	my $done = 0 ;
 	foreach my $f (@files){
@@ -109,12 +111,20 @@ if (($build_jni || AskYN("Do you wish to build the JNI extension?", 'y'))){
 			map {print "  $_\n"; } keys %so_dirs ;
 			print "See README.JNI for more information.\n\n" ;
 
+			my @I = (
+				Inline::Java::Portable::portable('SUB_FIX_MAKE_QUOTES', 
+					"-I" . $files->{'jni.h'}->{selected}), 
+				Inline::Java::Portable::portable('SUB_FIX_MAKE_QUOTES', 
+					"-I" . $files->{'jni_md.h'}->{selected})) ; 
+			my @L = (
+				Inline::Java::Portable::portable('SUB_FIX_MAKE_QUOTES', 
+					"-L" . $files->{$jvm_lib}->{selected})) ;
 			WriteMakefile(
 				NAME => 'Inline::Java::JNI',
 				VERSION_FROM => 'JNI.pm',
 				DIR => [],
-				INC => "-I" . $files->{'jni.h'}->{selected} . " -I" . $files->{'jni_md.h'}->{selected},
-				LIBS => ["-L" . $files->{$jvm_lib}->{selected} . " -ljvm"],
+				INC => join(' ', @I),
+				LIBS => [join(' ', @L) . " -ljvm"],
 				# CCFLAGS => '-D_REENTRANT',
 			) ;
 		}
@@ -197,7 +207,7 @@ sub FindDefaultVMType {
 					next ;
 				}
 				else{
-					$type = split(/\s+/, $line) ;
+					($type) = split(/\s+/, $line) ;
 					$type =~ s/^-// ;
 					last ;
 				}

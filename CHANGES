@@ -15,7 +15,8 @@ Revision history for Perl extension Inline::Java
       clashes.
       Note: The default port on systems where this feature is not 
             available has remained 7890.
-      Note: The default port for SHARED_JVM mode it has remained 7890.
+      Note: The default port for SHARED_JVM mode is now 7891.
+    - SHARED_JVM mode now calls release_JVM() automatically.
     - User code can now be a public class and (optionally) inside a package.
     - Callback classes have changed.
       Note: These classes are now in the org.perl.inline.java package.

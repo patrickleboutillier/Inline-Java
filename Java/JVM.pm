@@ -101,7 +101,7 @@ sub new {
 			"java" . Inline::Java::portable("EXE_EXTENSION")) ;
 
 		my $shared = ($this->{shared} ? "true" : "false") ;
-		my $cmd = "\"$java\" org.perl.inline.java.InlineJavaServer $debug $this->{port} $shared" ;
+		my $cmd = Inline::Java::portable("SUB_FIX_CMD_QUOTES", "\"$java\" org.perl.inline.java.InlineJavaServer $debug $this->{port} $shared") ;
 		Inline::Java::debug(2, $cmd) ;
 		if ($o->get_config('UNTAINT')){
 			($cmd) = $cmd =~ /(.*)/ ;

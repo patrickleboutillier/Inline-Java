@@ -1,9 +1,10 @@
 CODE:
+- Check John's bug #5. It seems if two modules have the same
+  module name some stuff gets screwed up.
 
 TEST:
 - Alpha
 - Cygwin
-- J2SDK 1.4.0 under Windows
 
 DOCUMENTATION:
 - Recheck all and complete.

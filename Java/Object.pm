@@ -333,43 +333,36 @@ sub DESTROY {
 			my $class = $this->__get_private()->{class} ;
 			Inline::Java::debug(2, "destroying object in java ($class):") ;
 
-			# I can't find any other trace of this weak_ref stuff, but
-			# it's not a bad idea...
-			if (! $this->__get_private()->{weak_ref}){
-				# This one is very tricky:
-				# Here we want to be careful since this can be called
-				# at scope end, but the scope end might be triggered
-				# by another croak, so we need to record and propagate 
-				# the current $@
-				my $prev_dollar_at = $@ ;
-				eval {
-					$this->__get_private()->{proto}->DeleteJavaObject($this) ;
-				} ;
-				if ($@){
-					# We croaked here. Was there already a pending $@?
-					my $name = $this->__get_private()->{class} ;
-					my $msg = "In method DESTROY of class $name: $@" ;
-					if ($prev_dollar_at){
-						$msg = "$prev_dollar_at\n$msg" ;
-					}
-					croak $msg ;
+			# This one is very tricky:
+			# Here we want to be careful since this can be called
+			# at scope end, but the scope end might be triggered
+			# by another croak, so we need to record and propagate 
+			# the current $@
+			my $prev_dollar_at = $@ ;
+			eval {
+				$this->__get_private()->{proto}->DeleteJavaObject($this) ;
+			} ;
+			if ($@){
+				# We croaked here. Was there already a pending $@?
+				my $name = $this->__get_private()->{class} ;
+				my $msg = "In method DESTROY of class $name: $@" ;
+				if ($prev_dollar_at){
+					$msg = "$prev_dollar_at\n$msg" ;
 				}
-				else{
-					# Put back the previous $@
-					$@ = $prev_dollar_at ;
-				}
-
-				# Here we have a circular reference so we need to break it
-				# so that the memory is collected.
-				my $priv = $this->__get_private() ;
-				my $proto = $priv->{proto} ;
-				$priv->{proto} = undef ;
-				$proto->{obj_priv} = undef ;
-				$PRIVATES->{$this} = undef ;
+				croak $msg ;
 			}
 			else{
-				Inline::Java::debug(4, "object marked as weak reference, object destruction not propagated to Java") ;
+				# Put back the previous $@
+				$@ = $prev_dollar_at ;
 			}
+
+			# Here we have a circular reference so we need to break it
+			# so that the memory is collected.
+			my $priv = $this->__get_private() ;
+			my $proto = $priv->{proto} ;
+			$priv->{proto} = undef ;
+			$proto->{obj_priv} = undef ;
+			$PRIVATES->{$this} = undef ;
 		}
 		else{
 			Inline::Java::debug(4, "script marked as DONE, object destruction not propagated to Java") ;

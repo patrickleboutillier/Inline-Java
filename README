@@ -33,7 +33,7 @@ See README.JNI for more information on building the JNI extension.
 -------------------------------------------------------------------------------
 INSTALLATION:
 
-- This module requires Inline version 0.43 or higher to be installed.
+- This module requires Inline version 0.44 or higher to be installed.
 - It also requires a version of the Java SDK 1.2 or higher to be 
   installed. You can get the latest Java SDK from Sun Microsystems
   at http://java.sun.com. Follow the provided instructions in order
@@ -41,10 +41,10 @@ INSTALLATION:
 
 To install Inline::Java do this:
 
-  % perl Makefile.PL         (see Note 1)
-  % make java                (see Note 2)
+  % perl Makefile.PL J2SDK=/your/java/dir   (see Note 1)
+  % make java                               (see Note 2)
   % make
-  % make test                (see Note 3, 4)
+  % make test                               (see Note 3, 4)
   % make install
 
 You have to 'make install' before you can run it successfully. 
@@ -84,7 +84,8 @@ Inline::Java version 0.40 is a major upgrade that includes:
   clashes.
   Note: The default port on systems where this feature is not 
         available has remained 7890.
-  Note: The default port for SHARED_JVM mode it has remained 7890.
+  Note: The default port for SHARED_JVM mode is now 7891.
++ SHARED_JVM mode now calls release_JVM() automatically.
 + User code can now be a public class and (optionally) inside a package.
 + Callback classes have changed.
   Note: These classes are now in the org.perl.inline.java package.

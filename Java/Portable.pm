@@ -144,6 +144,8 @@ sub portable {
 		DEV_NULL			=>  '/dev/null',
 		COMMAND_COM			=>  0,
 		SUB_FIX_CLASSPATH	=>	undef,
+		SUB_FIX_CMD_QUOTES	=>	undef,
+		SUB_FIX_MAKE_QUOTES	=>	undef,
 		JVM_LIB				=>	'libjvm.so',
 		JVM_SO				=>	'libjvm.so',
 	} ;
@@ -161,6 +163,16 @@ sub portable {
 			JVM_LIB				=>	'jvm.lib',
 			JVM_SO				=>	'jvm.dll',
 			GOT_NEXT_FREE_PORT	=>	0,
+			SUB_FIX_CMD_QUOTES	=>	($COMMAND_COM ? undef : sub {
+				my $val = shift ;
+				$val = qq{"$val"} ;
+				return $val ;
+			}),
+			SUB_FIX_MAKE_QUOTES	=>	sub {
+				my $val = shift ;
+				$val = qq{"$val"} ;
+				return $val ;
+			},
 		},
 		cygwin => {
 			ENV_VAR_PATH_SEP_CP	=>	';',

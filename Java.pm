@@ -35,7 +35,7 @@ use Inline::Java::Callback ;
 # Must be last.
 use Inline::Java::JVM ;
 # Our default J2SK
-require File::Spec->catfile('Java', 'default_j2sdk.pl') ;
+require Inline::Java->find_default_j2sdk() ;
 
 
 # This is set when the script is over.
@@ -139,7 +139,7 @@ sub validate {
 
 	if ($o->get_java_config('PORT') == -1){
 		if ($o->get_java_config('SHARED_JVM')){
-			$o->set_java_config('PORT', 7890) ;
+			$o->set_java_config('PORT', 7891) ;
 		}
 		else{
 			$o->set_java_config('PORT', -7890) ;
@@ -305,7 +305,7 @@ sub build {
 		my $cp = $ENV{CLASSPATH} || '' ;
 		$ENV{CLASSPATH} = make_classpath($o->get_java_config('CLASSPATH'), $server_jar, @prev_install_dirs) ;
 		Inline::Java::debug(2, "classpath: $ENV{CLASSPATH}") ;
-		my $cmd = "\"$javac\" -d \"$install_dir\" $source > cmd.out $redir" ;
+		my $cmd = portable("SUB_FIX_CMD_QUOTES", "\"$javac\" -d \"$install_dir\" $source > cmd.out $redir") ;
 		if ($o->get_config('UNTAINT')){
 			($cmd) = $cmd =~ /(.*)/ ;
 		}
@@ -413,7 +413,7 @@ sub load {
 		my $st = $pc->ServerType() ;
 		if ((($st eq "shared")&&(! $o->get_java_config('SHARED_JVM')))||
 			(($st eq "private")&&($o->get_java_config('SHARED_JVM')))){
-			croak "JVM type mismatch on port " . $o->get_java_config('PORT') ;
+			croak "JVM type mismatch on port " . $JVM->{port} ;
 		}
 	}
 	else{
@@ -424,6 +424,8 @@ sub load {
 
 	# Add our Inline object to the list.
 	push @INLINES, $o ;
+	$o->set_java_config('id', scalar(@INLINES) - 1) ;
+	Inline::Java::debug(3, "Inline::Java object id is " . $o->get_java_config('id')) ;
 
 	my $classes = [] ;
 	if ((defined($o->get_java_config('STUDY')))&&(scalar($o->get_java_config('STUDY')))){
@@ -631,7 +633,7 @@ sub bind_jdat {
 		return ;
 	}
 
-	my $inline_idx = scalar(@INLINES) - 1 ;
+	my $inline_idx = $o->get_java_config('id') ;
 
 	my %classes = %{$d->{classes}} ;
 	foreach my $class (sort keys %classes) {
@@ -713,6 +715,10 @@ CODE
 
 		# open (Inline::Java::CODE, ">>code") and print CODE $code and close(CODE) ;
 
+		# Here it seems that for the eval below to resolve the @INLINES
+		# list properly, it must be used in this function...
+		my $dummy = scalar(@INLINES) ;
+
 		eval $code ;
 
 		croak $@ if $@ ;
@@ -726,8 +732,6 @@ sub bind_method {
 	my $class = shift ;
 	my $method = shift ;
 	my $static = shift ;
-
-	my $inline_idx = scalar(@INLINES) - 1 ;
 
 	my $code = <<CODE;
 
@@ -924,11 +928,11 @@ sub known_to_perl {
 
 	no strict 'refs' ;
 	if (defined(${$perl_class . "::" . "EXISTS"})){
-		Inline::Java::debug(3, "perl knows about '$jclass'") ;
+		Inline::Java::debug(3, "perl knows about '$jclass' ('$perl_class')") ;
 		return 1 ;
 	}
 	else{
-		Inline::Java::debug(3, "perl doesn't know about '$jclass'") ;
+		Inline::Java::debug(3, "perl doesn't know about '$jclass' ('$perl_class')") ;
 	}
 
 	return 0 ;
@@ -1019,6 +1023,13 @@ sub caught {
 	$@ = $e ;
 
 	return $ret ;
+}
+
+
+sub	find_default_j2sdk {
+	my $class = shift ;
+
+	return File::Spec->catfile('Inline', 'Java', 'default_j2sdk.pl') ;
 }
 
 
