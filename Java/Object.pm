@@ -201,6 +201,8 @@ sub DELETE {
 
 
 sub CLEAR { 
+ 	my $this = shift ;
+
 	croak "Operation CLEAR not supported on Java object" ;
 }
 
