@@ -51,6 +51,7 @@ foreach my $podf ('Java.pod', 'Java/Callback.pod', 'Java/PerlNatives/PerlNatives
 
 		$code =~ s/(\n)(   )/$1/gs ;  
 		$code =~ s/(((END(_OF_JAVA_CODE)?)|STUDY)\')/$1, NAME => "main::main" / ;  
+		$code =~ s/(STUDY\')/$1, AUTOSTUDY => 1 / ;  
 
 		if (($code =~ /SHARED_JVM/)&&($opts{o} != $cnt)){
 			print "skipped\n" ;
