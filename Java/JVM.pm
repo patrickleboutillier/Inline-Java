@@ -13,6 +13,8 @@ use POSIX qw(setsid) ;
 
 my %SIGS = () ;
 
+my @SIG_LIST = ('HUP', 'INT', 'PIPE', 'TERM') ;
+
 sub new {
 	my $class = shift ;
 	my $o = shift ;
@@ -20,7 +22,7 @@ sub new {
 	my $this = {} ;
 	bless($this, $class) ;
 
-	foreach my $sig ('HUP', 'INT', 'PIPE', 'TERM'){
+	foreach my $sig (@SIG_LIST){
 		local $SIG{__WARN__} = sub {} ;
 		if (exists($SIG{$sig})){
 			$SIGS{$sig} = $SIG{$sig} ;
@@ -103,7 +105,7 @@ sub launch {
 
 	local $SIG{__WARN__} = sub {} ;
 
-	my $dn = File::Spec->devnull() ;
+	my $dn = Inline::Java::portable("DEV_NULL") ;
 	my $in = new IO::File("<$dn") ;
 	if (! defined($in)){
 		croak "Can't open $dn for reading" ;
@@ -188,7 +190,7 @@ sub shutdown {
 			if ($this->{socket}){
 				# This asks the Java server to stop and die.
 				my $sock = $this->{socket} ;
-				if ($sock->connected()){
+				if ($sock->peername()){
 					Inline::Java::debug("Sending 'die' message to JVM...") ;
 					print $sock "die\n" ;
 				}
@@ -324,7 +326,7 @@ sub capture {
 		return ;
 	}
 
-	foreach my $sig ('HUP', 'INT', 'PIPE', 'TERM'){
+	foreach my $sig (@SIG_LIST){
 		if (exists($SIG{$sig})){
 			$SIG{$sig} = \&Inline::Java::done ;
 		}
@@ -348,7 +350,7 @@ sub release {
 		return ;
 	}
 
-	foreach my $sig qw(HUP INT PIPE TERM){
+	foreach my $sig (@SIG_LIST){
 		local $SIG{__WARN__} = sub {} ;
 		if (exists($SIG{$sig})){
 			$SIG{$sig} = $SIGS{$sig} ;
