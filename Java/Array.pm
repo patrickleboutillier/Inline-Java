@@ -499,16 +499,3 @@ sub DELETE {
 	croak "Operation DELETE not supported on Java array" ;
 }
 
-# sub TIEARRAY  { bless [], $_[0] }
-# sub FETCHSIZE { scalar @{$_[0]} }             
-#sub STORESIZE { $#{$_[0]} = $_[1]-1 }  
-#sub STORE     { $_[0]->[$_[1]] = $_[2] }
-#sub FETCH     { $_[0]->[$_[1]] }
-#sub CLEAR     { @{$_[0]} = () }
-#sub POP       { pop(@{$_[0]}) } 
-#sub PUSH      { my $o = shift; push(@$o,@_) }
-#sub SHIFT     { shift(@{$_[0]}) } 
-#sub UNSHIFT   { my $o = shift; unshift(@$o,@_) } 
-#sub EXISTS    { exists $_[0]->[$_[1]] }
-#sub DELETE    { delete $_[0]->[$_[1]] }
-
