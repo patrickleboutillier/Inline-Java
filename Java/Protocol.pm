@@ -274,12 +274,13 @@ sub Send {
 		}
 		else{
 			my $inline = Inline::Java::get_INLINE($this->{module}) ;
-			my $perl_class = Inline::Java::known_to_perl($inline->{pkg}, $class) ;
-			if (! $perl_class){
-				$perl_class = "Inline::Java::Object" ;
+			my $perl_class = Inline::Java::java2perl($inline->{pkg}, $class) ;
+			if (! Inline::Java::known_to_perl($inline->{pkg}, $class)){
 				if ($inline->{Java}->{AUTOSTUDY}){
 					$inline->_study([$class]) ;
-					$perl_class = Inline::Java::known_to_perl($inline->{pkg}, $class) ;
+				}
+				else{
+					$perl_class = "Inline::Java::Object" ;
 				}
 			}
 

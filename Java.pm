@@ -745,7 +745,7 @@ sub load_jdat {
 		if ($line =~ /^class ($re)$/){
 			# We found a class definition
 			my $java_class = $1 ;
-			$current_class = Inline::Java::java2perl($java_class) ;
+			$current_class = Inline::Java::java2perl($o->{pkg}, $java_class) ;
 			$d->{classes}->{$current_class} = {} ;
 			$d->{classes}->{$current_class}->{java_class} = $java_class ;
 			$d->{classes}->{$current_class}->{constructors} = {} ;
@@ -830,13 +830,13 @@ sub bind_jdat {
 		my $dash = "-" ;
 		
 		my $code = <<CODE;
-package $o->{pkg}::$class ;
+package $class ;
 use vars qw(\@ISA \$EXISTS \$JAVA_CLASS \$DUMMY_OBJECT) ;
 
 \@ISA = qw(Inline::Java::Object) ;
 \$EXISTS = 1 ;
 \$JAVA_CLASS = '$java_class' ;
-\$DUMMY_OBJECT = $o->{pkg}::$class$dash>__new(
+\$DUMMY_OBJECT = $class$dash>__new(
 	\$JAVA_CLASS,
 	Inline::Java::get_INLINE('$modfname'),
 	0) ;
@@ -848,7 +848,7 @@ CODE
 		while (my ($field, $sign) = each %{$d->{classes}->{$class}->{fields}}){
 			if ($sign->{STATIC}){
 				$code .= <<CODE;
-tie \$$o->{pkg}::$class$colon:$field, "Inline::Java::Object::StaticMember", 
+tie \$$class$colon:$field, "Inline::Java::Object::StaticMember", 
 			\$DUMMY_OBJECT,
 			'$field' ;
 CODE
@@ -857,7 +857,6 @@ CODE
 
 
 		if (scalar(keys %{$d->{classes}->{$class}->{constructors}})){
-			my $pkg = $o->{pkg} ;
 			$code .= <<CODE;
 
 sub new {
@@ -911,7 +910,6 @@ sub bind_method {
 	my $static = shift ;
 
 	my $modfname = $o->{modfname} ;
-	my $pkg = $o->{pkg} ;
 	
 	my $code = <<CODE;
 
@@ -1057,9 +1055,14 @@ sub get_DONE {
 
 
 sub java2perl {
+	my $pkg = shift ;
 	my $jclass = shift ;
 
 	$jclass =~ s/[.\$]/::/g ;
+
+	if ((defined($pkg))&&($pkg)){
+		$jclass = $pkg . "::" . $jclass ;
+	}
 
 	return $jclass ;
 }
@@ -1069,21 +1072,18 @@ sub known_to_perl {
 	my $pkg = shift ;
 	my $jclass = shift ;
 
-	$jclass =~ s/[.\$]/::/g ;
-
-	my $perl_class = java2perl($jclass) ;
-	$perl_class = $pkg . "::" . $perl_class ;
+	my $perl_class = java2perl($pkg, $jclass) ;
 
 	no strict 'refs' ;
 	if (defined(${$perl_class . "::" . "EXISTS"})){
 		Inline::Java::debug("  returned class exists!") ;
-		return $perl_class ;
+		return 1 ;
 	}
 	else{
 		Inline::Java::debug("  returned class doesn't exist!") ;
 	}
 
-	return undef ;
+	return 0 ;
 }
 
 
