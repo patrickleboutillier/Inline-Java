@@ -1,6 +1,12 @@
 Revision history for Perl extension Inline::Java
 ------------------------------------------------
 
+0.33  Mon Jun 17 13:50:14 EDT 2002
+    - Improved and more flexible debug output
+    - Auto loading of thread libraries under Solaris
+	- Basic support for J2SDK 1.4
+    - Other minor bug fixes
+
 0.32  Sat Apr  6 11:45:06 EST 2002
     - Restored compatibility with perl 5.005_03
     - Other minor bug fixes
