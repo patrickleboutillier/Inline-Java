@@ -393,7 +393,7 @@ sub DeserializeObject {
 sub DESTROY {
 	my $this = shift ;
 
-	Inline::Java::debug(2, "destroying Inline::Java::Protocol") ;
+	Inline::Java::debug(4, "destroying Inline::Java::Protocol") ;
 }
 
 

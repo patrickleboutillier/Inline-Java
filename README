@@ -6,7 +6,7 @@ Inline::Java lets you write Perl classes in Java.
 
 Example:
 
-    use Inline Java => <<'END',
+    use Inline Java => <<'END';
 	    class JAxH {
 			public JAxH(String x){
 				System.out.println("Just Another " + x + " Hacker") ;

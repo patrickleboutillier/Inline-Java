@@ -163,7 +163,7 @@ new(CLASS, classpath, debug)
 	check_exception(env, "Can't find class java.lang.String") ;
 	
 	/* Get the method ids that are needed later */
-	RETVAL->jni_main_mid = (*(env))->GetStaticMethodID(env, RETVAL->ijs_class, "jni_main", "(Z)LInlineJavaServer;") ;
+	RETVAL->jni_main_mid = (*(env))->GetStaticMethodID(env, RETVAL->ijs_class, "jni_main", "(I)LInlineJavaServer;") ;
 	check_exception(env, "Can't find method jni_main in class InlineJavaServer") ;
 	RETVAL->process_command_mid = (*(env))->GetMethodID(env, RETVAL->ijs_class, "ProcessCommand", "(Ljava/lang/String;)Ljava/lang/String;") ;
 	check_exception(env, "Can't find method ProcessCommand in class InlineJavaServer") ;

@@ -150,14 +150,14 @@ sub DESTROY {
 
 	my $knot = tied @{$this} ;
 	if (! $knot){
-		Inline::Java::debug(2, "destroying Inline::Java::Array::Tie") ;
+		Inline::Java::debug(4, "destroying Inline::Java::Array::Tie") ;
 
 		$OBJECTS->{$this} = undef ;
 	}
 	else{
 		# Here we can't untie because we still have a reference in $OBJECTS
 		# untie @{$this} ;
-		Inline::Java::debug(2, "destroying Inline::Java::Array") ;
+		Inline::Java::debug(4, "destroying Inline::Java::Array") ;
 	}
 }
 

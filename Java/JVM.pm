@@ -36,8 +36,8 @@ sub new {
 
 	Inline::Java::debug(1, "starting JVM...") ;
 
+	$this->{owner} = 1 ;
 	if ($o->get_java_config('JNI')){
-		$this->{owner} = 1 ;
 		Inline::Java::debug(1, "JNI mode") ;
 
 		my $jni = new Inline::Java::JNI(
@@ -110,15 +110,19 @@ sub launch {
 	if (! defined($in)){
 		croak "Can't open $dn for reading" ;
 	}
-	my $out = new IO::File(">$dn") ;
-	if (! defined($out)){
-		croak "Can't open $dn for writing" ;
+	my $out = ">&STDOUT" ;
+	if ($this->{shared}){
+		$out = new IO::File(">$dn") ;
+		if (! defined($out)){
+			croak "Can't open $dn for writing" ;
+		}
 	}
-
 	my $pid = open3($in, $out, ">&STDERR", $cmd) ;
 
 	close($in) ;
-	close($out) ;
+	if ($this->{shared}){
+		close($out) ;
+	}
 
 	return $pid ;
 }

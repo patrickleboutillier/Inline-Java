@@ -79,22 +79,13 @@ public class InlineJavaServer {
 		init() ;
 		debug = d ;
 
-		thread_objects.put(Thread.currentThread().getName(), new HashMap()) ;		
+		thread_objects.put(Thread.currentThread().getName(), new HashMap()) ;
 	}
 
 
 	// This constructor is used in server mode
 	InlineJavaServer(String[] argv) {
 		init() ;
-
-		try {
-			System.out.close() ;
-			System.in.close() ;
-		}
-		catch (IOException e){
-			System.err.println("IO error: " + e.getMessage()) ;
-			System.err.flush() ;
-		}
 
 		debug = new Integer(argv[0]).intValue() ;
 		port = Integer.parseInt(argv[1]) ;

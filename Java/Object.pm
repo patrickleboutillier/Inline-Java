@@ -53,7 +53,7 @@ sub __new {
 	}
 	else{
 		$this->__get_private()->{id} = $objid ;
-		Inline::Java::debug(2, "object created in java ($class):") ;
+		Inline::Java::debug(2, "creating object in java ($class):") ;
 	}
 
 	Inline::Java::debug_obj($this) ;
@@ -330,7 +330,7 @@ sub DESTROY {
 	
 	my $knot = tied %{$this} ;
 	if (! $knot){
-		Inline::Java::debug(2, "destroying Inline::Java::Object::Tie") ;
+		Inline::Java::debug(4, "destroying Inline::Java::Object::Tie") ;
 		
 		if (! Inline::Java::get_DONE()){
 			if (! $this->__get_private()->{weak_ref}){
@@ -366,17 +366,21 @@ sub DESTROY {
 				$PRIVATES->{$this} = undef ;
 			}
 			else{
-				Inline::Java::debug(2, "object marked as weak reference, object destruction not propagated to Java") ;
+				Inline::Java::debug(4, "object marked as weak reference, object destruction not propagated to Java") ;
 			}
 		}
 		else{
-			Inline::Java::debug(2, "script marked as DONE, object destruction not propagated to Java") ;
+			Inline::Java::debug(4, "script marked as DONE, object destruction not propagated to Java") ;
 		}
 	}
 	else{
 		# Here we can't untie because we still have a reference in $PRIVATES
 		# untie %{$this} ;
-		Inline::Java::debug(2, "destroying Inline::Java::Object") ;
+
+		my $class = $this->__get_private()->{class} ;
+		Inline::Java::debug(2, "destroying object in java ($class):") ;
+
+		Inline::Java::debug(4, "destroying Inline::Java::Object") ;
 	}
 }
 
@@ -539,7 +543,7 @@ sub new {
 sub DESTROY {
 	my $this = shift ;
 
-	Inline::Java::debug(2, "destroying Inline::Java::Object::Private") ;
+	Inline::Java::debug(4, "destroying Inline::Java::Object::Private") ;
 }
 
 

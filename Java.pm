@@ -7,7 +7,7 @@ package Inline::Java ;
 
 use strict ;
 
-$Inline::Java::VERSION = '0.32' ;
+$Inline::Java::VERSION = '0.33' ;
 
 
 # DEBUG is set via the DEBUG config
@@ -668,7 +668,16 @@ sub set_classpath {
 		$p =~ s/\s+$// ;
 	}
 
-	$ENV{CLASSPATH} = join($sep, @cp) ;
+	my @fcp = () ;
+	my %cp = map {$_ => 1} @cp ;
+	foreach my $p (@cp){
+		if ($cp{$p}){
+			push @fcp, $p ;
+			delete $cp{$p} ;
+		}
+	}
+
+	$ENV{CLASSPATH} = join($sep, @fcp) ;
 
 	Inline::Java::debug(1, "classpath: " . $ENV{CLASSPATH}) ;
 }
