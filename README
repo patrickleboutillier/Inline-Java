@@ -29,10 +29,19 @@ To install Inline::Java do this:
 
 perl Makefile.PL
 make
-make test
+make test (see Note 2)
 make install
 
-You have to 'make install' before you can run it successfully.
+You have to 'make install' before you can run it successfully. 
+
+
+Note 1: Use nmake on Windows systems.
+
+Note 2: In order for 'make test' to run properly, you should put the 
+directory to your Java binaries in either your PATH environment variable 
+or in the PERL_INLINE_JAVA_BIN environment variable. 'make test' will remind you 
+if you don't do this.
+
 
 -------------------------------------------------------------------------------
 FEATURES:

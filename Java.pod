@@ -71,8 +71,8 @@ In order for C<Inline::Java> to function properly, it needs to know
 where to find the Java compiler (javac) and the Java Runtime (java)
 on your machine. This is done using one of the following techniques:
 
-   - set the JAVA_BIN configuration option to the correct directory
-   - set the JAVA_BIN environment variable to the correct directory
+   - set the BIN configuration option to the correct directory
+   - set the PERL_INLINE_JAVA_BIN environment variable to the correct directory
    - put the correct directory in your PATH environment variable
 
 =head1 CONFIGURATION OPTIONS
@@ -80,31 +80,31 @@ on your machine. This is done using one of the following techniques:
 There are a number of configuration options that dictate the 
 behavior of C<Inline::Java>:
 
-   JAVA_BIN: 
+   BIN: 
       Specifies the path to your Java binaries. 
-	  Ex: JAVA_BIN => 'my/java/bin/path'
+	  Ex: BIN => 'my/java/bin/path'
 
-   JAVA_PORT:
+   PORT:
       Specifies the starting port number for the server. If many 
       C<Inline::Java> blocks are declared, the port number is 
       incremented each time.	
       Default is 7890.
-      Ex: JAVA_PORT => 4567
+      Ex: PORT => 4567
 
-   JAVA_STARTUP_DELAY:
+   STARTUP_DELAY:
       Specifies the maximum number of seconds that the Perl script
       will try to connect to the Java server. In other this is the
       delay that Perl gives to the Java server to start.
       Default is 15 seconds.
-      Ex: JAVA_STARTUP_DELAY => 20
+      Ex: STARTUP_DELAY => 20
 
-   JAVA_DEBUG:
+   DEBUG:
       Enables debugging info
-      Ex: JAVA_DEBUG => 1
+      Ex: DEBUG => 1
 
-   JAVA_CLASSPATH:
+   CLASSPATH:
       Adds the specified CLASSPATH to the environment CLASSPATH.
-      Ex: JAVA_CLASSPATH => 'my/other/java/classses'
+      Ex: CLASSPATH => 'my/other/java/classses'
 
 =head1 CLASSES AND OBJECTS
 
