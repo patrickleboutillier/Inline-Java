@@ -18,6 +18,7 @@ public class InlineJavaServer {
 	private HashMap thread_objects = new HashMap() ;
 	private int objid = 1 ;
 	private boolean jni = false ;
+	private Thread creator = null ;
 
 
 	// This constructor is used in JNI mode
@@ -25,7 +26,7 @@ public class InlineJavaServer {
 		init(d) ;
 
 		jni = true ; 
-		thread_objects.put(Thread.currentThread(), new HashMap()) ;
+		thread_objects.put(creator, new HashMap()) ;
 	}
 
 
@@ -73,6 +74,7 @@ public class InlineJavaServer {
 
 	private void init(int debug){
 		instance = this ;
+		creator = Thread.currentThread() ;
 		InlineJavaUtils.debug = debug ;
 
 		ijucl = new InlineJavaUserClassLoader() ;
@@ -150,75 +152,11 @@ public class InlineJavaServer {
 		return resp ;
 	}
 
-	
-	Object GetObject(int id) throws InlineJavaException {
-		Object o = null ;
-		HashMap h = (HashMap)thread_objects.get(Thread.currentThread()) ;
 
-		if (h == null){
-			throw new InlineJavaException("Can't find thread " + Thread.currentThread().getName() + "!") ;
-		}
-		else{
-			o = h.get(new Integer(id)) ;
-			if (o == null){
-				throw new InlineJavaException("Can't find object " + id + " for thread " +Thread.currentThread().getName()) ;
-			}
-		}
-
-		return o ;
-	}
+	native private String jni_callback(String cmd) ;
 
 
-	synchronized int PutObject(Object o) throws InlineJavaException {
-		HashMap h = (HashMap)thread_objects.get(Thread.currentThread()) ;
-
-		int id = objid ;
-		if (h == null){
-			throw new InlineJavaException("Can't find thread " + Thread.currentThread().getName() + "!") ;
-		}
-		else{
-			h.put(new Integer(objid), o) ;
-			objid++ ;
-		}
-
-		return id ;
-	}
-
-
-	Object DeleteObject(int id) throws InlineJavaException {
-		Object o = null ;
-		HashMap h = (HashMap)thread_objects.get(Thread.currentThread()) ;
-
-		if (h == null){
-			throw new InlineJavaException("Can't find thread " + Thread.currentThread().getName() + "!") ;
-		}
-		else{
-			o = h.remove(new Integer(id)) ;
-			if (o == null){
-				throw new InlineJavaException("Can't find object " + id + " for thread " + Thread.currentThread().getName()) ;
-			}
-		}
-
-		return o ;
-	}
-
-
-	int ObjectCount() throws InlineJavaException {
-		int i = -1 ;
-		HashMap h = (HashMap)thread_objects.get(Thread.currentThread()) ;
-
-		if (h == null){
-			throw new InlineJavaException("Can't find thread " + Thread.currentThread().getName() + "!") ;
-		}
-		else{
-			i = h.values().size() ;
-		}
-
-		return i ;
-	}
-
-
-	// So far this is the only method that can be called (indirectly) by the 
+	// So far this is the only method that can be called (indirectly) by the
 	// user code to get back in to Perl. This means that this method really
 	// can be called by other threads the are not InlineJavaServerThreads...
 	//
@@ -269,7 +207,7 @@ public class InlineJavaServer {
 					}
 
 					break ;
-				}	
+				}
 				else{
 					// Pass it on through the regular channel...
 					InlineJavaUtils.debug(3, "packet is not callback response: " + resp) ;
@@ -287,7 +225,81 @@ public class InlineJavaServer {
 	}
 
 
-	native private String jni_callback(String cmd) ;
+	boolean IsThreadPerlContact(Thread t){
+		if (((jni)&&(t == creator))||
+			((! jni)&&(t instanceof InlineJavaServerThread))){
+			return true ;
+		}
+
+		return false ;
+	}
+
+
+	Object GetObject(int id) throws InlineJavaException {
+		Object o = null ;
+		HashMap h = (HashMap)thread_objects.get(Thread.currentThread()) ;
+
+		if (h == null){
+			throw new InlineJavaException("Can't find thread " + Thread.currentThread().getName() + "!") ;
+		}
+		else{
+			o = h.get(new Integer(id)) ;
+			if (o == null){
+				throw new InlineJavaException("Can't find object " + id + " for thread " +Thread.currentThread().getName()) ;
+			}
+		}
+
+		return o ;
+	}
+
+
+	int PutObject(Object o) throws InlineJavaException {
+		HashMap h = (HashMap)thread_objects.get(Thread.currentThread()) ;
+
+		int id = objid ;
+		if (h == null){
+			throw new InlineJavaException("Can't find thread " + Thread.currentThread().getName() + "!") ;
+		}
+		else{
+			h.put(new Integer(objid), o) ;
+			objid++ ;
+		}
+
+		return id ;
+	}
+
+
+	Object DeleteObject(int id) throws InlineJavaException {
+		Object o = null ;
+		HashMap h = (HashMap)thread_objects.get(Thread.currentThread()) ;
+
+		if (h == null){
+			throw new InlineJavaException("Can't find thread " + Thread.currentThread().getName() + "!") ;
+		}
+		else{
+			o = h.remove(new Integer(id)) ;
+			if (o == null){
+				throw new InlineJavaException("Can't find object " + id + " for thread " + Thread.currentThread().getName()) ;
+			}
+		}
+
+		return o ;
+	}
+
+
+	int ObjectCount() throws InlineJavaException {
+		int i = -1 ;
+		HashMap h = (HashMap)thread_objects.get(Thread.currentThread()) ;
+
+		if (h == null){
+			throw new InlineJavaException("Can't find thread " + Thread.currentThread().getName() + "!") ;
+		}
+		else{
+			i = h.values().size() ;
+		}
+
+		return i ;
+	}
 
 
 	void AddThread(InlineJavaServerThread t){
