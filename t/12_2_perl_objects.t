@@ -13,7 +13,7 @@ use Data::Dumper ;
 
 
 BEGIN {
-	my $cnt = 14 ;
+	my $cnt = 21 ;
 	plan(tests => $cnt) ;
 }
 
@@ -25,24 +25,34 @@ my $t = new t16() ;
 		$t->set($o) ;
 		ok($t->get(), $o) ;
 		ok($t->get()->{name}, 'toto') ;
+		check_count(1) ; # po
+
 		ok($t->round_trip($o), $o) ;
-		ok($o->get("name"), 'toto') ;
+		check_count(2) ; # po + 1 leaked object
+
 		ok($t->method_call($o, 'get', ['name']), 'toto') ;
-		eval {$t->method_call($o, 'bad', ['bad'])} ; ok($@, qr/Can't locate object method "bad" via package "Obj"/) ;
-		eval {$t->round_trip({})} ; ok($@, qr/^Can't convert (.*?) to object org.perl.inline.java.InlineJavaPerlObject/) ;
+		check_count(2) ; # po + 1 leaked object
+
 		ok($t->add_eval(5, 6), 11) ;
+		check_count(2) ; # po + 1 leaked object
+
+		eval {$t->method_call($o, 'bad', ['bad'])} ; ok($@, qr/Can't locate object method "bad" via package "Obj"/) ;
+		check_count(3) ; # po + $o + 1 leaked object
+		eval {$t->round_trip({})} ; ok($@, qr/^Can't convert (.*?) to object org.perl.inline.java.InlineJavaPerlObject/) ;
 		eval {$t->error()} ; ok($@, qr/alone/) ;
 
-		my $cnt = Inline::Java::Callback::ObjectCount() ;
-		$t->clean($o) ;
-		ok($cnt, Inline::Java::Callback::ObjectCount()) ;
+		check_count(3) ; # po + 2 leaked objects
+		$t->dispose($o) ;
+		check_count(2) ; # 2 leaked objects
 
 		my $jo = $t->create("Obj", ['name', 'titi']) ;
 		ok($jo->get("name"), 'titi') ;
 		$t->have_fun() ;
 		ok($jo->get('shirt'), qr/lousy t-shirt/) ;
+		check_count(3) ; # po + 2 leaked objects
 
-		$t->clean(undef) ;
+		$t->dispose(undef) ;
+		check_count(2) ; # 2 leaked objects
 	} ;
 	if ($@){
 		if (caught("java.lang.Throwable")){
@@ -56,7 +66,17 @@ my $t = new t16() ;
 }
 
 ok($t->__get_private()->{proto}->ObjectCount(), 1) ;
-ok(Inline::Java::Callback::ObjectCount(), 3) ;
+check_count(2) ; # 2 leaked objects
+
+
+sub check_count {
+	ok($_[0], Inline::Java::Callback::ObjectCount()) ;
+}
+
+
+sub debug_objects {
+	map {print "$_\n"} %{Inline::Java::Callback::__GetObjects()} ;
+}
 
 
 package Obj ;
@@ -114,7 +134,7 @@ class t16 {
 
 	public String method_call(InlineJavaPerlObject o, String name, Object args[]) throws InlineJavaException, InlineJavaPerlException {
 		String s = (String)o.InvokeMethod(name, args) ;
-		o.Done() ;
+		o.Dispose() ;
 		return s ;
 	}
 
@@ -126,12 +146,12 @@ class t16 {
 		return o ;
 	}
 
-	public void clean(InlineJavaPerlObject o) throws InlineJavaException, InlineJavaPerlException {
+	public void dispose(InlineJavaPerlObject o) throws InlineJavaException, InlineJavaPerlException {
 		if (o != null){
-			o.Done() ;
+			o.Dispose() ;
 		}
-		else if (po != null){
-			po.Done() ;
+		if (po != null){
+			po.Dispose() ;
 		}
 	}
 
@@ -142,10 +162,5 @@ class t16 {
 
 	public void have_fun() throws InlineJavaException, InlineJavaPerlException {
 		po.InvokeMethod("set", new Object [] {"shirt", "I've been to Java and all I got was this lousy t-shirt!"}) ;
-	}
-
-	public void gc(){
-		System.runFinalization() ;
-		System.gc() ;
 	}
 }

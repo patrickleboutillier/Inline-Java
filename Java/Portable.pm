@@ -159,6 +159,7 @@ sub portable {
 		JVM_SO				=>	"libjvm.$Config{dlext}",
 		PRE_WHOLE_ARCHIVE	=>  '-Wl,--whole-archive',
 		POST_WHOLE_ARCHIVE	=>  '-Wl,--no-whole-archive',
+		PERL_PARSE_DUP_ENV	=>  '-DPERL_PARSE_DUP_ENV',
 	} ;
 
 	my $map = {

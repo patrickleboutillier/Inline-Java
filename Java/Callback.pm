@@ -145,6 +145,12 @@ sub ObjectCount {
 }
 
 
+sub __GetObjects {
+	return \%OBJECTS ;
+}
+
+
+
 ########## Utility methods used by Java to access Perl objects #################
 
 
