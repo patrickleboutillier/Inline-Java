@@ -14,7 +14,7 @@ use Inline::Java qw(caught) ;
 
 
 BEGIN {
-	plan(tests => 12) ;
+	plan(tests => 14) ;
 }
 
 my $t = new t10() ;
@@ -32,6 +32,10 @@ my $t = new t10() ;
 
 		ok($t->add_via_perl_via_java(3, 4), 7) ;
 		ok($t->silly_mul_via_perl_via_java(10, 9), 90) ;
+
+		ok(t10->add_via_perl_via_java_t($t, 6, 9), 15) ;
+
+		ok($t->cat_via_perl("Inline", "Java"), "InlineJava") ;
 
 		eval {$t->death_via_perl()} ; ok($@, qr/death/) ;
 
@@ -78,11 +82,28 @@ sub mul {
 }
 
 
+sub cat {
+	my $i = shift ;
+	my $j = shift ;
+
+	return $i . $j ;
+}
+
+
 sub add_via_java {
 	my $i = shift ;
 	my $j = shift ;
 
 	return $t->add($i, $j) ;
+}
+
+
+sub add_via_java_t {
+	my $_t = shift ;
+	my $i = shift ;
+	my $j = shift ;
+
+	return $_t->add($i, $j) ;
 }
 
 
@@ -150,9 +171,24 @@ class t10 extends InlineJavaPerlCaller {
 		return new Integer(val).intValue() ;
 	}
 
+	public String cat_via_perl(String a, String b) throws InlineJavaPerlCallerException {
+		String val = (String)CallPerl("main", "cat", 
+			new Object [] {a, b}) ;
+
+		return val ;
+	}
+
 	public int add_via_perl_via_java(int a, int b) throws InlineJavaPerlCallerException {
 		String val = (String)CallPerl("main", "add_via_java", 
 			new Object [] {new Integer(a), new Integer(b)}) ;
+
+		return new Integer(val).intValue() ;
+	}
+
+	static public int add_via_perl_via_java_t(t10 t, int a, int b) throws InlineJavaPerlCallerException {
+		InlineJavaPerlCaller c = new InlineJavaPerlCaller() ;
+		String val = (String)c.CallPerl("main", "add_via_java_t", 
+			new Object [] {t, new Integer(a), new Integer(b)}) ;
 
 		return new Integer(val).intValue() ;
 	}
