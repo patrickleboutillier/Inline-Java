@@ -93,7 +93,7 @@ used was stored in a file called default_j2sdk.pl that resides with
 the C<Inline::Java> module. You can find this file by using the following
 command:
 
-    % perl -MInline::Java -e 'print Inline::Java->find_default_j2sdk()'
+    % perl -MInline::Java=j2sdk
 
 If you wish to permanently change the default Java 2 SDK that is used
 by C<Inline::Java>, edit this file and change the value found there. 

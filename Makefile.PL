@@ -147,6 +147,8 @@ sub expand_macros {
 
 
 # Write the Makefile
+my $natives_test = File::Spec->catdir('Java', 'Natives', '_Inline_test') ;
+my $perlinterp_test = File::Spec->catdir('Java', 'PerlInterpreter', '_Inline_test') ;
 WriteMakefile(
 	NAME => 'Inline::Java',
 	VERSION_FROM => 'Java.pm',
@@ -161,7 +163,7 @@ WriteMakefile(
 		$server_arch => File::Spec->catfile('$(INST_LIBDIR)', $server_arch),
 		$user_arch => File::Spec->catfile('$(INST_LIBDIR)', $user_arch),
 	},
-	clean => {FILES => "$def_jdk _Inline_test $obj_dir $server_arch $user_arch"},
+	clean => {FILES => "$def_jdk _Inline_test $natives_test $perlinterp_test $obj_dir $server_arch $user_arch"},
 ) ;
 
 

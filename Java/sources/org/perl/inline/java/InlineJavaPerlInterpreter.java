@@ -91,16 +91,6 @@ public class InlineJavaPerlInterpreter extends InlineJavaPerlCaller {
 	synchronized static private native void destruct() ;
 
 
-	public Object eval(String code) throws InlineJavaPerlException, InlineJavaException {
-		return CallPerl("Inline::Java::PerlInterpreter", "java_eval", new Object [] {code}) ;
-	}
-
-
-	public Object require(String module) throws InlineJavaPerlException, InlineJavaException {
-		return CallPerl("Inline::Java::PerlInterpreter", "java_require", new Object [] {module}) ;
-	}
-
-
 	synchronized public void destroy() {
 		destruct() ;
 		instance = null ;

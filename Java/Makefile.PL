@@ -138,11 +138,19 @@ TXT
 			if (AskYN("Do you wish to build the PerlNatives extension?", 'n')){
 				push @{$DIR}, 'Natives' ;
 			}
-
-			# Not quite yet...
-			# push @{$DIR}, 'PerlInterpreter' ;
-
 			print "\n" ;
+
+			print <<TXT;
+The PerlInterpreter extension allows Inline::Java to be loaded directly from
+Java using an embedded PerlInterpreter. It is still EXPERIMENTAL and 
+currently builds and works only with gcc under Linux. See documentation for 
+more details.
+TXT
+			if (AskYN("Do you wish to build the PerlInterpreter extension?", 'n')){
+				push @{$DIR}, 'PerlInterpreter' ;
+			}
+			print "\n" ;
+
 			WriteMakefile(
 				NAME => 'Inline::Java::JNI',
 				VERSION_FROM => 'JNI.pm',
