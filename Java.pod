@@ -82,7 +82,8 @@ where to find the Java compiler (javac) and the Java Runtime (java)
 on your machine. This is done using one of the following techniques:
 
    - set the BIN configuration option to the correct directory
-   - set the PERL_INLINE_JAVA_BIN environment variable to the correct directory
+   - set the PERL_INLINE_JAVA_BIN environment variable to the correct 
+     directory
    - put the correct directory in your PATH environment variable
 
 
@@ -495,16 +496,16 @@ to study all classes that it comes across:
    }
 
 In this case C<Inline::Java> intercepts the return value of the get_hm()
-method, sees that it's of a type that it doesn't know about (java.lang.HashMap),
-and immediately studies the class. After that call the java::lang::HashMap
-class is available to use through Perl.
+method, sees that it's of a type that it doesn't know about 
+(java.lang.HashMap), and immediately studies the class. After that call 
+the java::lang::HashMap class is available to use through Perl.
 
 
 =head1 USING MULTIPLE SECTIONS
 
 If you wish to use more than one C<Inline::Java> section in your Perl script,
 you will need to use the Inline NAME option to name your modules. You can then
-use a special syntax in your CLASSPATH (either the environment variable or the 
+use a special syntax in your CLASSPATH (either the environment variable or the
 configuration option) to tell what Inline::Java modules it will need to load
 at runtime:
 
@@ -562,11 +563,11 @@ section determines the execution mode.
 =head1 SHARED_JVM
 
 Starting with version 0.30, the C<Inline::Java> JVM can now be shared between
-multiple processes. The first process to start the JVM is considered the JVM owner
-and will shutdown the JVM on exit. All other processes can connect as needed to 
-the JVM. If any of these other processes where created by forking the parent process,
-the Inline::Java->reconnect_JVM() function must be called in the child to get a fresh
-connection to the JVM. Ex:
+multiple processes. The first process to start the JVM is considered the JVM 
+owner and will shutdown the JVM on exit. All other processes can connect as 
+needed to the JVM. If any of these other processes where created by forking 
+the parent process, the Inline::Java->reconnect_JVM() function must be called 
+in the child to get a fresh connection to the JVM. Ex:
 
    use Inline (
       Java => '<<END',
@@ -589,14 +590,13 @@ connection to the JVM. Ex:
       }
    }
 
-Once this code was run, each of the 6 processes will have created a different instance
-of the t class. Data can be shared between the processes by using static members in the 
-Java code.
+Once this code was run, each of the 6 processes will have created a different 
+instance of the t class. Data can be shared between the processes by using 
+static members in the Java code.
 
-If processes not forked off the parent are connecting to the shared JVM, please remember
-to set the CLASSPATH for the classes in the other processes before starting the parent,
-or else the parent will not see these classes. See USING MULTIPLE SECTIONS for more 
-details.
+If processes not forked off the parent are connecting to the shared JVM, the 
+parent's CLASSPATH must be set properly or else the parent will not see these
+classes. See USING MULTIPLE SECTIONS for more details.
 
 Please note that the SHARED_JVM feature does not work in JNI mode.
 
