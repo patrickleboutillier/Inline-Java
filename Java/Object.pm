@@ -96,8 +96,8 @@ sub __validate_prototype {
 		my $new_args = undef ;
 		my $score = undef ;
 
-		my $s = Inline::Java::Protocol->CreateSignature($proto) ;
-		Inline::Java::debug("Matching arguments to $method$s") ;
+		my $sig = Inline::Java::Protocol->CreateSignature($proto) ;
+		Inline::Java::debug("Matching arguments to $method$sig") ;
 		
 		eval {
 			($new_args, $score) = Inline::Java::Class::CastArguments($args, $proto, $inline->get_api('modfname')) ;
@@ -136,8 +136,8 @@ sub __validate_prototype {
 			my $proto = $s->{SIGNATURE} ;	
 			my $static = ($s->{STATIC} ? "static " : "") ;
 
-			my $s = Inline::Java::Protocol->CreateSignature($proto) ;
-			$msg .= "\t$static$method$s\n" ;
+			my $sig = Inline::Java::Protocol->CreateSignature($proto) ;
+			$msg .= "\t$static$method$sig\n" ;
 			$msg .= "\t\terror was: $errors[$i]" ;
 			$i++ ;
 		}
