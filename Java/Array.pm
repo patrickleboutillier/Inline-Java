@@ -308,8 +308,26 @@ sub __flatten_array {
 	my $level = shift ;
 
 	my $extra = $ARRAYS->{$this} ;
+	my $dim = $extra->{dim} ;
+	my $last = scalar(@{$dim} - 1) ;
+	my $list = $extra->{map}->{$last}->{list} ;
+	my $nb_elem = scalar(@{$list}) ;
 		
-	
+	my $req_nb_elem = 1 ;
+	foreach my $d (@{$dim}){
+		$req_nb_elem *= $d ;
+	}
+
+	if ($req_nb_elem != $nb_elem){
+		my $ds = "[" . join("][", @{$dim}) . "]" ;
+		croak "Corrupted array: $ds should contain $req_nb_elem elements, has $nb_elem" ;
+	}
+
+	my $ret = [$dim, $list] ;
+
+	Inline::Java::debug_obj($ret) ;
+
+	return $ret ;
 }
 
 

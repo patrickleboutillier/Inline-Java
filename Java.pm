@@ -603,7 +603,7 @@ sub load_jdat {
 		if ($line =~ /^class ([\w.\$]+)$/){
 			# We found a class definition
 			$current_class = $1 ;
-			$current_class =~ s/\$/::/g ;
+			$current_class =~ s/[\$.]/::/g ;
 			$d->{classes}->{$current_class} = {} ;
 			$d->{classes}->{$current_class}->{constructors} = undef ;
 			$d->{classes}->{$current_class}->{methods} = {} ;
