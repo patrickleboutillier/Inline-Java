@@ -164,6 +164,9 @@ sub CleanSoDirs {
 		elsif ($d =~ /plugin/){
 				delete $so_dirs{$d} ;
 		}
+		elsif ($d =~ /motif/){
+				delete $so_dirs{$d} ;
+		}
 		elsif ($d =~ /_threads/){
 			if ($d !~ /native_threads/){
 				delete $so_dirs{$d} ;
