@@ -244,12 +244,18 @@ sub Send {
 	my $data = shift ;
 	my $const = shift ;
 
+	my $resp = undef ;
 	my $inline = $Inline::Java::INLINE->{$this->{module}} ;
-	my $sock = $inline->{Java}->{socket} ;
-	print $sock $data . "\n" or
-		croak "Can't send packet over socket: $!" ;
+	if (! $inline->{Java}->{USE_JNI}){
+		my $sock = $inline->{Java}->{socket} ;
+		print $sock $data . "\n" or
+			croak "Can't send packet over socket: $!" ;
 
-	my $resp = <$sock> ;
+		$resp = <$sock> ;
+	}
+	else{
+		$resp = $inline->{Java}->{JNI}->process_command($data) ;
+	}
 
 	Inline::Java::debug("  packet recv is $resp") ;
 
@@ -690,6 +696,8 @@ class InlineJavaProtocol {
 
 				// Now we check if the signatures match
 				String sign = ijs.CreateSignature(params, ",") ;
+				ijs.debug(sign + " = " + signature + "?") ;
+
 				if (signature.equals(sign)){
 					ijs.debug("  has matching signature " + sign) ;
 					ml.add(ml.size(), m) ;

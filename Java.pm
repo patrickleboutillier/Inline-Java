@@ -14,6 +14,7 @@ if (! defined($Inline::Java::DEBUG)){
 
 # This hash will store the $o objects...
 $Inline::Java::INLINE = {} ;
+$Inline::Java::BOUND_CLASSES = {} ;
 
 
 require Inline ;
@@ -201,6 +202,23 @@ sub boot_jni {
 	@Inline::Java::ISA = qw(DynaLoader) ;
 
 	Inline::Java->bootstrap($Inline::Java::VERSION) ;
+}
+
+
+sub get_jni {
+	my $o = shift ;
+
+	if (! defined($o->{Java}->{JNI})){
+		my $jni = new Inline::Java::JNI(
+			$ENV{CLASSPATH} || "", 
+			($Inline::Java::DEBUG ? 1 : 0),
+		) ;
+		$jni->create_ijs() ; 
+		$o->{Java}->{JNI} = $jni ;
+	}
+
+	Inline::Java::debug_obj($o->{Java}->{JNI}) ;
+	return $o->{Java}->{JNI} ;
 }
 
 
@@ -398,7 +416,7 @@ sub write_java {
 	my $modfname = $o->{modfname} ;
 	my $code = $o->{code} ;
 
-	$o->mkpath($o->{build_dir}) ;
+	$o->mymkpath($o->{build_dir}) ;
 
 	open(JAVA, ">$build_dir/$modfname.java") or
 		croak "Can't open $build_dir/$modfname.java: $!" ;
@@ -414,6 +432,70 @@ sub write_java {
 }
 
 
+sub report {
+	my $o = shift ;
+	my $pattern = shift ;
+	my $other_classes = shift || [] ;
+
+	if (! $o->{Java}->{loaded}){
+		my $modfname = $o->{modfname} ;
+		my $java = $o->{Java}->{BIN} . "/java" . portable("EXE_EXTENSION") ;
+		my $pjava = portable("RE_FILE", $java) ;
+		my $predir = portable("IO_REDIR") ;
+		my $debug = ($Inline::Java::DEBUG ? "true" : "false") ;
+
+		my @classes = ($pattern) ;
+		foreach my $class (@{$other_classes}){
+			if (! $Inline::Java::BOUND_CLASSES->{$class}){
+				$Inline::Java::BOUND_CLASSES->{$class} = 1 ;
+				$class .= ".class" ;
+				push @classes, $class ;	
+			}
+			else{
+				carp "Java class $class already bound to Perl!" ;
+			}
+		}
+
+		if (! $o->{Java}->{USE_JNI}){
+			my $class_str = join(" ", @classes) ;
+			Inline::Java::debug($class_str) ;
+
+			my $cmd = "\"$pjava\" InlineJavaServer report $debug $modfname $class_str > cmd.out $predir" ;
+			if ($o->{config}->{UNTAINT}){
+				($cmd) = $cmd =~ /(.*)/ ;
+			}
+			return $cmd ;
+		}
+		else{
+			# Here we need to expand the pattern.
+			my $build_dir = $o->{build_dir} ;
+			my @cl = glob("$build_dir/$pattern") ;
+			foreach my $class (@cl){
+				$class =~ s/^$build_dir\/// ;
+			}
+	
+			shift @classes ;
+			unshift @classes, @cl ;
+
+			my $class_str = join(" ", @classes) ;
+			Inline::Java::debug($class_str) ;
+
+			my $jni = $o->get_jni() ;
+			$jni->report($modfname, $class_str, scalar(@classes)) ;
+
+			return "" ;
+		}
+	}
+	else{
+		# On-the-fly class reporting and binding...
+		if (! $o->{Java}->{USE_JNI}){
+		}
+		else{
+		}
+	}
+}
+
+
 # Run the build process.
 sub compile {
 	my $o = shift ;
@@ -424,7 +506,7 @@ sub compile {
 	my $install_lib = $o->{install_lib} ;
 
 	my $install = "$install_lib/auto/$modpname" ;
-	$o->mkpath($install) ;
+	$o->mymkpath($install) ;
 
 	my $javac = $o->{Java}->{BIN} . "/javac" . portable("EXE_EXTENSION") ;
 	my $java = $o->{Java}->{BIN} . "/java" . portable("EXE_EXTENSION") ;
@@ -449,11 +531,11 @@ sub compile {
 	# to be copied, and if not will exit the script.
 	foreach my $cmd (
 		"\"$pjavac\" $modfname.java > cmd.out $predir",
-		["copy_pattern", $build_dir, "*.class", $pinstall, $o->{config}->{UNTAINT} || 0],
+		["copy_pattern", $o, "*.class"],
 		"\"$pjavac\" InlineJavaServer.java > cmd.out $predir",
-		["copy_pattern", $build_dir, "*.class", $pinstall, $o->{config}->{UNTAINT} || 0],
-		"\"$pjava\" InlineJavaServer report $debug $modfname *.class > cmd.out $predir",
-		["copy_pattern", $build_dir, "*.jdat", $pinstall, $o->{config}->{UNTAINT} || 0],
+		["copy_pattern", $o, "*.class"],
+		["report", $o, "*.class"],
+		["copy_pattern", $o, "*.jdat", ],
 		) {
 
 		if ($cmd){
@@ -490,7 +572,7 @@ sub compile {
 
 	if ($o->{config}->{CLEAN_AFTER_BUILD} and
 		not $o->{config}->{REPORTBUG}){
-		$o->rmpath($o->{config}->{DIRECTORY} . 'build/', $modpname) ;
+		$o->myrmpath($o->{config}->{DIRECTORY} . 'build/', $modpname) ;
 	}
 
 	Inline::Java::debug("compile done.") ;
@@ -569,46 +651,53 @@ sub load {
 	my $pjava = portable("RE_FILE", $java) ;
 
 	Inline::Java::debug("  cwd is: " . Cwd::getcwd()) ;
-	Inline::Java::debug("  load is forking.") ;
-	my $pid = fork() ;
-	if (! defined($pid)){
-		croak "Can't fork to start Java interpreter" ;
-	}
-	$CHILD_CNT++ ;
 
-	my $port = $o->{Java}->{PORT} + ($CHILD_CNT - 1) ;
+	if (! $o->{Java}->{USE_JNI}){
+		Inline::Java::debug("  load is forking.") ;
+		my $pid = fork() ;
+		if (! defined($pid)){
+			croak "Can't fork to start Java interpreter" ;
+		}
+		$CHILD_CNT++ ;
 
-	if ($pid){
-		# parent here
-		Inline::Java::debug("  parent here.") ;
+		my $port = $o->{Java}->{PORT} + ($CHILD_CNT - 1) ;
 
-		push @CHILDREN, $pid ;
+		if ($pid){
+			# parent here
+			Inline::Java::debug("  parent here.") ;
 
-		my $socket = $o->setup_socket($port) ;
-		$o->{Java}->{socket} = $socket ;
-		$Inline::Java::INLINE->{$modfname} = $o ;
+			push @CHILDREN, $pid ;
 
-		$o->{Java}->{loaded} = 1 ;
-		Inline::Java::debug("load done.") ;
+			my $socket = $o->setup_socket($port) ;
+			$o->{Java}->{socket} = $socket ;
+			Inline::Java::debug("load done.") ;
+		}
+		else{
+			# child here
+			Inline::Java::debug("  child here.") ;
+
+			my $debug = ($Inline::Java::DEBUG ? "true" : "false") ;
+
+			my @cmd = ($pjava, 'InlineJavaServer', 'run', $debug, $port) ;
+			Inline::Java::debug(join(" ", @cmd)) ;
+
+			if ($o->{config}->{UNTAINT}){
+				foreach my $cmd (@cmd){
+					($cmd) = $cmd =~ /(.*)/ ;
+				}
+			}
+
+			exec(@cmd)
+				or croak "Can't exec Java interpreter" ;
+		}
 	}
 	else{
-		# child here
-		Inline::Java::debug("  child here.") ;
-
-		my $debug = ($Inline::Java::DEBUG ? "true" : "false") ;
-
-		my @cmd = ($pjava, 'InlineJavaServer', 'run', $debug, $port) ;
-		Inline::Java::debug(join(" ", @cmd)) ;
-
-		if ($o->{config}->{UNTAINT}){
-			foreach my $cmd (@cmd){
-				($cmd) = $cmd =~ /(.*)/ ;
-			}
-		}
-
-		exec(@cmd)
-			or croak "Can't exec Java interpreter" ;
+		# This will create the JNI object if it is not already created.
+		$o->get_jni() ;
 	}
+
+	$Inline::Java::INLINE->{$modfname} = $o ;
+	$o->{Java}->{loaded} = 1 ;
 }
 
 
@@ -869,8 +958,67 @@ sub setup_socket {
 }
 
 
+sub copy_pattern {
+	my $o = shift ;
+	my $pattern = shift ;
+
+	my $build_dir = $o->{build_dir} ;
+	my $modpname = $o->{modpname} ;
+	my $install_lib = $o->{install_lib} ;
+	my $install = "$install_lib/auto/$modpname" ;
+	my $pinstall = portable("RE_FILE", $install) ;
+
+	my $src_dir = $build_dir ;
+	my $dest_dir = $pinstall ;
+
+	chdir($src_dir) ;
+
+	my @flist = glob($pattern) ;
+
+	if (portable('COMMAND_COM')){
+		if (! scalar(@flist)){
+			croak "No files to copy. Previous command failed under command.com?" ;
+		}
+		foreach my $file (@flist){
+			if (! (-s $file)){
+				croak "File $file has size zero. Previous command failed under WIN9x?" ;
+			}
+		}
+	}
+
+	foreach my $file (@flist){
+		if ($o->{config}->{UNTAINT}){
+			($file) = $file =~ /(.*)/ ;
+		}
+		Inline::Java::debug("copy_pattern: $file, $dest_dir/$file") ;
+		if (! File::Copy::copy($file, "$dest_dir/$file")){
+			return "Can't copy $src_dir/$file to $dest_dir/$file: $!" ;
+		}
+	}
+
+	return '' ;
+}
+
 
 ######################## General Functions ########################
+
+
+sub mymkpath {
+	my $o = shift ;
+	my $path = shift ;	
+
+	my $sub = \&Inline::mkpath ;
+	return $o->$sub($path) ;
+}
+
+sub myrmpath {
+	my $o = shift ;
+	my $path = shift ;	
+
+	my $sub = \&Inline::rmpath ;
+
+	return $o->$sub($path) ;
+}
 
 
 sub debug {
@@ -953,41 +1101,6 @@ sub portable {
 			return $defmap->{$key} ;
 		}
 	}
-}
-
-
-sub copy_pattern {
-	my $src_dir = shift ;
-	my $pattern = shift ;
-	my $dest_dir = shift ;
-	my $untaint = shift ;
-
-	chdir($src_dir) ;
-
-	my @flist = glob($pattern) ;
-
-	if (portable('COMMAND_COM')){
-		if (! scalar(@flist)){
-			croak "No files to copy. Previous command failed under command.com?" ;
-		}
-		foreach my $file (@flist){
-			if (! (-s $file)){
-				croak "File $file has size zero. Previous command failed under WIN9x?" ;
-			}
-		}
-	}
-
-	foreach my $file (@flist){
-		if ($untaint){
-			($file) = $file =~ /(.*)/ ;
-		}
-		Inline::Java::debug("copy_pattern: $file, $dest_dir/$file") ;
-		if (! File::Copy::copy($file, "$dest_dir/$file")){
-			return "Can't copy $src_dir/$file to $dest_dir/$file: $!" ;
-		}
-	}
-
-	return '' ;
 }
 
 

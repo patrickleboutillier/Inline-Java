@@ -1,16 +1,14 @@
 package Inline::Java::Array ;
-@Inline::Java::Array::ISA = qw(Tie::StdArray) ;
 
 
 use strict ;
 
 $Inline::Java::Array::VERSION = '0.10' ;
 
-use Tie::Array ;
 use Carp ;
 
 
-# Here we store the objects that corresponds to the arrays.
+# Here we store as keys the knots and as values our blessed objects
 my $OBJECTS = {} ;
 
 
@@ -19,15 +17,29 @@ sub new {
 	my $object = shift ;
 
 	my @this = () ;
-	my $knot = tie @this, 'Inline::Java::Array' ;
+	my $knot = tie @this, 'Inline::Java::Array::Tie' ;
 	my $this = bless (\@this, $class) ;
 
-	$OBJECTS->{$knot} = $object ;
+	$OBJECTS->{$knot} = [$this, $object] ;
 
 	Inline::Java::debug("this = $this") ; 
 	Inline::Java::debug("knot = $knot") ; 
 
 	return $this ;
+}
+
+
+sub __get_object {
+	my $this = shift ;
+
+	my $knot = tied @{$this} ;
+
+	my $ref = $OBJECTS->{$knot} ;
+	if ((! defined($ref))||(! defined($ref->[1]))){
+		croak "Unknown Java array reference" ;
+	}
+	
+	return $ref->[1] ;
 }
 
 
@@ -102,23 +114,6 @@ sub __set_element {
 }
 
 
-sub __get_object {
-	my $this = shift ;
-
-	my $knot = tied @{$this} || $this ;
-	Inline::Java::debug("this = $this") ; 
-	Inline::Java::debug("knot = $knot") ; 
-
-	my $obj = $OBJECTS->{$knot} ;
-	if (! defined($obj)){
-		croak "Unknown Java array reference" ;
-	}
-	
-	return $obj ;
-}
-
-
-
 sub AUTOLOAD {
 	my $this = shift ;
 	my @args = @_ ;
@@ -137,13 +132,17 @@ sub AUTOLOAD {
 
 sub DESTROY {
 	my $this = shift ;
-
-	$OBJECTS->{$this} = undef ;
 }
 
 
 
 ######################## Array methods ########################
+package Inline::Java::Array::Tie ;
+@Inline::Java::Array::Tie::ISA = qw(Tie::StdArray) ;
+
+
+use Tie::Array ;
+use Carp ;
 
 
 sub TIEARRAY {
@@ -153,10 +152,24 @@ sub TIEARRAY {
 }
 
 
+sub __get_array {
+	my $this = shift ;
+
+	my $ref = $OBJECTS->{$this} ;
+	if ((! defined($ref))||(! defined($ref->[0]))){
+		croak "Unknown Java array reference" ;
+	}
+	
+	return $ref->[0] ;
+}
+
+
 sub FETCHSIZE { 
  	my $this = shift ;
 
-	return $this->length() ;  
+	my $array = $this->__get_array() ;
+
+	return $array->length() ;  
 }
 
 
@@ -165,7 +178,9 @@ sub STORE {
  	my $idx = shift ;
  	my $s = shift ;
 
-	return $this->__set_element($idx, $s) ;
+	my $array = $this->__get_array() ;
+
+	return $array->__set_element($idx, $s) ;
 } 
 
 
@@ -173,7 +188,9 @@ sub FETCH {
  	my $this = shift ;
  	my $idx = shift ;
 
-	return $this->__get_element($idx) ;
+	my $array = $this->__get_array() ;
+
+	return $array->__get_element($idx) ;
 }
 
 
@@ -235,6 +252,13 @@ sub DELETE {
 	my $idx = shift ;
 
 	croak "Operation DELETE not supported on Java array" ;
+}
+
+
+sub DESTROY {
+ 	my $this = shift ;
+
+	$OBJECTS->{$this} = undef ;
 }
 
 

@@ -1,5 +1,4 @@
 package Inline::Java::Object ;
-@Inline::Java::Object::ISA = qw(Tie::StdHash) ;
 
 
 use strict ;
@@ -7,8 +6,11 @@ use strict ;
 $Inline::Java::Object::VERSION = '0.10' ;
 
 use Inline::Java::Protocol ;
-use Tie::Hash ;
 use Carp ;
+
+
+# Here we store as keys the knots and as values our blessed objects
+my $OBJECTS = {} ;
 
 
 # Bogus constructor. We fall here if no public constructor is defined
@@ -32,8 +34,10 @@ sub __new {
 
 	my %this = () ;
 
-	my $knot = tie %this, 'Inline::Java::Object' ;
+	my $knot = tie %this, 'Inline::Java::Object::Tie' ;
 	my $this = bless(\%this, $class) ;
+
+	$OBJECTS->{$knot} = $this ;
 
 	$this->{private} = {} ;
 	$this->{private}->{class} = $class ;
@@ -115,10 +119,6 @@ sub __get_member {
 	my $this = shift ;
 	my $key = shift ;
 
- 	if ($key eq "private"){
- 		return $this->SUPER::FETCH($key) ;
-	}
-
 	Inline::Java::debug("fetching member variable $key") ;
 
 	my $inline = $Inline::Java::INLINE->{$this->{private}->{module}} ;
@@ -137,7 +137,6 @@ sub __get_member {
 	else{
 		croak "No public member variable $key defined for class $this->{private}->{class}" ;
 	}
-
 }
 
 
@@ -145,10 +144,6 @@ sub __set_member {
 	my $this = shift ;
 	my $key = shift ;
 	my $value = shift ;
-
-	if ($key eq "private"){
-		return $this->SUPER::STORE($key, $value) ;
-	}
 
 	my $inline = $Inline::Java::INLINE->{$this->{private}->{module}} ;
 	my $fields = $inline->get_fields($this->{private}->{java_class}) ;
@@ -238,7 +233,24 @@ sub DESTROY {
 
 
 ######################## Hash Methods ########################
+package Inline::Java::Object::Tie ;
+@Inline::Java::Object::Tie::ISA = qw(Tie::StdHash) ;
 
+
+use Tie::Hash ;
+use Carp ;
+
+
+sub __get_object {
+	my $this = shift ;
+
+	my $obj = $OBJECTS->{$this} ;
+	if (! defined($obj)){
+		croak "Unknown Java object reference" ;
+	}
+	
+	return $obj ;
+}
 
 
 sub TIEHASH {
@@ -253,7 +265,13 @@ sub STORE {
 	my $key = shift ;
 	my $value = shift ;
 
-	return $this->__set_member($key, $value) ;
+	if ($key eq "private"){
+		return $this->SUPER::STORE($key, $value) ;
+	}
+
+	my $obj = $this->__get_object() ;
+
+	return $obj->__set_member($key, $value) ;
 }
 
 
@@ -261,7 +279,13 @@ sub FETCH {
  	my $this = shift ;
  	my $key = shift ;
 
-	return $this->__get_member($key) ;
+ 	if ($key eq "private"){
+ 		return $this->SUPER::FETCH($key) ;
+	}
+
+	my $obj = $this->__get_object() ;
+
+	return $obj->__get_member($key) ;
 }
 
 
@@ -307,6 +331,14 @@ sub CLEAR {
 
 	croak "Operation CLEAR not supported on Java object" ;
 }
+
+
+sub DESTROY {
+	my $this = shift ;
+
+	$OBJECTS->{$this} = undef ;
+}
+
 
 
 package Inline::Java::Object ;
