@@ -5,25 +5,34 @@ use blib ;
 
 use Inline Java => <<'END_OF_JAVA_CODE' ;
 
-package test1.test2.test3 ;
- 
-public class Pod_alu {
-      public Pod_alu(){
-      }
+public class cache {
+	public int i = 0 ;
 
-      public int add(int i, int j){
-         return i + j ;
-      }
+	public cache(){
+	}
 
-      public int subtract(int i, int j){
-         return i - j ;
-      }
-   }   
+	public void m1(int j){
+		i++ ;
+	}
+
+	public void m2(int i){
+	}
+
+	public void m3(int i){
+	}
+
+	public void m4(int i){
+	}
+
+	public void m5(int i){
+	}
+}   
 END_OF_JAVA_CODE
 
 
-my $alu = new test1::test2::test3::Pod_alu() ;
-print($alu->add(9, 16) . "\n") ; # prints 25
-print($alu->subtract(9, 16) . "\n") ; # prints -7
-
+my $c = new cache() ;
+for (my $i = 0 ; $i < 10000 ; $i++){
+	$c->m1($i) ;
+}
+print $c->{i} . "\n" ;
 
