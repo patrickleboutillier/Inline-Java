@@ -25,6 +25,7 @@ use Cwd qw(cwd abs_path) ;
 
 use IO::Socket ;
 
+use Inline::Java::Class ;
 use Inline::Java::Object ;
 use Inline::Java::Protocol ;
 # Must be last.
@@ -43,11 +44,18 @@ sub done {
 
 	$DONE = 1 ;
 
+	# Close the sockets
+	foreach my $o (values %{$Inline::Java::INLINE}){
+		close($o->{Java}->{socket}) ;
+	}
+
+	my $ec = 0 ;
 	if (! $signal){
 		debug("killed by natural death.") ;
 	}
 	else{
 		debug("killed by signal SIG$signal.") ;
+		$ec = 1 ;
 	}
 
 	foreach my $pid (@CHILDREN){
@@ -55,7 +63,7 @@ sub done {
 		debug("killing $pid...", ($ok ? "ok" : "failed")) ;
 	}
 
-	exit 1 ;
+	exit($ec) ;
 }
 END {
 	if (! $DONE){
@@ -109,6 +117,9 @@ sub _validate {
 	}
 	if (! exists($o->{Java}->{JAVA_DEBUG})){
 		$o->{Java}->{JAVA_DEBUG} = 0 ;
+	}
+	if (! exists($o->{Java}->{JAVA_CLASSPATH})){
+		$o->{Java}->{JAVA_CLASSPATH} = '' ;
 	}
 
 	my $install_lib = $o->{install_lib} ;
@@ -542,14 +553,15 @@ sub load_jdat {
 			my $method = $3 ;
 			my $signature = $4 ;
 
-			if ($declared_in ne $current_class){
+			if ($declared_in eq 'java.lang.Object'){
 				next ;
 			}
+
 			if (! defined($d->{classes}->{$current_class}->{methods}->{$static}->{$method})){
 				$d->{classes}->{$current_class}->{methods}->{$static}->{$method} = [] ;
 			}
 			else{
-				croak "Can't bind class $current_class: class has more than one '$method' method" ;
+				croak "Can't bind class $current_class: class has more than one '$method' method (including inherited methods)" ;
 			}
 			push @{$d->{classes}->{$current_class}->{methods}->{$static}->{$method}}, [split(", ", $signature)] ;
 		}
@@ -559,7 +571,7 @@ sub load_jdat {
 			my $field = $3 ;
 			my $type = $4 ;
 
-			if ($declared_in ne $current_class){
+			if ($declared_in eq 'java.lang.Object'){
 				next ;
 			}
 
@@ -612,7 +624,10 @@ CODE
 
 		if (defined($d->{classes}->{$class}->{constructors})){
 			my @sign = @{$d->{classes}->{$class}->{constructors}->[0]} ;
-			my $signature = "'" . join("', '", @sign). "'" ;
+			my $signature = '' ;
+			if (scalar(@sign)){
+				$signature = "'" . join("', '", @sign). "'" ;
+			}
 			my $pkg = $o->{pkg} ;
 			$code .= <<CODE;
 
@@ -620,9 +635,9 @@ sub new {
 	my \$class = shift ;
 	my \@args = \@_ ;
 	
-	\$class->__validate_prototype([\@args], [($signature)]) ;
+	my \@new_args = \$class->__validate_prototype('new', [\@args], [$signature]) ;
 
-	return \$class->__new('$java_class', \$Inline::Java::INLINE->{'$modfname'}, -1, \@_) ;
+	return \$class->__new('$java_class', \$Inline::Java::INLINE->{'$modfname'}, -1, \@new_args) ;
 }
 
 
@@ -635,8 +650,11 @@ CODE
 
 
 		while (my ($method, $sign) = each %{$d->{classes}->{$class}->{methods}->{static}}){
-			my @sign = @{$sign} ;
-			my $signature = "'" . join("', '", @sign). "'" ;
+			my @sign = @{$sign->[0]} ;
+			my $signature = '' ;
+			if (scalar(@sign)){
+				$signature = "'" . join("', '", @sign). "'" ;
+			}
 			my $pkg = $o->{pkg} ;
 			$code .= <<CODE;
 
@@ -644,11 +662,11 @@ sub $method {
 	my \$class = shift ;
 	my \@args = \@_ ;
 	
-	\$class->__validate_prototype([\@args], [($signature)]) ;
-	
-	my \$proto = new Inline::Java::Protocol(undef, \$Inline::Java::INLINE->{'$modfname'}) ;
+	my \@new_args = \$class->__validate_prototype('$method', [\@args], [$signature]) ;
 
-	return \$proto->CallStaticJavaMethod('$java_class', '$method', \@args) ;
+	my \$proto = new Inline::Java::Protocol(undef, \$Inline::Java::INLINE->{'$modfname'}) ;	
+
+	return \$proto->CallStaticJavaMethod('$java_class', '$method', \@new_args) ;
 }
 
 CODE
@@ -656,17 +674,20 @@ CODE
 
 
 		while (my ($method, $sign) = each %{$d->{classes}->{$class}->{methods}->{instance}}){
-			my @sign = @{$sign} ;
-			my $signature = "'" . join("', '", @sign). "'" ;
+			my @sign = @{$sign->[0]} ;
+			my $signature = '' ;
+			if (scalar(@sign)){
+				$signature = "'" . join("', '", @sign). "'" ;
+			}
 			$code .= <<CODE;
 
 sub $method {
 	my \$this = shift ;
 	my \@args = \@_ ;
 	
-	\$this->__validate_prototype([\@args], [($signature)]) ;
+	my \@new_args = \$this->__validate_prototype('$method', [\@args], [$signature]) ;
 	
-	return \$this->{private}->{proto}->CallJavaMethod('$method', \@args) ;
+	return \$this->{private}->{proto}->CallJavaMethod('$method', \@new_args) ;
 }
 
 CODE
