@@ -8,7 +8,7 @@ $code =~ s/\/\/(.*)$///gm ;
 
 - Write a test for a public class in a package.
 - Retest all the small test stuff under Linux.
-- Fix MANIFEST
+- Add debug for port selection
 
 TEST:
 - Alpha

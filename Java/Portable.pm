@@ -75,9 +75,13 @@ sub make_classpath {
 
 
 sub get_jar_dir {
-	return Cwd::abs_path(File::Spec->catpath(
-		(File::Spec->splitpath($INC{"Inline/Java.pm"}))[0,1], 
-		'Java', '')) ;
+	my $path = $INC{"Inline/Java.pm"} ;
+	my ($v, $d, $f) = File::Spec->splitpath($path) ;
+
+	# This undef for the file should be ok.
+	my $dir = File::Spec->catpath($v, $d, 'Java', undef) ;
+
+	return Cwd::abs_path($dir) ;
 }
 
 
@@ -91,14 +95,29 @@ sub get_user_jar {
 }
 
 
+# This maybe could be made more stable
 sub find_classes_in_dir {
 	my $dir = shift ;
 
+	my $sdir = (File::Spec->splitpath(
+		File::Spec->catfile($dir, 'dummy_file')))[1] ;
+
 	my @ret = () ;
 	find(sub {
-		my $file = $_ ;
-		if ($file =~ /\.class$/){
-			push @ret, File::Spec->catfile($File::Find::dir, $file) ;
+		my $f = $_ ;
+		if ($f =~ /\.class$/){
+			my $file = $File::Find::name ;
+			my $fdir = (File::Spec->splitpath($file))[1] ;
+			$fdir =~ s/^$sdir// ;
+
+			my @dirs = File::Spec->splitdir($fdir) ;
+			if ((! scalar(@dirs))||($dirs[-1] ne '')){
+				push @dirs, '' ;
+			}
+			my $pkg = (scalar(@dirs) ? join('.', @dirs) : '') ;
+			my $class = "$pkg$f" ;
+			$class =~ s/\.class$// ;
+			push @ret, {file => $file, class => $class} ;
 		}
 	}, $dir) ;
 

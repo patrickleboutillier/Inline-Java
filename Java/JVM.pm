@@ -67,11 +67,16 @@ sub new {
 				LocalAddr => 'localhost', LocalPort => 0) ;
 			if ($sock){
 				$this->{port} = $sock->sockport() ;
+				Inline::Java::debug(2, "next available port number is $this->{port}") ;
 				close($sock) ;
 			}
 			else{
 				# Revert to the default.
 				$this->{port} = - $this->{port} ;
+				carp(
+					"Could not get next available port number, using port " .
+					"$this->{port} instead. Use the PORT configuration " .
+					"option to suppress this warning.\n") ;
 			}
 		}
 

@@ -275,7 +275,7 @@ sub build {
 	$pcode =~ s/\/\*(.*?)\*\///gs ;
 	$pcode =~ s/\/\/(.*)$//gm ;
 	if ($pcode =~ /public\s+class\s+(\w+)/){
-		# $source = "$1.java" ;
+		$source = "$1.java" ;
 	}
 
 	my $install_dir = File::Spec->catdir($o->get_api('install_lib'), 
@@ -323,13 +323,13 @@ sub build {
 		# We need to take care of checking whether there are actually files
 		# to be copied, and if not will exit the script.
 		if (portable('COMMAND_COM')){
-			my @flist= Inline::Java::Portable::find_classes_in_dir($install_dir) ;
-		 	if (! scalar(@flist)){
+			my @fl = Inline::Java::Portable::find_classes_in_dir($install_dir) ;
+		 	if (! scalar(@fl)){
 				croak "No class files produced. Previous command failed under command.com?" ;
 			}
-		 	foreach my $file (@flist){
-				if (! (-s $file)){
-					croak "File $file has size zero. Previous command failed under command.com?" ;
+		 	foreach my $f (@fl){
+				if (! (-s $f->{file})){
+					croak "File $f->{file} has size zero. Previous command failed under command.com?" ;
 				}
 			}
 		}
@@ -448,12 +448,9 @@ sub _study {
 
 	if ($study_module){
 		# We need to add the classes that are in the directory or under...
-		my @cl = Inline::Java::Portable::find_classes_in_dir($install_dir) ;
-		foreach my $class (@cl){
-			if ($class =~ s/([\w\$]+)\.class$/$1/){
-				my $f = $1 ;
-				push @{$classes}, $f ;
-			}
+		my @fl = Inline::Java::Portable::find_classes_in_dir($install_dir) ;
+		foreach my $f (@fl){
+			push @{$classes}, $f->{class} ;
 		}
 	}
 

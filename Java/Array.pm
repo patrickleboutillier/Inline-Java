@@ -555,7 +555,7 @@ sub FillArray {
 
 	my $type = $map->{$level}->{type} ;
 	# Type can be undefined when array is zero length.
-	if ((defined($type))&&($map->{$level}->{type} eq "SUB_ARRAY")){
+	if ((defined($type))&&($type eq "SUB_ARRAY")){
 		foreach my $elem (@{$array}){
 			if (! defined($elem)){
 				$elem = [] ;
@@ -567,7 +567,7 @@ sub FillArray {
 	if ($nb < $max){
 		# We must stuff...
 		for (my $i = $nb ; $i < $max ; $i++){
-			if ($map->{$level}->{type} eq "SUB_ARRAY"){
+			if ((defined($type))&&($type eq "SUB_ARRAY")){
 				my $elem = [] ;
 				$this->FillArray($elem, $level + 1) ;
 				push @{$array}, $elem ;

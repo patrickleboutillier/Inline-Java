@@ -5,7 +5,9 @@ use blib ;
 
 use Inline Java => <<'END_OF_JAVA_CODE' ;
 
-class Pod_alu {
+package test1.test2.test3 ;
+ 
+public class Pod_alu {
       public Pod_alu(){
       }
 
@@ -20,7 +22,7 @@ class Pod_alu {
 END_OF_JAVA_CODE
 
 
-my $alu = new Pod_alu() ;
+my $alu = new test1::test2::test3::Pod_alu() ;
 print($alu->add(9, 16) . "\n") ; # prints 25
 print($alu->subtract(9, 16) . "\n") ; # prints -7
 
