@@ -8,7 +8,7 @@ $Inline::Java::JVM::VERSION = '0.31' ;
 use Carp ;
 use IPC::Open3 ;
 use IO::File ;
-use IO::Pipe ;
+use IO::Socket ;
 use POSIX qw(setsid) ;
 
 my %SIGS = () ;
@@ -41,7 +41,7 @@ sub new {
 		Inline::Java::debug(1, "JNI mode") ;
 
 		my $jni = new Inline::Java::JNI(
-			$ENV{CLASSPATH} || "",
+			$ENV{CLASSPATH} || '',
 			$o->get_java_config('EMBEDDED_JNI'),
 			Inline::Java::get_DEBUG(),
 		) ;
@@ -70,13 +70,12 @@ sub new {
 		}
 		$this->capture(1) ;
 
-		my $java = File::Spec->catfile($o->get_java_config('BIN'), 
+		my $java = File::Spec->catfile($o->get_java_config('J2SDK'), 'bin',
 			"java" . Inline::Java::portable("EXE_EXTENSION")) ;
 
-		my $shared_arg = ($this->{shared} ? "true" : "false") ;
-		my $cmd = "\"$java\" InlineJavaServer $debug $this->{port} $shared_arg" ;
+		my $shared = ($this->{shared} ? "true" : "false") ;
+		my $cmd = "\"$java\" InlineJavaServer $debug $this->{port} $shared" ;
 		Inline::Java::debug(1, $cmd) ;
-
 		if ($o->get_config('UNTAINT')){
 			($cmd) = $cmd =~ /(.*)/ ;
 		}
@@ -91,7 +90,7 @@ sub new {
 		$this->{socket}	= $this->setup_socket(
 			$this->{host}, 
 			$this->{port}, 
-			$o->get_java_config('STARTUP_DELAY'),
+			int($o->get_java_config('STARTUP_DELAY')),
 			0
 		) ;
 	}
@@ -323,10 +322,12 @@ sub process_command {
 	my $data = shift ;
 
 	my $resp = undef ;
+
 	# Patch by Simon Cozens for perl -wle 'use Our::Module; do_stuff()'
 	local $/ = "\n" ;
 	local $\ = "" ;
 	# End Patch
+
 	while (1){
 		Inline::Java::debug(3, "packet sent is $data") ;
 

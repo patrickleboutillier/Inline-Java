@@ -1,18 +1,20 @@
 package Inline::Java::Portable ;
 @Inline::Java::Portable::ISA = qw(Exporter) ;
 
-@EXPORT = qw(portable) ;
+@EXPORT = qw(portable make_classpath get_jar) ;
 
 
 use strict ;
 
-$Inline::Java::Portable::VERSION = '0.31' ;
+$Inline::Java::Portable::VERSION = '0.40' ;
 
 
 use Exporter ;
 use Carp ;
 use Config ;
 use File::Find ;
+use File::Spec ;
+
 
 # Here is some code to figure out if we are running on command.com
 # shell under Windows.
@@ -38,27 +40,50 @@ sub debug {
 }
 
 
-# Here in Inline <= 0.43 there is a portability issue
-# with the mkpath function. It splits directly on '/'.
-# We assume this will be fixed in 0.44
-sub mkpath {
-	my $o = shift ;
-	my $path = shift ;
+# Cleans the CLASSPATH environment variable and adds
+# the paths specified.
+sub make_classpath {
+	my @paths = @_ ;
 
-	return $o->Inline::mkpath($path) ;
-} ;
+	my @list = () ;
+	if (defined($ENV{CLASSPATH})){
+		push @list, $ENV{CLASSPATH} ;
+	}
+	push @list, @paths ;
+
+	my $sep = portable("ENV_VAR_PATH_SEP_CP") ;
+	my @cp = split(/$sep+/, join($sep, @list)) ;
+
+	# Clean up paths
+	foreach my $p (@cp){
+		$p =~ s/^\s+// ;
+		$p =~ s/\s+$// ;
+		$p = portable("SUB_FIX_CLASSPATH", $p) ;
+	}
+
+	# Remove duplicates, but preserve order
+	my @fcp = () ;
+	my %cp = map {$_ => 1} @cp ;
+	foreach my $p (@cp){
+		if (($p)&&($cp{$p})){
+			push @fcp, $p ;
+			delete $cp{$p} ;
+		}
+	}
+
+	my $cp = join($sep, @fcp) ;
+	Inline::Java::debug(1, "classpath: $cp") ;
+
+	return (wantarray ? @fcp : $cp) ;
+}
 
 
-# Here in Inline <= 0.43 there is a portability issue
-# with the rmpath function. It splits directly on '/'.
-# We assume this will be fixed in 0.44
-sub rmpath {
-	my $o = shift ;
-	my $prefix = shift ;
-	my $path = shift ;
-	
-	return $o->Inline::rmpath($prefix, $path) ;
-} ;
+sub get_jar {
+	return File::Spec->catfile(
+		(File::Spec->splitpath($INC{"Inline/Java.pm"}))[0,1], 
+		'Java', 'jar', 'InlineJava.jar'
+	) ;
+}
 
 
 sub find_classes_in_dir {
@@ -68,9 +93,9 @@ sub find_classes_in_dir {
 	find(sub {
 		my $file = $_ ;
 		if ($file =~ /\.class$/){
-			push @ret, $file ;
+			push @ret, File::Spec->catfile($File::Find::dir, $file) ;
 		}
-	}, $dir) ;	
+	}, $dir) ;
 
 	return @ret ;
 }
@@ -178,7 +203,3 @@ sub portable {
 
 
 1 ;
-
-
-
-

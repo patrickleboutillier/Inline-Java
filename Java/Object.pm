@@ -548,12 +548,4 @@ sub DESTROY {
 
 
 
-
-package Inline::Java::Object ;
-
-
 1 ;
-
-
-__DATA__
-

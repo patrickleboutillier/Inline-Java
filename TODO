@@ -1,4 +1,8 @@
 CODE:
+- Implement AddClassPath
+- Change BIN to J2SDK
+- Fix makfile.PL to build at install time, create jar and config file
+- Fix environment variables
 
 TEST:
 - Alpha

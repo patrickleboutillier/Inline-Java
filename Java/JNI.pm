@@ -21,7 +21,7 @@ sub load_lib {
 	my $lib = (DynaLoader::dl_findfile($l))[0] ;	
 	
     if ((! $lib)||(! defined(DynaLoader::dl_load_file($lib, 0x01)))){
-		carp("Couldn't load $l.") ;
+		carp("Couldn't find or load $l.") ;
 	}
 }
 

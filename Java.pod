@@ -176,12 +176,12 @@ behavior of C<Inline::Java>:
    STUDY:
       Takes an array of Java classes that you wish to have 
       C<Inline::Java> learn about so that you can use them inside Perl.
-      Ex: STUDY => ['java.lang.HashMap', 'my.class'] ;
+      Ex: STUDY => ['java.lang.HashMap', 'my.class']
 
    AUTOSTUDY:
       Makes C<Inline::Java> automatically study unknown classes it 
-      encounters.
-      Ex: STUDY => ['java.lang.HashMap', 'my.class'] ;
+      encounters them.
+      Ex: AUTOSTUDY => 1
 
 
 =head1 ENVIRONMENT VARIABLES

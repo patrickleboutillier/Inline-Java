@@ -3,7 +3,7 @@ package Inline::Java::Callback ;
 
 use strict ;
 
-$Inline::Java::Callback::VERSION = '0.31' ;
+$Inline::Java::Callback::VERSION = '0.40' ;
 
 
 use Carp ;
@@ -85,69 +85,3 @@ sub ProcessCallback {
 
 
 1 ;
-
-
-__DATA__
-
-/*
-	Callback to Perl...
-*/
-public class InlineJavaPerlCaller {
-	public InlineJavaPerlCaller(){
-	}
-
-
-	class InlineJavaException extends Exception {
-		private InlineJavaServer.InlineJavaException ije = null ;
-		
-		InlineJavaException(InlineJavaServer.InlineJavaException e) {
-			ije = e ;
-		}
-
-		public InlineJavaServer.InlineJavaException GetException(){
-			return ije ;
-		}
-	}
-
-
-	class PerlException extends Exception {
-		private Object obj = null ;
-
-		PerlException(Object o) {
-			obj = o ;
-		}
-
-		public Object GetObject(){
-			return obj ;
-		}
-
-		public String GetString(){
-			return (String)obj ;
-		}
-	}
-
-
-	public Object CallPerl(String pkg, String method, Object args[]) throws InlineJavaException, PerlException {
-		return CallPerl(pkg, method, args, null) ;
-	}
-
-
-	public Object CallPerl(String pkg, String method, Object args[], String cast) throws InlineJavaException, PerlException {
-		if (InlineJavaServer.instance == null){
-			System.err.println("Can't use InlineJavaPerlCaller outside of an Inline::Java context") ;
-			System.err.flush() ;
-			System.exit(1) ;
-		}
-
-		try {
-			return InlineJavaServer.instance.Callback(pkg, method, args, cast) ;
-		}
-		catch (InlineJavaServer.InlineJavaException e){
-			throw new InlineJavaException(e) ;
-		}
-		catch (InlineJavaServer.InlineJavaPerlException e){
-			throw new PerlException(e.GetObject()) ;
-		}
-	}
-}
-

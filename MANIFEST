@@ -6,7 +6,6 @@ TODO
 Makefile.PL
 Java.pm
 Java.pod
-Java/Init.pm
 Java/Object.pm
 Java/Protocol.pm
 Java/Class.pm
