@@ -406,7 +406,7 @@ Java array reference obtained from elsewhere, you don't even need to cast:
 Starting in version 0.20, it is possible to use the JNI (Java Native 
 Interface) extension. This enables C<Inline::Java> to load the Java virtual 
 machine as a shared object instead of running it as a stand-alone server. 
-This brings a dramatic improvement in performance.
+This brings an improvement in performance.
 
 However, the JNI extension is not available on all platforms (see README and
 README.JNI for more information). For that reason, if you have built the 
