@@ -121,7 +121,7 @@ sub MY::postamble {
 # Added by Inline::Java installation
 java ::
 	\@\$(MKPATH) $obj_dir
-	"$javac" -g -d $obj_dir $src
+	"$javac" -deprecation -g -d $obj_dir $src
 	"$jar" cf $server_arch -C $obj_dir org -C $obj_dir InlineJava.properties
 	"$jar" cf $user_arch -C $obj_dir InlineJavaUserClassLink.class
 MAKE

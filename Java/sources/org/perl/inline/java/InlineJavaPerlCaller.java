@@ -49,14 +49,19 @@ public class InlineJavaPerlCaller {
 		return resources ;
 	}
 
-
 	/* Old interface */
+	/**
+	 * @deprecated  As of 0.48, replaced by {@link #CallPerlSub(String,Object[])}
+	 */
 	public Object CallPerl(String pkg, String method, Object args[]) throws InlineJavaException, InlineJavaPerlException {
 		return CallPerl(pkg, method, args, null) ;
 	}
 
 
 	/* Old interface */
+	/**
+	 * @deprecated  As of 0.48, replaced by {@link #CallPerlSub(String,Object[],Class)}
+	 */
 	public Object CallPerl(String pkg, String method, Object args[], String cast) throws InlineJavaException, InlineJavaPerlException {
 		InlineJavaCallback ijc = new InlineJavaCallback(
 			(String)null, pkg + "::" + method, args, 
@@ -118,17 +123,17 @@ public class InlineJavaPerlCaller {
 
 
 	public Object require(String module_or_file) throws InlineJavaPerlException, InlineJavaException {
-		return CallPerlSub("Inline::Java::PerlInterpreter::java_require", new Object [] {module_or_file}) ;
+		return CallPerlSub("Inline::Java::Callback::java_require", new Object [] {module_or_file}) ;
 	}
 
 
 	public Object require_file(String file) throws InlineJavaPerlException, InlineJavaException {
-		return CallPerlSub("Inline::Java::PerlInterpreter::java_require", new Object [] {file, new Boolean("true")}) ;
+		return CallPerlSub("Inline::Java::Callback::java_require", new Object [] {file, new Boolean("true")}) ;
 	}
 	
 	
 	public Object require_module(String module) throws InlineJavaPerlException, InlineJavaException {
-		return CallPerlSub("Inline::Java::PerlInterpreter::java_require", new Object [] {module, new Boolean("false")}) ;
+		return CallPerlSub("Inline::Java::Callback::java_require", new Object [] {module, new Boolean("false")}) ;
 	}
 	
 

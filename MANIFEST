@@ -44,7 +44,8 @@ Java/Natives/t/02_perl_natives.t
 Java/PerlInterpreter/Makefile.PL
 Java/PerlInterpreter/PerlInterpreter.pm
 Java/PerlInterpreter/PerlInterpreter.xs
-Java/PerlInterpreter/01_perl_interpreter.t
+Java/PerlInterpreter/t/01_init.t
+Java/PerlInterpreter/t/02_perl_interpreter.t
 t/01_init.t
 t/02_primitives.t
 t/03_objects.t

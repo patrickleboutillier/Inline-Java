@@ -167,12 +167,12 @@ sub java_require {
 
 	if (! defined($is_file)){
 		if (-e $module){
-			$module = '"$module"' ;
+			$module = "\"$module\"" ;
 		}
 	}
 
 	if ($is_file){
-		$module = '"$module"' ;
+		$module = "\"$module\"" ;
 	}
 
 	Inline::Java::debug(3, "requiring Perl module/file: $module") ; 

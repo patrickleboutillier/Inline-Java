@@ -119,6 +119,8 @@ if (($build_jni || AskYN("Do you wish to build the JNI extension?", 'y'))){
 			map {print "  $_\n"; } keys %so_dirs ;
 			print "See README.JNI for more information.\n\n" ;
 
+			# Add these so_dirs to the default_j2sdk.pl file.
+
 			@main::I = (
 				Inline::Java::Portable::portable('SUB_FIX_MAKE_QUOTES', 
 					"-I" . $files->{'jni.h'}->{selected}), 

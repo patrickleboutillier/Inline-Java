@@ -158,19 +158,22 @@ public class InlineJavaPerlNatives extends InlineJavaPerlCaller {
 
 		// Transform the Java class name into the Perl package name
 		StringTokenizer st = new StringTokenizer(pkg, ".") ;
-		StringBuffer perl_pkg = new StringBuffer() ;
+		StringBuffer perl_sub = new StringBuffer() ;
 		// Starting with "::" means that the package is relative to the caller package
 		while (st.hasMoreTokens()){
-			perl_pkg.append("::" + st.nextToken()) ;
+			perl_sub.append("::" + st.nextToken()) ;
 		}
+		perl_sub.append("::" + method) ;
 
 		for (int i = 0 ; i < args.length ; i++){
 			InlineJavaUtils.debug(3, "InvokePerlMethod argument " + i + " = " + args[i]) ;
 		}
 
+		Object ret = CallPerlSub(perl_sub.toString(), args) ;
+
 		InlineJavaUtils.debug(3, "exiting InvokePerlMethod") ;
 
-		return CallPerl(perl_pkg.toString(), method, args) ;
+		return ret ;
 	}
 
 

@@ -323,7 +323,7 @@ class t15 extends InlineJavaPerlCaller {
 	public int silly_mul_via_perl_via_java(int a, int b) throws InlineJavaException, InlineJavaPerlException {
 		int ret = 0 ;
 		for (int i = 0 ; i < b ; i++){
-			String val = (String)CallPerlSub("main::add_via_java", 
+			String val = (String)CallPerlSub("add_via_java", 
 				new Object [] {new Integer(ret), new Integer(a)}) ;
 			ret = new Integer(val).intValue() ;
 		}
@@ -332,7 +332,7 @@ class t15 extends InlineJavaPerlCaller {
 
 
 	public String cat_via_perl(String a, String b) throws InlineJavaException, InlineJavaPerlException {
-		String val = (String)CallPerl("main", "cat", 
+		String val = (String)CallPerlSub("cat", 
 			new Object [] {a, b}) ;
 
 		return val ;
