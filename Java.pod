@@ -36,7 +36,7 @@ The process of interrogating the Java classes for public methods
 occurs the first time you run your Java code. The namespace is
 cached, and subsequent calls use the cached version.
 
-=head1 Using the Inline::Java Module
+=head1 USING THE Inline::Java MODULE
 
 C<Inline::Java> is driven by fundamentally the same idea as other
 C<Inline> language modules, like C<Inline::C> or C<Inline::CPP>. 
@@ -74,6 +74,37 @@ on your machine. This is done using one of the following techniques:
    - set the JAVA_BIN configuration option to the correct directory
    - set the JAVA_BIN environment variable to the correct directory
    - put the correct directory in your PATH environment variable
+
+=head1 CONFIGURATION OPTIONS
+
+There are a number of configuration options that dictate the 
+behavior of C<Inline::Java>:
+
+   JAVA_BIN: 
+      Specifies the path to your Java binaries. 
+	  Ex: JAVA_BIN => 'my/java/bin/path'
+
+   JAVA_PORT:
+      Specifies the starting port number for the server. If many 
+      C<Inline::Java> blocks are declared, the port number is 
+      incremented each time.	
+      Default is 7890.
+      Ex: JAVA_PORT => 4567
+
+   JAVA_STARTUP_DELAY:
+      Specifies the maximum number of seconds that the Perl script
+      will try to connect to the Java server. In other this is the
+      delay that Perl gives to the Java server to start.
+      Default is 15 seconds.
+      Ex: JAVA_STARTUP_DELAY => 20
+
+   JAVA_DEBUG:
+      Enables debugging info
+      Ex: JAVA_DEBUG => 1
+
+   JAVA_CLASSPATH:
+      Adds the specified CLASSPATH to the environment CLASSPATH.
+      Ex: JAVA_CLASSPATH => 'my/other/java/classses'
 
 =head1 CLASSES AND OBJECTS
 
@@ -205,7 +236,7 @@ are not know to C<Inline::Java>. This is also true for return types:
 Objects of types unknown to Perl can exist in the Perl space, you just 
 can't call any of their methods.
 
-=head1 MEMBER_VARIABLES
+=head1 MEMBER VARIABLES
 
 Currently public member variables are not visible from the Perl space. 
 This will be implemented in a future version. But you can certainly create 
@@ -225,7 +256,23 @@ focus for future releases. It has been tested on Solaris 2.5.1, with
 Perl 5.6 and Java SDK 1.2.1. It likely will work with many other
 configuration under Unix, and possibly under Windows.
 
-=head1 SEE ALSO 
+=head1 HOW IT WORKS
+
+This is how C<Inline::Java> works. Once the user's code is compiled by the 
+javac binary, C<Inline::Java>'s own Java code is compiled. This code 
+implements a server that receives requests from Perl to create objects, 
+call methods, destroy objects, etc. It is also capable of analyzing Java code
+tp extract the public symbols. Once this code is compiled, it is executed to 
+extract the symbols from the Java code.
+
+Once this is done, the user's code information is fetched and is bound to 
+Perl namespaces. Then C<Inline::Java>'s code is run to launch the server. The 
+Perl script then connects to the server using a TCP socket. Then each object 
+creation or method invocation on "Java objects" send requests to the server, 
+which processes them and returns object ids to Perl which keeps them the 
+reference te objects in the future.
+
+=head1 SEE ALSO 		   
 
 For information about using C<Inline>, see L<Inline>.
 
