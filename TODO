@@ -1,18 +1,9 @@
 CODE:
-- Parse source code for "public class \w+" and use this for file name.
-
-$code =~ s/\\\"//g ;
-$code =~ s/\"(.*?)\"//g ;
-$code =~ s/\/\*(.*?)\*\///gs ;
-$code =~ s/\/\/(.*)$///gm ;
-
-- Write a test for a public class in a package.
-- Retest all the small test stuff under Linux.
-- Add debug for port selection
 
 TEST:
 - Alpha
 - Cygwin
+- J2SDK 1.4.0 under Windows
 
 DOCUMENTATION:
 - Recheck all and complete.
