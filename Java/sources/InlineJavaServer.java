@@ -45,8 +45,8 @@ public class InlineJavaServer {
 
 		while (true){
 			try {
-				// For now we pass our own InlineJavaUserClassLoader, but later we can implement
-				// privacy by creating a new one.
+				// For now we pass our own InlineJavaUserClassLoader, but later
+				//  we can implement privacy by creating a new one.
 				InlineJavaServerThread ijt = new InlineJavaServerThread(this, ss.accept(), ijucl) ;
 				ijt.start() ;
 				if (! shared_jvm){

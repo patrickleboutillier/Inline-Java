@@ -32,7 +32,7 @@ sub AddClassPath {
 			return () ;
 		}
 		else{
-			Inline::Java::debug(1, "adding to classpath: '$e'") ;
+			Inline::Java::debug(2, "adding to classpath: '$e'") ;
 			$CLASSPATH_ENTRIES{$e} = 1 ;
 		}
 		$e ;
@@ -283,7 +283,7 @@ sub CreateSignature {
 	my $proto = shift ;
 	my $del = shift || ", " ;
 
-	my @p = map {$_ || ''} @{$proto} ;
+	my @p = map {(defined($_) ? $_ : '')} @{$proto} ;
 
 	return "(" . join($del, @p) . ")" ;
 }

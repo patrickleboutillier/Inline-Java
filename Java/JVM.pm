@@ -60,6 +60,21 @@ sub new {
 		$this->{port} = $o->get_java_config('PORT') ;
 		$this->{host} = "localhost" ;
 
+		# Grab the next free port number and release it.
+		if ($this->{port} < 0){
+			my $sock = IO::Socket::INET->new(
+				Listen => 0, Proto => 'tcp',
+				LocalAddr => 'localhost', LocalPort => 0) ;
+			if ($sock){
+				$this->{port} = $sock->sockport() ;
+				close($sock) ;
+			}
+			else{
+				# Revert to the default.
+				$this->{port} = - $this->{port} ;
+			}
+		}
+
 		# Check if JVM is already running
 		if ($this->{shared}){
 			eval {
@@ -76,7 +91,7 @@ sub new {
 
 		my $shared = ($this->{shared} ? "true" : "false") ;
 		my $cmd = "\"$java\" org.perl.inline.java.InlineJavaServer $debug $this->{port} $shared" ;
-		Inline::Java::debug(1, $cmd) ;
+		Inline::Java::debug(2, $cmd) ;
 		if ($o->get_config('UNTAINT')){
 			($cmd) = $cmd =~ /(.*)/ ;
 		}

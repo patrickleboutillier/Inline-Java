@@ -63,19 +63,21 @@ sub make_classpath {
 			push @fcp, (-d $p ? Cwd::abs_path($p) : $p) ;
 			delete $cp{$p} ;
 		}
+		else{
+			Inline::Java::debug(2, "classpath candidate '$p' scraped") ;
+		}
 	}
 
 	my $cp = join($sep, @fcp) ;
-	Inline::Java::debug(1, "classpath: $cp") ;
 
 	return (wantarray ? @fcp : $cp) ;
 }
 
 
 sub get_jar_dir {
-	return File::Spec->catdir(
+	return Cwd::abs_path(File::Spec->catpath(
 		(File::Spec->splitpath($INC{"Inline/Java.pm"}))[0,1], 
-		'Java') ;
+		'Java', '')) ;
 }
 
 
@@ -120,6 +122,7 @@ sub portable {
 		SO_LIB_PATH_VAR		=>	'LD_LIBRARY_PATH',
 		ENV_VAR_PATH_SEP_CP	=>	':',
 		IO_REDIR			=>  '2>&1',
+		MAKE				=>	'make',
 		DEV_NULL			=>  '/dev/null',
 		COMMAND_COM			=>  0,
 		SUB_FIX_CLASSPATH	=>	undef,
@@ -132,6 +135,7 @@ sub portable {
 			ENV_VAR_PATH_SEP_CP	=>	';',
 			# 2>&1 doesn't work under command.com
 			IO_REDIR			=>  ($COMMAND_COM ? '' : undef),
+			MAKE				=>	'nmake',
 			DEV_NULL			=>  'nul',
 			COMMAND_COM			=>	$COMMAND_COM,
 			SO_LIB_PATH_VAR		=>	'PATH',

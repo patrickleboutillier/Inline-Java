@@ -23,9 +23,9 @@ foreach my $arg (@ARGV){
 @ARGV = @new_args ;
 
 if (! $jdk_dir){
-	my $def_pl = File::Spec->catfile('Java', 'DefaultJ2SDK.pl') ;
+	my $def_pl = File::Spec->catfile('Java', 'default_j2sdk.pl') ;
 	if (-e $def_pl){
-		require File::Spec->catfile('Java', 'DefaultJ2SDK.pl') ;
+		require File::Spec->catfile('Java', 'default_j2sdk.pl') ;
 		$jdk_dir = Inline::Java::get_default_j2sdk() ;
 	}
 	else{
@@ -59,9 +59,9 @@ foreach my $f ('javac', 'jar', 'java'){
 
 
 # Now we have the J2SDK directory and it exists. 
-# We will create the DefaultJ2SDK.pl file that
+# We will create the default_j2sdk.pl file that
 # will contain that value for future use.
-my $def_jdk = File::Spec->catfile('Java', 'DefaultJ2SDK.pl') ;
+my $def_jdk = File::Spec->catfile('Java', 'default_j2sdk.pl') ;
 open(J2SDK, ">$def_jdk") or
 	die("Can't open '$def_jdk' for writing: $!") ;
 print J2SDK <<J2SDK_PL;
@@ -169,3 +169,8 @@ if (Inline::Java::Portable::portable('COMMAND_COM')){
 	close(MAKEFILE) ;
 }
 
+my $make = Inline::Java::Portable::portable('MAKE') ;
+print "\nYou can continue the installation with the following commands:\n" ;
+print "  % $make java\n" ;
+print "  % $make\n" ;
+print "  % $make test\n" ; 

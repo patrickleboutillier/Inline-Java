@@ -35,7 +35,7 @@ use Inline::Java::Callback ;
 # Must be last.
 use Inline::Java::JVM ;
 # Our default J2SK
-require File::Spec->catfile('Java', 'DefaultJ2SDK.pl') ;
+require File::Spec->catfile('Java', 'default_j2sdk.pl') ;
 
 
 # This is set when the script is over.
@@ -139,10 +139,10 @@ sub validate {
 
 	if ($o->get_java_config('PORT') == -1){
 		if ($o->get_java_config('SHARED_JVM')){
-			$o->set_java_config('PORT') = 7891 ;
+			$o->set_java_config('PORT', 7890) ;
 		}
 		else{
-			$o->set_java_config('PORT') = 7890 ;
+			$o->set_java_config('PORT', -7890) ;
 		}
 	}
 
@@ -255,14 +255,29 @@ sub build {
 		($cwd) = $cwd =~ /(.*)/ ;
 	}
 
+	# We must grab this before we change to the build dir because
+	# it could be relative...
+	my $server_jar = get_server_jar() ;
+
 	# Create the build dir and go there
 	my $build_dir = $o->get_api('build_dir') ;
 	$o->mkpath($build_dir) ;
 	chdir $build_dir ;
 
 	my $code = $o->get_api('code') ;
+	my $pcode = $code ;
 	my $study_only = ($code =~ /^(STUDY|SERVER)$/) ;
 	my $source = ($study_only ? '' : $o->get_api('modfname') . ".java") ;
+
+	# Parse code to check for public class
+	$pcode =~ s/\\\"//g ;
+	$pcode =~ s/\"(.*?)\"//g ;
+	$pcode =~ s/\/\*(.*?)\*\///gs ;
+	$pcode =~ s/\/\/(.*)$//gm ;
+	if ($pcode =~ /public\s+class\s+(\w+)/){
+		# $source = "$1.java" ;
+	}
+
 	my $install_dir = File::Spec->catdir($o->get_api('install_lib'), 
 		'auto', $o->get_api('modpname')) ;
 	$o->mkpath($install_dir) ;
@@ -288,12 +303,13 @@ sub build {
 		}
 
 		my $cp = $ENV{CLASSPATH} || '' ;
-		$ENV{CLASSPATH} = make_classpath($o->get_java_config('CLASSPATH'), get_server_jar(), @prev_install_dirs) ;
+		$ENV{CLASSPATH} = make_classpath($o->get_java_config('CLASSPATH'), $server_jar, @prev_install_dirs) ;
+		Inline::Java::debug(2, "classpath: $ENV{CLASSPATH}") ;
 		my $cmd = "\"$javac\" -d \"$install_dir\" $source > cmd.out $redir" ;
 		if ($o->get_config('UNTAINT')){
 			($cmd) = $cmd =~ /(.*)/ ;
 		}
-		Inline::Java::debug(1, "$cmd") ;
+		Inline::Java::debug(2, "$cmd") ;
 		my $res = system($cmd) ;
 		$res and do {
 			croak $o->compile_error_msg($cmd) ;
@@ -385,6 +401,7 @@ sub load {
 	if (! $JVM){
 		my $cp = $ENV{CLASSPATH} || '' ;
 		$ENV{CLASSPATH} = get_server_jar() ;
+		Inline::Java::debug(2, "classpath: $ENV{CLASSPATH}") ;
 		$JVM = new Inline::Java::JVM($o) ;
 		$ENV{CLASSPATH}	= $cp ;
 

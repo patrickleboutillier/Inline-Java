@@ -329,9 +329,15 @@ sub DESTROY {
 		Inline::Java::debug(4, "destroying Inline::Java::Object::Tie") ;
 		
 		if (! Inline::Java::get_DONE()){
+
+			my $class = $this->__get_private()->{class} ;
+			Inline::Java::debug(2, "destroying object in java ($class):") ;
+
+			# I can't find any other trace of this weak_ref stuff, but
+			# it's not a bad idea...
 			if (! $this->__get_private()->{weak_ref}){
 				# This one is very tricky:
-				# Here we want to be carefull since this can be called
+				# Here we want to be careful since this can be called
 				# at scope end, but the scope end might be triggered
 				# by another croak, so we need to record and propagate 
 				# the current $@
@@ -370,12 +376,6 @@ sub DESTROY {
 		}
 	}
 	else{
-		# Here we can't untie because we still have a reference in $PRIVATES
-		# untie %{$this} ;
-
-		my $class = $this->__get_private()->{class} ;
-		Inline::Java::debug(2, "destroying object in java ($class):") ;
-
 		Inline::Java::debug(4, "destroying Inline::Java::Object") ;
 	}
 }

@@ -16,7 +16,7 @@ BEGIN {
 	}
 	else{
 		$t10::nb = 10 ;
-		plan(tests => $t10::nb + 1) ;
+		plan(tests => $t10::nb + 3) ;
 	}
 }
 
@@ -49,6 +49,11 @@ for (my $i = 0 ; $i < $nb ; $i++){
 }
 
 ok($t10::t10::i, $sum) ;
+
+# Bring down the JVM
+ok(! Inline::Java::i_am_JVM_owner()) ;
+Inline::Java::capture_JVM() ;
+ok(Inline::Java::i_am_JVM_owner()) ;
 
 
 sub do_child {

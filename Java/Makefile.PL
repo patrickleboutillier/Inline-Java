@@ -6,7 +6,7 @@ use File::Spec ;
 
 require "Portable.pm" ;
 # The file we just produced in the parent Makefile.PL
-require "DefaultJ2SDK.pl" ;
+require "default_j2sdk.pl" ;
 
 
 # Some shortcuts while developing
@@ -43,6 +43,7 @@ my $files = {
 foreach my $f (@files){
 	$files->{$f}->{selected} = undef ;
 	$files->{$f}->{choices} = [] ;
+	$files->{$f}->{default_choice} = 1 ;
 }
 
 
@@ -58,9 +59,16 @@ if (($build_jni || AskYN("Do you wish to build the JNI extension?", 'y'))){
 
 	$jdk_dir = Inline::Java::get_default_j2sdk() ;
 
-	my $type = FindDefaultVMType() ;
-
 	find(\&search, $jdk_dir) ;
+
+	my $type = FindDefaultVMType() ;
+	my $cnt = 1 ;
+	foreach my $c (@{$files->{$jvm_lib}->{choices}}){
+		if ($c =~ /$type/){
+			$files->{$jvm_lib}->{default_choice} = $cnt ;
+		}
+		$cnt++ ;
+	}
 
 	my $done = 0 ;
 	foreach my $f (@files){
@@ -74,7 +82,7 @@ if (($build_jni || AskYN("Do you wish to build the JNI extension?", 'y'))){
 			$files->{$f}->{selected} = $files->{$f}->{choices}->[0] ;
 		}
 		else{
-			Choose($f, $type) ;
+			Choose($f) ;
 		}
 	}
 	if (! $done){
@@ -195,20 +203,16 @@ sub FindDefaultVMType {
 
 sub Choose {
 	my $f = shift ;
-	my $type = shift ;
 
 	my $o = $files->{$f} ;
 	my $cnt = 0 ;
 	my $def = undef ;
 	foreach my $f (@{$o->{choices}}){
 		$cnt++ ;
-		if ($f =~ /$type/){
-			$def = $cnt ;
-		}
-		print "$cnt- $f\n" ;
+		print "$cnt) $f\n" ;
 	}
-	my $idx = AskSub("Please select from the above list (using the corresponding number) which '$f' to use:",
-		$def, sub {(($_[0] >= 1)&&($_[0] <= $cnt))}) ;
+	my $idx = AskSub("Please select from the above list which '$f' to use:",
+		$o->{default_choice}, sub {(($_[0] >= 1)&&($_[0] <= $cnt))}) ;
 
 	$o->{selected} = $o->{choices}->[int($idx) - 1] ;
 	print "\n" ;

@@ -1,10 +1,14 @@
 CODE:
 - Parse source code for "public class \w+" and use this for file name.
-- Fix install and compilation of jars.
-- Fix installation script for JNI.
+
+$code =~ s/\\\"//g ;
+$code =~ s/\"(.*?)\"//g ;
+$code =~ s/\/\*(.*?)\*\///gs ;
+$code =~ s/\/\/(.*)$///gm ;
+
 - Write a test for a public class in a package.
 - Retest all the small test stuff under Linux.
-- Restore Alpha status
+- Fix MANIFEST
 
 TEST:
 - Alpha

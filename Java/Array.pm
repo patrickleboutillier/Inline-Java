@@ -151,8 +151,6 @@ sub DESTROY {
 		$OBJECTS->{$this} = undef ;
 	}
 	else{
-		# Here we can't untie because we still have a reference in $OBJECTS
-		# untie @{$this} ;
 		Inline::Java::debug(4, "destroying Inline::Java::Array") ;
 	}
 }
@@ -435,9 +433,12 @@ sub ValidateArray {
 		croak "'$ref' is not an array reference" ;
 	}
 
+	my $map = $this->{map} ;
+	if (! exists($map->{$level}->{max})){
+		$map->{$level}->{max} = 0 ;
+	}
 	$this->ValidateElements($ref, $array, $level) ;
 
-	my $map = $this->{map} ;
 	foreach my $elem (@{$ref}){
 		if ((defined($elem))&&(UNIVERSAL::isa($elem, "ARRAY"))){
 			# All the elements at this level are sub-arrays.
@@ -457,7 +458,7 @@ sub ValidateArray {
 		my @dims = () ;
 		my $max_cells = 1 ;
 		foreach my $l (@levels){
-			push @dims, ($map->{$l}->{max} || 0) ;
+			push @dims, $map->{$l}->{max} ;
 			$max_cells *= $map->{$l}->{max} ;
 		}
 		my $nb_cells = ($map->{$last}->{count} || 0) ;
@@ -485,10 +486,8 @@ sub ValidateElements {
 	my $level = shift ;
 
 	my $map = $this->{map} ;
-
 	my $cnt = scalar(@{$ref}) ;
-	my $max = $map->{$level}->{max} || 0 ;
-
+	my $max = $map->{$level}->{max} ;
 	if ($cnt > $max){
 		$map->{$level}->{max} = $cnt ;
 	}
@@ -513,8 +512,7 @@ sub ValidateElements {
 		}
 		$map->{$level}->{count}++ ;
 	}
-}
-
+}	
 
 sub CheckMap {
 	my $this = shift ;
@@ -555,7 +553,9 @@ sub FillArray {
 	my $max = $map->{$level}->{max} ;
 	my $nb = scalar(@{$array}) ;
 
-	if ($map->{$level}->{type} eq "SUB_ARRAY"){
+	my $type = $map->{$level}->{type} ;
+	# Type can be undefined when array is zero length.
+	if ((defined($type))&&($map->{$level}->{type} eq "SUB_ARRAY")){
 		foreach my $elem (@{$array}){
 			if (! defined($elem)){
 				$elem = [] ;

@@ -109,7 +109,8 @@ behavior of C<Inline::Java>:
       Specifies the starting port number for the server. If many 
       C<Inline::Java> blocks are declared, the port number is 
       incremented each time.	
-      Default is 7890.
+      Default is 0 (next available port number).
+      Default for SHARED_JVM mode is 7890.
       Ex: PORT => 4567
       Note: This configuration option only has an effect on the first
       'use Inline Java' call inside a Perl script, since all other calls 

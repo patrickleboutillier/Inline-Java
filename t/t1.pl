@@ -4,20 +4,12 @@ use blib ;
 
 
 use Inline Java => <<'END_OF_JAVA_CODE' ;
-   class Pod_alu extends InlineJavaPerlCaller {
+
+class Pod_alu {
       public Pod_alu(){
       }
 
-      public int add(int i, int j) throws InlineJavaException {
-         try {
-            CallPerl("main", "tt", null) ;
-            CallPerl("main", "tt", new Object [] {"hello"}) ;
-            CallPerl("main", "tt", new Object [] {"die"}) ;
-         }
-         catch (PerlException pe){
-			System.out.println("perl died : " + (String)pe.GetObject()) ;
-         }
-		
+      public int add(int i, int j){
          return i + j ;
       }
 
@@ -26,16 +18,6 @@ use Inline Java => <<'END_OF_JAVA_CODE' ;
       }
    }   
 END_OF_JAVA_CODE
-
-
-sub tt {
-	my $arg = shift ;
-
-	print "$arg: it works!\n" ;
-	if ($arg eq "die"){
-		die("ouch!") ;
-	}
-}
 
 
 my $alu = new Pod_alu() ;
