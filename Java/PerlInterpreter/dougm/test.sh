@@ -2,4 +2,4 @@
 
 export LD_LIBRARY_PATH=`pwd`/src/jni
 
-java -cp ./dist/lib/PerlInterpreter.jar:/home/dougm/covalent/eam/PerlInterpreter/inline/lib/auto/MyStuff org.perl.PerlInterpreter
+/usr/java/j2sdk1.4.2_02/bin/java -cp ./dist/lib/PerlInterpreter.jar org.perl.PerlInterpreter
