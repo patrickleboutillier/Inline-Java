@@ -1031,7 +1031,7 @@ sub get_fields {
 sub info {
 	my $o = shift ;
 
-	if (! $o->{INLINE}->{object_ready})&&(! $o->{ILSM}->{built})){
+	if (! (($o->{INLINE}->{object_ready})||($o->{ILSM}->{built}))){
 		$o->build ;
 	}
 
