@@ -71,8 +71,9 @@ WARNING: THIS IS ALPHA SOFTWARE. It is incomplete and possibly unreliable.
          change in future releases.
 
 Inline::Java version 0.44 is a major upgrade that includes:
-+ Callbacks from multiple threads are now supported.
++ Callbacks from multiple threads are now supported
 + Refactored (again...) studying/.jdat/cache stuff
++ Added PRIVATE mode for use with SHARED_JVM
 + Fixed memory leak in JNI coded (patch submitted by Dave Blob)
 
 Inline::Java version 0.43 is a minor upgrade that includes:
