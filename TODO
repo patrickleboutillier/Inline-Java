@@ -3,7 +3,8 @@ CODE:
 - Fix info (members part)
 
 TEST:
-
+- Alpha
+- Cygwin
 
 DOCUMENTATION:
 
