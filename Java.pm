@@ -653,7 +653,7 @@ sub set_classpath {
 			my $path = File::Spec->catdir($dir, $m) ;
 			Inline::Java::Portable::mkpath($o, $path) ;
 
-			$paths{$path} = 1 ;
+			$paths{portable("SUB_FIX_CLASSPATH", $path)} = 1 ;
 		}
 
 		join($sep, keys %paths) ;
