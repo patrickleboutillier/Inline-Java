@@ -7,8 +7,6 @@ use Cwd ;
 
 require "Java/Portable.pm" ;
 
-$main::build_jni = 'false' ;
-
 print "\nWelcome to the Inline::Java installation procedure.\n\n" ;
 
 # Grab the J2SDK argument
@@ -56,7 +54,7 @@ foreach my $f ('javac', 'jar', 'java'){
 }
 
 
-# Now we have the J2SDK directory and it exists. 
+# Now we have the J2SDK directory and it exists.
 # We will create the default_j2sdk.pl file that
 # will contain that value for future use.
 my $def_jdk = File::Spec->catfile('Java', 'default_j2sdk.pl') ;
@@ -169,24 +167,21 @@ WriteMakefile(
 
 
 # Create the properties that will be included in the jar.
-my @jni_so_parts = ("auto", "Inline", "Java", "JNI", 
-	"JNI." . Inline::Java::Portable::portable('SO_EXT')) ;
-my $install_jni_so = File::Spec->catfile($INSTALLSITEARCH, @jni_so_parts) ;
-my $test_jni_so = File::Spec->rel2abs(File::Spec->catfile($INST_ARCHLIB, @jni_so_parts)) ;
-my $libperl_so = File::Spec->catfile($Config{installarchlib}, 'CORE', 
-	Inline::Java::Portable::portable('LIBPERL')) ;
+my @natives_so_parts = ("auto", "Inline", "Java", "Natives", 
+	"Natives." . Inline::Java::Portable::portable('SO_EXT')) ;
+my $install_natives_so = File::Spec->catfile($INSTALLSITEARCH, @natives_so_parts) ;
+$install_natives_so =~ s/\\/\\\\/g ;
+my $test_natives_so = File::Spec->rel2abs(File::Spec->catfile($INST_ARCHLIB, @natives_so_parts)) ;
+$test_natives_so =~ s/\\/\\\\/g ;
 my $prop = File::Spec->catfile($obj_dir, 'InlineJava.properties') ;
 open(PROP, ">$prop") or
 	die("Can't open '$prop' for writing: $!") ;
 print PROP <<PROP;
 # This file is created by the Makefile.PL for Inline::Java
-jni_so_built               = $main::build_jni
-inline_java_jni_so_install = $install_jni_so
-inline_java_jni_so_test    = $test_jni_so
-libperl_so                 = $libperl_so
+inline_java_natives_so_install = $install_natives_so
+inline_java_natives_so_test    = $test_natives_so
 PROP
 close(PROP) ;
-
 
 # Clean up the Makefile for Win95/98/Me
 if (Inline::Java::Portable::portable('COMMAND_COM')){
