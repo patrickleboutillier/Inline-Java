@@ -51,14 +51,12 @@ sub new {
 
 		my $debug = (Inline::Java::get_DEBUG() ? "true" : "false") ;
 
-		my $shared_jvm = ($o->get_java_config('SHARED_JVM') ? "true" : "false") ;	
-		my $port = $o->get_java_config('PORT') ;
-
-		$this->{port} = $port ;
+		$this->{shared} = $o->get_java_config('SHARED_JVM') ;
+		$this->{port} = $o->get_java_config('PORT') ;
 		$this->{host} = "localhost" ;
 
 		# Check if JVM is already running
-		if ($shared_jvm eq "true"){
+		if ($this->{shared}){
 			eval {
 				$this->reconnect() ;
 			} ;
@@ -72,7 +70,8 @@ sub new {
 		my $java = File::Spec->catfile($o->get_java_config('BIN'), 
 			"java" . Inline::Java::portable("EXE_EXTENSION")) ;
 
-		my $cmd = "\"$java\" InlineJavaServer $debug $this->{port} $shared_jvm" ;
+		my $shared_arg = ($this->{shared} ? "true" : "false") ;
+		my $cmd = "\"$java\" InlineJavaServer $debug $this->{port} $shared_arg" ;
 		Inline::Java::debug($cmd) ;
 
 		if ($o->get_config('UNTAINT')){
@@ -295,7 +294,7 @@ sub setup_socket {
 sub reconnect {
 	my $this = shift ;
 
-	if ($this->{JNI}){
+	if (($this->{JNI})||(! $this->{shared})){
 		return ;
 	}
 
@@ -321,7 +320,7 @@ sub reconnect {
 sub capture {
 	my $this = shift ;
 
-	if ($this->{JNI}){
+	if (($this->{JNI})||(! $this->{shared})){
 		return ;
 	}
 
@@ -345,7 +344,7 @@ sub am_owner {
 sub release {
 	my $this = shift ;
 
-	if ($this->{JNI}){
+	if (($this->{JNI})||(! $this->{shared})){
 		return ;
 	}
 
