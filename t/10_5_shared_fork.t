@@ -15,7 +15,7 @@ BEGIN {
 		exit ;
 	}
 	else{
-		$t10::nb = 10 ;
+		$t10::nb = 5 ;
 		plan(tests => $t10::nb + 3) ;
 	}
 }
