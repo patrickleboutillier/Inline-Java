@@ -19,10 +19,10 @@ my $jvm_so = Inline::Java::Portable::portable('JVM_SO') ;
 my %so_dirs = () ;
 
 my @files = (
+	'jvm.cfg',
 	'jni.h',
 	'jni_md.h',
 	$jvm_lib,
-	'jvm.cfg',
 ) ;
 if ($jvm_so ne $jvm_lib){
 	push @files, $jvm_so ;
@@ -72,6 +72,9 @@ if (($build_jni || AskYN("Do you wish to build the JNI extension?", 'y'))){
 		}
 		$cnt++ ;
 	}
+
+	# We no longer need jvm.cfg from now on...
+	shift @files ;
 
 	my $done = 0 ;
 	foreach my $f (@files){
