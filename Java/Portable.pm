@@ -9,7 +9,7 @@ use Config ;
 use File::Find ;
 use File::Spec ;
 
-$Inline::Java::Portable::VERSION = '0.49' ;
+$Inline::Java::Portable::VERSION = '0.50' ;
 
 # Here is some code to figure out if we are running on command.com
 # shell under Windows.
@@ -61,7 +61,7 @@ sub make_classpath {
 		if (($p)&&(-e $p)){
 			if ($cp{$p}){
 				my $fp = (-d $p ? File::Spec->rel2abs($p) : $p) ;
-				push @fcp, Inline::Java::Portable::portable("SUB_FIX_CLASSPATH", $fp) ;
+				push @fcp, Inline::Java::Portable::portable("SUB_FIX_JAVA_PATH", $fp) ;
 				delete $cp{$p} ;
 			}
 		}
@@ -152,7 +152,7 @@ sub portable {
 		MAKE				=>	'make',
 		DEV_NULL			=>  '/dev/null',
 		COMMAND_COM			=>  0,
-		SUB_FIX_CLASSPATH	=>	undef,
+		SUB_FIX_JAVA_PATH	=>	undef,
 		SUB_FIX_CMD_QUOTES	=>	undef,
 		SUB_FIX_MAKE_QUOTES	=>	undef,
 		JVM_LIB				=>	"libjvm.$Config{dlext}",
@@ -197,7 +197,7 @@ sub portable {
 		},
 		cygwin => {
 			ENV_VAR_PATH_SEP_CP	=>	';',
-			SUB_FIX_CLASSPATH	=>	sub {
+			SUB_FIX_JAVA_PATH	=>	sub {
 				my $val = shift ;
 				if (defined($val)&&($val)){
 					$val = `cygpath -w \"$val\"` ;
@@ -219,7 +219,11 @@ sub portable {
 		aix => {
 			JVM_LIB				=>	"libjvm$Config{lib_ext}",
 			JVM_SO				=>	"libjvm$Config{lib_ext}",
-		}
+		},
+		darwin => {
+			# Suggested by Ken Williams, mailing list 2004/07/07
+			SO_EXT				=>	$Config{so},
+		},
 	} ;
 
 	if (! exists($defmap->{$key})){
