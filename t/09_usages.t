@@ -7,13 +7,7 @@ use Inline Config =>
 
 
 BEGIN {
-	if ($ENV{PERL_INLINE_JAVA_JNI}){
-		plan(tests => 0) ;
-		exit ;
-	}
-	else{
-		plan(tests => 4) ;
-	}
+	plan(tests => 4) ;
 }
 
 
