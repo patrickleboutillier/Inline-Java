@@ -271,15 +271,18 @@ sub find_file_in_path {
 				}
 			}
 
+			my $found = 0 ;
 			foreach my $file (@{$files}){
 				my $f = "$p/$file" ;
 				debug("  candidate: $f\n") ;
 
 				if (-f $f){
 					debug("  found file $file in $p") ;
-
-					return $p ;
+					$found++ ;
 				}
+			}
+			if ($found == scalar(@{$files})){	
+				return $p ;
 			}
 		}
 	}
