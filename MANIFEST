@@ -24,6 +24,9 @@ t/5_arrays.t
 t/6_static.t
 t/7_polymorph.t
 t/8_study.t
+t/types.java
 t/types.class
+t/no_const.java
+t/no_const.class
 
 

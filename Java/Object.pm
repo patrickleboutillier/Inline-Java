@@ -37,6 +37,11 @@ sub __new {
 	my $knot = tie %this, $class ;
 	my $this = bless(\%this, $class) ;
 
+	my $pkg = $inline->{pkg} ;
+	if ($class ne "Inline::Java::Object"){
+		$class = Inline::Java::java2perl($pkg, $java_class) ;
+	}
+
 	my $priv = Inline::Java::Object::Private->new($class, $java_class, $inline) ;
 	$PRIVATES->{$knot} = $priv ;
 
@@ -162,7 +167,7 @@ sub __validate_prototype {
 	if ((! $chosen->{STATIC})&&(! ref($this))){
 		# We are trying to call an instance method without an object
 		# reference
-		croak "Method $method of class $inline->{pkg}::$this must be called from an object reference" ;
+		croak "Method $method of class $this must be called from an object reference" ;
 	}
 
 	# Here we will be polite and warn the user if we had to choose a 
@@ -224,7 +229,7 @@ sub __get_member {
 	Inline::Java::debug("fetching member variable $key") ;
 
 	my $inline = Inline::Java::get_INLINE($this->__get_private()->{module}) ;
-	my $fields = $inline->get_fields($this->__get_private()->{java_class}) ;
+	my $fields = $inline->get_fields($this->__get_private()->{class}) ;
 
 	if ($fields->{$key}){
 		my $proto = $fields->{$key}->{TYPE} ;
@@ -251,7 +256,7 @@ sub __set_member {
 	}
 
 	my $inline = Inline::Java::get_INLINE($this->__get_private()->{module}) ;
-	my $fields = $inline->get_fields($this->__get_private()->{java_class}) ;
+	my $fields = $inline->get_fields($this->__get_private()->{class}) ;
 
 	if ($fields->{$key}){
 		my $proto = $fields->{$key}->{TYPE} ;
@@ -373,7 +378,7 @@ sub EXISTS {
  	my $key = shift ;
 
 	my $inline = Inline::Java::get_INLINE($this->__get_private()->{module}) ;
-	my $fields = $inline->get_fields($this->__get_private()->{java_class}) ;
+	my $fields = $inline->get_fields($this->__get_private()->{class}) ;
 
 	if ($fields->{$key}){
 		return 1 ;

@@ -401,12 +401,23 @@ class InlineJavaProtocol {
 			Method methods[] = c.getMethods() ;
 			Field fields[] = c.getFields() ;
 
+			int pub = c.getModifiers() & Modifier.PUBLIC ;
+			if (pub != 0){
+				// If the class is public and has no constructors,
+				// we provide a default no-arg constructors.
+				if (c.getDeclaredConstructors().length == 0){
+					String noarg_sign = CreateSignature(new Class [] {}) ;
+					pw.append("constructor " + noarg_sign + "\n") ;	
+				}
+			}
 			for (int j = 0 ; j < constructors.length ; j++){
 				Constructor x = constructors[j] ;
-				String sign = CreateSignature(x.getParameterTypes()) ;
+				Class params[] = x.getParameterTypes() ;
+				String sign = CreateSignature(params) ;
 				Class decl = x.getDeclaringClass() ;
-				pw.append("constructor" + " " + sign + "\n") ;
+				pw.append("constructor " + sign + "\n") ;
 			}
+
 			for (int j = 0 ; j < methods.length ; j++){
 				Method x = methods[j] ;
 				String stat = (Modifier.isStatic(x.getModifiers()) ? " static " : " instance ") ;
@@ -414,6 +425,7 @@ class InlineJavaProtocol {
 				Class decl = x.getDeclaringClass() ;
 				pw.append("method" + stat + decl.getName() + " " + x.getName() + sign + "\n") ;
 			}
+
 			for (int j = 0 ; j < fields.length ; j++){
 				Field x = fields[j] ;
 				String stat = (Modifier.isStatic(x.getModifiers()) ? " static " : " instance ") ;
@@ -455,7 +467,6 @@ class InlineJavaProtocol {
 
 		if (! ijc.ClassIsArray(c)){
 			ArrayList f = ValidateMethod(true, c, class_name, st) ;
-			Constructor con = (Constructor)f.get(0) ;
 			Object p[] = (Object [])f.get(1) ;
 			Class clist[] = (Class [])f.get(2) ;
 
@@ -665,8 +676,14 @@ class InlineJavaProtocol {
 		String name = p.getName() ;
 		Object ret = null ;
 		try {
-			Constructor con = (Constructor)p.getConstructor(proto) ;
-			ret = con.newInstance(args) ;
+			// This will allow usage of the default no-arg constructor
+			if (proto.length == 0){
+				ret = p.newInstance() ;
+			}
+			else{
+				Constructor con = (Constructor)p.getConstructor(proto) ;
+				ret = con.newInstance(args) ;
+			}
 		}
 		catch (NoSuchMethodException e){
 			throw new InlineJavaException("Constructor for class " + name + " with signature " + ijs.CreateSignature(proto) + " not found: " + e.getMessage()) ;
@@ -738,10 +755,18 @@ class InlineJavaProtocol {
 		// Now we got a list of matching methods. 
 		// We have to figure out which one we will call.
 		if (ml.size() == 0){
-			throw new InlineJavaException(
-				(constructor ? "Constructor " : "Method ") + 
-				name + " for class " + c.getName() + " with signature " +
-				signature + " not found") ;
+			// Nothing matched. Maybe we got a default constructor
+			if ((constructor)&&(signature.equals("()"))){
+				ret.add(0, null) ;
+				ret.add(1, new Object [] {}) ;
+				ret.add(2, new Class [] {}) ;
+			}
+			else{
+				throw new InlineJavaException(
+					(constructor ? "Constructor " : "Method ") + 
+					name + " for class " + c.getName() + " with signature " +
+					signature + " not found") ;
+			}
 		}
 		else if (ml.size() == 1){
 			// Now we need to force the arguments received to match
