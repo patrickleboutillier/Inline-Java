@@ -81,12 +81,7 @@ sub new {
 
 		my $pid = 0 ;
 		eval {
-			if (Inline::Java::Portable::portable('GOT_FORK')){
-				$pid = $this->launch($cmd) ;
-			}	
-			else{
-				$pid = $this->launch($cmd) ;
-			}
+			$pid = $this->launch($cmd) ;
 		} ;
 		croak "Can't exec JVM: $@" if $@ ;
 
@@ -107,6 +102,9 @@ sub launch {
 	my $this = shift ;
 	my $cmd = shift ;
 
+
+	local $SIG{__WARN__} = sub {} ;
+
 	my $dn = File::Spec->devnull() ;
 	my $in = new IO::File("<$dn") ;
 	if (! defined($in)){
@@ -116,8 +114,7 @@ sub launch {
 	if (! defined($out)){
 		croak "Can't open $dn for writing" ;
 	}
-	
-	local $SIG{__WARN__} = sub {} ;
+
 	my $pid = open3($in, $out, ">&STDERR", $cmd) ;
 
 	close($in) ;
