@@ -80,7 +80,7 @@ sub register {
     return {
 	    language => 'Java',
 	    aliases => ['JAVA', 'java'],
-	    type => 'compiled',
+	    type => 'interpreted',
 	    suffix => 'jdat',
 	   };
 }
@@ -168,11 +168,24 @@ sub set_classpath {
 	my $o = shift ;
 	my $path = shift ;
 
-	my @cp = split(/:/, join(":", $ENV{CLASSPATH}, $o->{Java}->{JAVA_CLASSPATH}, $path)) ;
+	my @list = () ;
+	if (defined($ENV{CLASSPATH})){
+		push @list, $ENV{CLASSPATH} ;
+	}
+	if (defined($o->{Java}->{JAVA_CLASSPATH})){
+		push @list, $o->{Java}->{JAVA_CLASSPATH} ;
+	}
+	if (defined($path)){
+		push @list, $path ;
+	}
+
+	my $sep = portable("ENV_VAR_PATH_SEP") ;
+
+	my @cp = split(/$sep/, join($sep, @list)) ;
 
 	my %cp = map { ($_ !~ /^\s*$/ ? ($_, 1) : ()) } @cp ;
 
-	$ENV{CLASSPATH} = join(":", keys %cp) ;
+	$ENV{CLASSPATH} = join($sep, keys %cp) ;
 
 	debug("  classpath: " . $ENV{CLASSPATH}) ;
 }
@@ -181,20 +194,24 @@ sub set_classpath {
 sub set_java_bin {
 	my $o = shift ;
 
+	my $sep = portable("PATH_SEP") ;
+
 	my $cjb = $o->{Java}->{JAVA_BIN} ;
 	my $ejb = $ENV{JAVA_BIN} ;
 	if ($cjb){
-		$cjb =~ s/\/+$// ;
+		$cjb =~ s/$sep+$// ;
 		return $o->find_java_bin($cjb) ;
 	}
 	elsif ($ejb) {
-		$ejb =~ s/\/+$// ;
+		$ejb =~ s/$sep+$// ;
 		$o->{Java}->{JAVA_BIN} = $ejb ;
 		return $o->find_java_bin($ejb) ;
 	}
 
 	# Java binaries are assumed to be in $ENV{PATH} ;
-	my @path = split(/:/, $ENV{PATH}) ;
+	my $psep = portable("ENV_VAR_PATH_SEP") ;
+	my @path = split(/$psep/, $ENV{PATH}) ;
+
 	return $o->find_java_bin(@path) ;
 }
 
@@ -207,6 +224,7 @@ sub find_java_bin {
 
 	my $found = 0 ;
 	foreach my $p (@paths){
+		debug("path element: $p") ;
 		if ($p !~ /^\s*$/){
 			$p =~ s/\/+$// ;
 
@@ -220,7 +238,8 @@ sub find_java_bin {
 				}
 			}
 	
-			my $java = $p . "/java" ;
+			my $java = $p . "/java" . portable("EXE_EXTENSION") ;
+			debug("  candidate: $java\n") ;
 			if (-f $java){
 				debug("  found java binaries in $p") ;
 				$o->{Java}->{JAVA_BIN} = $p ;
@@ -343,25 +362,31 @@ sub write_makefile {
 	my $install = "$install_lib/auto/$modpname" ;
     $o->mkpath($install) ;
 
-	my $javac = $o->{Java}->{JAVA_BIN} . "/javac" ;
-	my $java = $o->{Java}->{JAVA_BIN} . "/java" ;
+	my $javac = $o->{Java}->{JAVA_BIN} . "/javac" . portable("EXE_EXTENSION") ;
+	my $java = $o->{Java}->{JAVA_BIN} . "/java" . portable("EXE_EXTENSION") ;
 
 	my $debug = ($Inline::Java::DEBUG ? "true" : "false") ;
 
 	open(MAKE, ">$build_dir/Makefile") or 
 		croak "Can't open $build_dir/Makefile: $!" ;
 
+	my $cp = portable("COPY") ;
+	my $pinstall = portable("RE_FILE", $install) ;
+	my $pjavac = portable("RE_FILE", $javac) ;
+	my $pjava = portable("RE_FILE", $java) ;
+	my $predir = portable("IO_REDIR") ;
+
 	print MAKE "class:\n" ;
-	print MAKE "\t$javac $modfname.java > cmd.out 2<&1\n" ;
-	print MAKE "\tcp -f *.class $install\n" ;
+	print MAKE "\t$pjavac $modfname.java > cmd.out $predir\n" ;
+	print MAKE "\t$cp *.class $pinstall\n" ;
 	print MAKE "\n" ;
 	print MAKE "server:\n" ;
-	print MAKE "\t$javac InlineJavaServer.java > cmd.out 2<&1\n" ;
-	print MAKE "\tcp -f *.class $install\n" ;
+	print MAKE "\t$pjavac InlineJavaServer.java > cmd.out $predir\n" ;
+	print MAKE "\t$cp *.class $pinstall\n" ;
 	print MAKE "\n" ;
 	print MAKE "report:\n" ;
-	print MAKE "\t$java InlineJavaServer report $debug $modfname *.class > cmd.out 2<&1\n" ;
-	print MAKE "\tcp -f *.jdat $install\n" ;
+	print MAKE "\t$pjava InlineJavaServer report $debug $modfname *.class > cmd.out $predir\n" ;
+	print MAKE "\t$cp *.jdat $pinstall\n" ;
 
 	close(MAKE) ;
 
@@ -386,9 +411,9 @@ sub compile {
 	}
 
 	foreach my $cmd (
-		"make -s class",
-		"make -s server",
-		"make -s report",
+		"$make -s class",
+		"$make -s server",
+		"$make -s report",
 		) {
 
 		if ($cmd){
@@ -419,7 +444,11 @@ sub error_msg {
 	my $cwd = shift ;
 
 	my $build_dir = $o->{build_dir} ;
-	my $error = `cat cmd.out` ;
+	my $error = '' ;
+	if (open(CMD, "<cmd.out")){
+		$error = join("", <CMD>) ;
+		close(CMD) ;
+	}
 
 	return <<MSG
 
@@ -473,7 +502,7 @@ sub load {
 	$o->load_jdat(@lines) ;
 	$o->bind_jdat() ;
 
-	my $java = $o->{Java}->{JAVA_BIN} . "/java" ;
+	my $java = $o->{Java}->{JAVA_BIN} . "/java" . portable("EXE_EXTENSION") ;
 	my $cp = $ENV{CLASSPATH} ;
 
 	debug("  cwd is: " . cwd()) ;
@@ -714,8 +743,8 @@ sub setup_socket {
 
 	my $last_words = "timeout\n" ;
 	eval {
-		local $SIG{ALRM} = sub { die($last_words) ; } ;
-		alarm($timeout) ;
+		# local $SIG{ALRM} = sub { die($last_words) ; } ;
+		# alarm($timeout) ;
 
 		while (1){
 			$socket = new IO::Socket::INET(
@@ -727,7 +756,7 @@ sub setup_socket {
 			}
 		}
 
-		alarm(0) ;
+		# alarm(0) ;
 	} ;
 	if ($@){
 		if ($@ eq $last_words){
@@ -759,7 +788,62 @@ sub debug_obj {
 	my $obj = shift ;
 
 	if ($Inline::Java::DEBUG){
-		print STDERR Dumper($obj) ;
+		print STDERR "perl: " . Dumper($obj) ;
+	}
+}
+
+
+sub portable {
+	my $key = shift ;
+	my $val = shift ;
+
+	my $defmap = {
+		EXE_EXTENSION		=>	'',
+		ENV_VAR_PATH_SEP	=>	':',
+		PATH_SEP			=>	'/',
+		COPY				=>  'cp -f',
+		RE_FILE				=>  [],
+		IO_REDIR			=>  '2<&1',
+	} ;
+
+	my $map = {
+		MSWin32 => {
+			EXE_EXTENSION		=>	'.exe',
+			ENV_VAR_PATH_SEP	=>	';',
+			PATH_SEP			=>	'\\',
+			COPY				=>  'copy',
+			RE_FILE				=>  ['/', '\\'],
+			IO_REDIR			=>  '',
+		}
+	} ;
+
+	if (! defined($defmap->{$key})){
+		croak "Portability issue $key not defined!" ;
+	}
+
+	if ((defined($map->{$^O}))&&(defined($map->{$^O}->{$key}))){
+		if ($key =~ /^RE_/){
+			if (defined($val)){
+				my $f = $map->{$^O}->{$key}->[0] ;
+				my $t = $map->{$^O}->{$key}->[1] ;
+				$val =~ s/$f/$t/eg ;
+				return $val ;
+			}
+			else{
+				return undef ;
+			}
+		}
+		else{
+			return $map->{$^O}->{$key} ;
+		}
+	}
+	else{
+		if ($key =~ /^RE_/){
+			return $val ;
+		}
+		else{
+			return $defmap->{$key} ;
+		}
 	}
 }
 
