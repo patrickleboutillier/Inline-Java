@@ -14,7 +14,7 @@ use Inline::Java qw(caught) ;
 
 
 BEGIN {
-	plan(tests => 17) ;
+	plan(tests => 19) ;
 }
 
 my $t = new t10() ;
@@ -55,6 +55,10 @@ my $t = new t10() ;
 		ok($msg, "throw java twister") ;
 
 		eval {$t->bug()} ; ok($@, qr/^bug/) ;
+
+		ok($t->perlt()->add(5, 6), 11) ;
+
+		eval {$t->perldummy()} ; ok($@, qr/Can't propagate non-/) ;
 	} ;
 	if ($@){
 		if (caught("java.lang.Throwable")){
@@ -127,6 +131,16 @@ sub twister {
 	else{
 		return $t->twister($max, $cnt+1, $explode) ;
 	}
+}
+
+
+sub t {
+	return $t ;
+}
+
+
+sub dummy {
+	die(bless({}, "Inline::Java::dummy")) ;
 }
 
 
@@ -249,6 +263,16 @@ class t10 extends InlineJavaPerlCaller {
 	public void bug() throws InlineJavaException {
 		throw new InlineJavaException(
 			InlineJavaServer.instance. new InlineJavaException("bug")) ;
+	}
+
+
+	public Object perlt() throws InlineJavaException, PerlException, OwnException {
+		return CallPerl("main", "t", null) ;
+	}
+
+
+	public Object perldummy() throws InlineJavaException, PerlException, OwnException {
+		return CallPerl("main", "dummy", null) ;
 	}
 }
 

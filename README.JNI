@@ -5,11 +5,10 @@ JNI (JAVA NATIVE INTERFACE) EXTENSION
 PLATFORM AVAILABILITY
 ---------------------
 
-The JNI extension is available on all platforms, but has been run 
-succesfully only on Win32 and Solaris. 
+The JNI extension is available on all platforms.
 
-The extension builds properly on all platform, but problems occurs when
-running it.
+The extension builds properly on all platform, but problems can occur when
+running it on certain platforms.
 
 WIN32
 -----
@@ -49,10 +48,12 @@ Then use this Perl version to build and run Inline::Java.
 
 LINUX
 -----
-The JNI extension has been run successfully on Linux. For this you need 
-to use Java with native threads. To do this you need to inspect your
-Java 2 SDK distribution tree, and put in your LD_LIBRARY_PATH the directories
-that contain 'native_threads' instead of those that contain 'green_threads'.
+The JNI extension has been run successfully on Linux, but some runtime
+problems can occur depending on Java 2 SDK version and other factors.
+For best results you need to use Java 1.2.2 with native threads. To do 
+this you need to inspect your Java 2 SDK distribution tree, and put in 
+your LD_LIBRARY_PATH the directories that contain 'native_threads' instead 
+of those that contain 'green_threads'.
 
 You should also use any directory that says 'classic' instead of the others.
 The Classic VM seems to run better under Linux.
@@ -62,7 +63,6 @@ On my Linux box, here's what I used as LD_LIBRARY_PATH:
   LD_LIBRARY_PATH=/home/patrickl/apps/jdk1.2.2/jre/lib/i386:
     /home/patrickl/apps/jdk1.2.2/jre/lib/i386/classic:
     /home/patrickl/apps/jdk1.2.2/jre/lib/i386/native_threads
-
 
 
 BUILDING THE JNI EXTENSION
