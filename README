@@ -45,8 +45,9 @@ INSTALLATION:
 To install Inline::Java do this:
 
 perl Makefile.PL
-make             (see Note 2)
-make test        (see Note 3, 4, 5)
+make                     (see Note 2)
+make test                (see Note 3, 4, 5)
+perl shared_jvm_test.pl  (see Note 6)
 make install
 
 You have to 'make install' before you can run it successfully. 
@@ -75,6 +76,10 @@ Note 5: When testing Inline::Java, it's always a good idea to run 'make test'
 twice. The first time you test the building and loading of a module, the second 
 time you test loading of an already built module.
 
+Note 6: If you plan to use Inline::Java under mod_perl or any other program thgat
+forks, you may wish to run 'perl shared_jvm_test.pl'. This will simulate a forking
+process that uses Inline::Java. Please keep in mind that this test does not work
+under Windows.
 
 -------------------------------------------------------------------------------
 FEATURES:
@@ -82,6 +87,12 @@ FEATURES:
 WARNING: THIS IS ALPHA SOFTWARE. It is incomplete and possibly unreliable. 
          It is also possible that some elements of the interface (API) will 
          change in future releases.
+
+Inline::Java version 0.30 is a major upgrade that includes:
++ Multi-threaded JVM
++ Shared JVM mode for forking programs, i.e. mod_perl
++ Optional test script to simulate forking programs
++ Fixed some memory leaks and made test suite 'leak aware'
 
 Inline::Java version 0.23 is a minor upgrade that includes:
 + Support for multiple Inline::Java sections

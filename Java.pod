@@ -138,6 +138,14 @@ behavior of C<Inline::Java>:
       'use Inline Java' call inside a Perl script, since all other calls 
       make use of the same JVM.
 
+  SHARED_JVM:
+      This mode enables mutiple processes to share the same JVM. It was 
+      created mainly in order to be able to use C<Inline::Java> under mod_perl. 
+      Ex: SHARED_JVM => 1
+      Note: This configuration option only has an effect on the first
+      'use Inline Java' call inside a Perl script, since all other calls 
+      make use of the same JVM.
+
    DEBUG:
       Enables debugging info
       Ex: DEBUG => 1
@@ -446,7 +454,7 @@ and use them just like the Java code you write inside your Perl script.
 In fact you are not even required to write Java code inside your Perl
 script anymore. Here's how to use the 'studying' function:
 
-   use Inline {
+   use Inline (
       Java => 'STUDY',
       STUDY => ['java.lang.HashMap'],
    ) ;
@@ -461,7 +469,7 @@ use the string 'STUDY' as your code. This will skip the build section.
 You can also use the AUTOSTUDY option to tell C<Inline::Java> that you wish
 to study all classes that it comes across:
 
-   use Inline {
+   use Inline (
       Java => 'DATA',
       AUTOSTUDY => 1,
    ) ;
@@ -501,7 +509,7 @@ configuration option) to tell what Inline::Java modules it will need to load
 at runtime:
 
    package Foo ;
-   use Inline {
+   use Inline (
       Java => '<<END',
         class Foo {
            public Foo() {
@@ -513,7 +521,7 @@ at runtime:
    ) ;
 
    package Bar ;
-   use Inline {
+   use Inline (
       Java => '<<END',
         class Bar {
            public Bar() {
@@ -521,7 +529,7 @@ at runtime:
         } 
    END
       NAME => "Bar",
-   ) 
+   ) ; 
 
    package main ;
    my $f = new Foo() ;
@@ -549,6 +557,48 @@ JNI extension, you must enable it explicitely by doing one of the following:
 Note: C<Inline::Java> only creates one virtual machine instance. Therefore
 you can't use JNI for some sections and client/server for others. The first
 section determines the execution mode.
+
+
+=head1 SHARED_JVM
+
+Starting with version 0.30, the C<Inline::Java> JVM can now be shared between
+multiple processes. The first process to start the JVM is considered the JVM owner
+and will shutdown the JVM on exit. All other processes can connect as needed to 
+the JVM. If any of these other processes where created by forking the parent process,
+the Inline::Java->reconnect_JVM() function must be called in the child to get a fresh
+connection to the JVM. Ex:
+
+   use Inline (
+      Java => '<<END',
+         import java.util.* ;
+         class t {
+            public t(){
+            }
+         }
+   END
+      SHARED_JVM => 1,
+   ) ;
+
+   my $t = new t() ;
+
+   my $nb = 5 ;
+   for (my $i = 0 ; $i < $nb ; $i++){
+      if (! fork()){
+         Inline::Java::reconnect_JVM() ;
+         $t = new $t() ;
+      }
+   }
+
+Once this code was run, each of the 6 processes will have created a different instance
+of the t class. Data can be shared between the processes by using static members in the 
+Java code.
+
+If processes not forked off the parent are connecting to the shared JVM, please remember
+to set the CLASSPATH for the classes in the other processes before starting the parent,
+or else the parent will not see these classes. See USING MULTIPLE SECTIONS for more 
+details.
+
+Please note that the SHARED_JVM feature does not work in JNI mode.
 
 
 =head1 SUPPORTED PLATFORMS

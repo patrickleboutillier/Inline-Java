@@ -7,7 +7,7 @@ package Inline::Java ;
 
 use strict ;
 
-$Inline::Java::VERSION = '0.23' ;
+$Inline::Java::VERSION = '0.30' ;
 
 
 # DEBUG is set via the DEBUG config
@@ -46,8 +46,10 @@ my $DONE = 0 ;
 # This is set when at least one JVM is loaded.
 my $JVM = undef ;
 
+
 # This hash will store the $o objects...
 my $INLINES = {} ;
+
 
 # Here is some code to figure out if we are running on command.com
 # shell under Windows.
@@ -82,9 +84,7 @@ sub done {
 		Inline::Java::debug("killed by signal SIG$signal.") ;
 	}
 
-	if ($JVM){
-		undef $JVM ;
-	}
+	shutdown_JVM() ;
 	
 	Inline::Java::debug("exiting with $ec") ;
 
@@ -150,15 +150,14 @@ sub _validate {
 	my $o = shift ;
 	my $ignore_other_configs = shift ;
 
-	# if ($o->get_INLINE_nb() == 1){
-	# 	croak "Inline::Java does not currently support multiple Inline sections" ;
-	# }
-
 	if (! exists($o->{ILSM}->{PORT})){
 		$o->{ILSM}->{PORT} = 7890 ;
 	}
 	if (! exists($o->{ILSM}->{STARTUP_DELAY})){
 		$o->{ILSM}->{STARTUP_DELAY} = 15 ;
+	}
+	if (! exists($o->{ILSM}->{SHARED_JVM})){
+		$o->{ILSM}->{SHARED_JVM} = 0 ;
 	}
 	if (! exists($o->{ILSM}->{DEBUG})){
 		$o->{ILSM}->{DEBUG} = 0 ;
@@ -199,6 +198,9 @@ sub _validate {
 			}
 			$o->{ILSM}->{$key} = $value ;
 		}
+		elsif ($key eq 'SHARED_JVM'){
+			$o->{ILSM}->{$key} = $value ;
+		}
 		elsif ($key eq 'DEBUG'){
 			$o->{ILSM}->{$key} = $value ;
 			$Inline::Java::DEBUG = $value ;
@@ -221,8 +223,20 @@ sub _validate {
 		}
 	}
 
+	if (defined($ENV{PERL_INLINE_JAVA_DEBUG})){
+		$Inline::Java::DEBUG = $ENV{PERL_INLINE_JAVA_DEBUG} ;
+	}
+
 	if (defined($ENV{PERL_INLINE_JAVA_JNI})){
 		$o->{ILSM}->{JNI} = $ENV{PERL_INLINE_JAVA_JNI} ;
+	}
+
+	if (defined($ENV{PERL_INLINE_JAVA_SHARED_JVM})){
+		$o->{ILSM}->{SHARED_JVM} = $ENV{PERL_INLINE_JAVA_SHARED_JVM} ;
+	}
+
+	if (($o->{ILSM}->{JNI})&&($o->{ILSM}->{SHARED_JVM})){
+		croak("You can't use the 'SHARED_JVM' option in 'JNI' mode") ;
 	}
 
 	$o->set_java_bin() ;
@@ -1080,6 +1094,20 @@ sub get_JVM {
 }
 
 
+sub shutdown_JVM {
+	if ($JVM){
+		undef $JVM ;
+	}
+}
+
+
+sub reconnect_JVM {
+	if ($JVM){
+		$JVM->reconnect() ;
+	}
+}
+
+
 sub get_INLINE {
 	my $module = shift ;
 
@@ -1088,7 +1116,6 @@ sub get_INLINE {
 
 
 sub get_INLINE_nb {
-
 	return scalar(keys %{$INLINES}) ;
 }
 
