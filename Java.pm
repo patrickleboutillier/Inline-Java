@@ -8,7 +8,7 @@ package Inline::Java ;
 use strict ;
 require 5.6.0 ;
 
-$Inline::Java::VERSION = '0.43' ;
+$Inline::Java::VERSION = '0.44' ;
 
 
 # DEBUG is set via the DEBUG config
@@ -127,6 +127,8 @@ sub validate {
 
 	$o->set_option('EXTRA_JAVA_ARGS',		'',		's', 1, \%opts) ;
 	$o->set_option('EXTRA_JAVAC_ARGS',		'',		's', 1, \%opts) ;
+
+	$o->set_option('PRIVATE',				'',		'b', 1, \%opts) ;
 
 	my @left_overs = keys(%opts) ;
 	if (scalar(@left_overs)){

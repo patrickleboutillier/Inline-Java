@@ -17,20 +17,23 @@ public class InlineJavaServer {
 	private InlineJavaUserClassLoader ijucl = null ;
 	private HashMap thread_objects = new HashMap() ;
 	private int objid = 1 ;
+	private boolean jni = false ;
 
 
 	// This constructor is used in JNI mode
-	public InlineJavaServer(int d){
+	private InlineJavaServer(int d){
 		init(d) ;
 
-		thread_objects.put(Thread.currentThread().getName(), new HashMap()) ;
+		jni = true ; 
+		thread_objects.put(Thread.currentThread(), new HashMap()) ;
 	}
 
 
 	// This constructor is used in server mode
-	public InlineJavaServer(String[] argv){
+	private InlineJavaServer(String[] argv){
 		init(new Integer(argv[0]).intValue()) ;
 
+		jni = false ;
 		port = Integer.parseInt(argv[1]) ;
 		shared_jvm = new Boolean(argv[2]).booleanValue() ;
 
@@ -150,16 +153,15 @@ public class InlineJavaServer {
 	
 	Object GetObject(int id) throws InlineJavaException {
 		Object o = null ;
-		String name = Thread.currentThread().getName() ;
-		HashMap h = (HashMap)thread_objects.get(name) ;
+		HashMap h = (HashMap)thread_objects.get(Thread.currentThread()) ;
 
 		if (h == null){
-			throw new InlineJavaException("Can't find thread " + name + "!") ;
+			throw new InlineJavaException("Can't find thread " + Thread.currentThread().getName() + "!") ;
 		}
 		else{
 			o = h.get(new Integer(id)) ;
 			if (o == null){
-				throw new InlineJavaException("Can't find object " + id + " for thread " + name) ;
+				throw new InlineJavaException("Can't find object " + id + " for thread " +Thread.currentThread().getName()) ;
 			}
 		}
 
@@ -168,12 +170,11 @@ public class InlineJavaServer {
 
 
 	synchronized int PutObject(Object o) throws InlineJavaException {
-		String name = Thread.currentThread().getName() ;
-		HashMap h = (HashMap)thread_objects.get(name) ;
+		HashMap h = (HashMap)thread_objects.get(Thread.currentThread()) ;
 
 		int id = objid ;
 		if (h == null){
-			throw new InlineJavaException("Can't find thread " + name + "!") ;
+			throw new InlineJavaException("Can't find thread " + Thread.currentThread().getName() + "!") ;
 		}
 		else{
 			h.put(new Integer(objid), o) ;
@@ -186,16 +187,15 @@ public class InlineJavaServer {
 
 	Object DeleteObject(int id) throws InlineJavaException {
 		Object o = null ;
-		String name = Thread.currentThread().getName() ;
-		HashMap h = (HashMap)thread_objects.get(name) ;
+		HashMap h = (HashMap)thread_objects.get(Thread.currentThread()) ;
 
 		if (h == null){
-			throw new InlineJavaException("Can't find thread " + name + "!") ;
+			throw new InlineJavaException("Can't find thread " + Thread.currentThread().getName() + "!") ;
 		}
 		else{
 			o = h.remove(new Integer(id)) ;
 			if (o == null){
-				throw new InlineJavaException("Can't find object " + id + " for thread " + name) ;
+				throw new InlineJavaException("Can't find object " + id + " for thread " + Thread.currentThread().getName()) ;
 			}
 		}
 
@@ -205,11 +205,10 @@ public class InlineJavaServer {
 
 	int ObjectCount() throws InlineJavaException {
 		int i = -1 ;
-		String name = Thread.currentThread().getName() ;
-		HashMap h = (HashMap)thread_objects.get(name) ;
+		HashMap h = (HashMap)thread_objects.get(Thread.currentThread()) ;
 
 		if (h == null){
-			throw new InlineJavaException("Can't find thread " + name + "!") ;
+			throw new InlineJavaException("Can't find thread " + Thread.currentThread().getName() + "!") ;
 		}
 		else{
 			i = h.values().size() ;
@@ -219,6 +218,12 @@ public class InlineJavaServer {
 	}
 
 
+	// So far this is the only method that can be called (indirectly) by the 
+	// user code to get back in to Perl. This means that this method really
+	// can be called by other threads the are not InlineJavaServerThreads...
+	//
+	// Is there a way to figure out which InlineJavaServerThread has created
+	// the current thread or is logically attached to it?
 	Object Callback(String pkg, String method, Object args[], String cast) throws InlineJavaException, InlineJavaPerlException {
 		Object ret = null ;
 
@@ -236,9 +241,9 @@ public class InlineJavaServer {
 
 			Thread t = Thread.currentThread() ;
 			String resp = null ;
-			while (true) {			
+			while (true) {
 				InlineJavaUtils.debug(3, "packet sent (callback) is " + cmd) ;
-				if (t instanceof InlineJavaServerThread){
+				if (! jni){
 					// Client-server mode
 					InlineJavaServerThread ijt = (InlineJavaServerThread)t ;
 					ijt.GetWriter().write(cmd + "\n") ;
@@ -285,13 +290,13 @@ public class InlineJavaServer {
 	native private String jni_callback(String cmd) ;
 
 
-	void AddThread(String name){
-		thread_objects.put(name, new HashMap()) ;
+	void AddThread(InlineJavaServerThread t){
+		thread_objects.put(t, new HashMap()) ;
 	}
 
 
-	void RemoveThread(String name){
-		thread_objects.remove(name) ;
+	void RemoveThread(InlineJavaServerThread t){
+		thread_objects.remove(t) ;
 	}
 	
 

@@ -23,6 +23,11 @@ class InlineJavaServerThread extends Thread {
 			new InputStreamReader(client.getInputStream())) ;
 		bw = new BufferedWriter(
 			new OutputStreamWriter(client.getOutputStream())) ;
+
+		String security_type = br.readLine() ;
+		if (security_type.equals("private")){
+			ijucl = new InlineJavaUserClassLoader() ;
+		}
 	}
 
 
@@ -43,7 +48,7 @@ class InlineJavaServerThread extends Thread {
 
 	public void run(){
 		try {
-			ijs.AddThread(getName()) ;
+			ijs.AddThread(this) ;
 
 			while (true){
 				String cmd = br.readLine() ;
@@ -62,7 +67,7 @@ class InlineJavaServerThread extends Thread {
 			System.err.println("IO error: " + e.getMessage()) ;
 		}
 		finally {
-			ijs.RemoveThread(getName()) ;
+			ijs.RemoveThread(this) ;
 		}
 	}
 }

@@ -33,6 +33,7 @@ sub new {
 	$this->{embedded} = $o->get_java_config('EMBEDDED_JNI') ;
 	$this->{owner} = 1 ;
 	$this->{destroyed} = 0 ;
+	$this->{private} = $o->get_java_config('PRIVATE') ;
 
 	if ($this->{embedded}){
 		Inline::Java::debug(1, "using embedded JVM...") ;
@@ -289,6 +290,8 @@ sub setup_socket {
 
 	$socket->autoflush(1) ;
 
+	print $socket (($this->{private} ? "private" : "public") . "\n") ;
+	
 	return $socket ;
 }
 
