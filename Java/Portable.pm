@@ -202,6 +202,9 @@ sub portable {
 		hpux => {
 			GOT_NEXT_FREE_PORT  =>  0,
 		},
+		solaris => {
+			GOT_NEXT_FREE_PORT  =>  0,
+		},
 	} ;
 
 	if (! exists($defmap->{$key})){
