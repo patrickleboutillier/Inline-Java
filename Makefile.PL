@@ -5,6 +5,9 @@ use strict ;
 require "Java/Portable.pm" ;
 Inline::Java::Portable::use_alone() ;
 
+# Replace everything just like out-of-the-box...
+rename("Java/JNI.xs_", "Java/JNI.xs") ;
+
 print "\nWelcome to the Inline::Java installation procedure.\n\n" ;
 
 WriteMakefile(

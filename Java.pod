@@ -159,7 +159,7 @@ behavior of C<Inline::Java>:
    WARN_METHOD_SELECT:
       Throws a warning when C<Inline::Java> has to 'choose' between 
       different method signatures. The warning states the possible 
-      choices and the sugnature chosen.
+      choices and the signature chosen.
       Ex: WARN_METHOD_SELECT => 1
 
    STUDY:
