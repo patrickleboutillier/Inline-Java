@@ -1,8 +1,3 @@
 CODE:
 - Arrays
 
-PORTABILITY ISSUES:
-- path sep ":"
-- fork, exec
-- makefile stuff
-

@@ -7,7 +7,7 @@ use strict ;
 
 $Inline::Java::VERSION = '0.01' ;
 
-# DEBUG is set via the JAVA_DEBUG config
+# DEBUG is set via the DEBUG config
 if (! defined($Inline::Java::DEBUG)){
 	$Inline::Java::DEBUG = 0 ;
 }
@@ -63,6 +63,7 @@ sub done {
 		debug("killing $pid...", ($ok ? "ok" : "failed")) ;
 	}
 
+	debug("exiting with $ec") ;
 	exit($ec) ;
 }
 END {
@@ -109,17 +110,17 @@ sub _validate {
 	my $o = shift ;
 	my $ignore_other_configs = shift ;
 
-	if (! exists($o->{Java}->{JAVA_PORT})){
-		$o->{Java}->{JAVA_PORT} = 7890 ;
+	if (! exists($o->{Java}->{PORT})){
+		$o->{Java}->{PORT} = 7890 ;
 	}
-	if (! exists($o->{Java}->{JAVA_STARTUP_DELAY})){
-		$o->{Java}->{JAVA_STARTUP_DELAY} = 15 ;
+	if (! exists($o->{Java}->{STARTUP_DELAY})){
+		$o->{Java}->{STARTUP_DELAY} = 15 ;
 	}
-	if (! exists($o->{Java}->{JAVA_DEBUG})){
-		$o->{Java}->{JAVA_DEBUG} = 0 ;
+	if (! exists($o->{Java}->{DEBUG})){
+		$o->{Java}->{DEBUG} = 0 ;
 	}
-	if (! exists($o->{Java}->{JAVA_CLASSPATH})){
-		$o->{Java}->{JAVA_CLASSPATH} = '' ;
+	if (! exists($o->{Java}->{CLASSPATH})){
+		$o->{Java}->{CLASSPATH} = '' ;
 	}
 
 	my $install_lib = $o->{install_lib} ;
@@ -128,15 +129,15 @@ sub _validate {
 
     while (@_) {
 		my ($key, $value) = (shift, shift) ;
-		if ($key eq 'JAVA_BIN'){
+		if ($key eq 'BIN'){
 		    $o->{Java}->{$key} = $value ;
 		}
-		elsif ($key eq 'JAVA_CLASSPATH'){
+		elsif ($key eq 'CLASSPATH'){
 		    $o->{Java}->{$key} = $value ;
 		}
 		elsif (
-			($key eq 'JAVA_PORT')||
-			($key eq 'JAVA_STARTUP_DELAY')){
+			($key eq 'PORT')||
+			($key eq 'STARTUP_DELAY')){
 
 			if ($value !~ /^\d+$/){
 				croak "config '$key' must be an integer" ;
@@ -146,7 +147,7 @@ sub _validate {
 			}
 		    $o->{Java}->{$key} = $value ;
 		}
-		elsif ($key eq 'JAVA_DEBUG'){
+		elsif ($key eq 'DEBUG'){
 		    $o->{Java}->{$key} = $value ;
 			$Inline::Java::DEBUG = $value ;
 		}
@@ -172,8 +173,8 @@ sub set_classpath {
 	if (defined($ENV{CLASSPATH})){
 		push @list, $ENV{CLASSPATH} ;
 	}
-	if (defined($o->{Java}->{JAVA_CLASSPATH})){
-		push @list, $o->{Java}->{JAVA_CLASSPATH} ;
+	if (defined($o->{Java}->{CLASSPATH})){
+		push @list, $o->{Java}->{CLASSPATH} ;
 	}
 	if (defined($path)){
 		push @list, $path ;
@@ -196,15 +197,15 @@ sub set_java_bin {
 
 	my $sep = portable("PATH_SEP") ;
 
-	my $cjb = $o->{Java}->{JAVA_BIN} ;
-	my $ejb = $ENV{JAVA_BIN} ;
+	my $cjb = $o->{Java}->{BIN} ;
+	my $ejb = $ENV{PERL_INLINE_JAVA_BIN} ;
 	if ($cjb){
 		$cjb =~ s/$sep+$// ;
 		return $o->find_java_bin($cjb) ;
 	}
 	elsif ($ejb) {
 		$ejb =~ s/$sep+$// ;
-		$o->{Java}->{JAVA_BIN} = $ejb ;
+		$o->{Java}->{BIN} = $ejb ;
 		return $o->find_java_bin($ejb) ;
 	}
 
@@ -239,10 +240,12 @@ sub find_java_bin {
 			}
 	
 			my $java = $p . "/java" . portable("EXE_EXTENSION") ;
+			my $javac = $p . "/javac" . portable("EXE_EXTENSION") ;
 			debug("  candidate: $java\n") ;
-			if (-f $java){
+			debug("  candidate: $javac\n") ;
+			if ((-f $java)&&(-f $javac)){
 				debug("  found java binaries in $p") ;
-				$o->{Java}->{JAVA_BIN} = $p ;
+				$o->{Java}->{BIN} = $p ;
 				$found = 1 ;
 				last ;
 			}	
@@ -252,8 +255,8 @@ sub find_java_bin {
 	if (! $found){
 		croak 
 			"Can't locate your java binaries ('java' and 'javac'). Please set one of the following to the proper directory:\n" .
-		    "  - The JAVA_BIN config option;\n" .
-		    "  - The JAVA_BIN environment variable;\n" .
+		    "  - The BIN config option;\n" .
+		    "  - The PERL_INLINE_JAVA_BIN environment variable;\n" .
 		    "  - The PATH environment variable.\n" ;
 	}
 }
@@ -362,8 +365,8 @@ sub write_makefile {
 	my $install = "$install_lib/auto/$modpname" ;
     $o->mkpath($install) ;
 
-	my $javac = $o->{Java}->{JAVA_BIN} . "/javac" . portable("EXE_EXTENSION") ;
-	my $java = $o->{Java}->{JAVA_BIN} . "/java" . portable("EXE_EXTENSION") ;
+	my $javac = $o->{Java}->{BIN} . "/javac" . portable("EXE_EXTENSION") ;
+	my $java = $o->{Java}->{BIN} . "/java" . portable("EXE_EXTENSION") ;
 
 	my $debug = ($Inline::Java::DEBUG ? "true" : "false") ;
 
@@ -502,7 +505,7 @@ sub load {
 	$o->load_jdat(@lines) ;
 	$o->bind_jdat() ;
 
-	my $java = $o->{Java}->{JAVA_BIN} . "/java" . portable("EXE_EXTENSION") ;
+	my $java = $o->{Java}->{BIN} . "/java" . portable("EXE_EXTENSION") ;
 	my $cp = $ENV{CLASSPATH} ;
 
 	debug("  cwd is: " . cwd()) ;
@@ -513,7 +516,7 @@ sub load {
 	}
 	$CHILD_CNT++ ;
 
-	my $port = $o->{Java}->{JAVA_PORT} + ($CHILD_CNT - 1) ;
+	my $port = $o->{Java}->{PORT} + ($CHILD_CNT - 1) ;
 
 	if ($pid){
 		# parent here
@@ -736,15 +739,20 @@ sub setup_socket {
 	my $o = shift ;
 	my $port = shift ;
 	
-	my $timeout = $o->{Java}->{JAVA_STARTUP_DELAY} ;
+	my $timeout = $o->{Java}->{STARTUP_DELAY} ;
 
 	my $modfname = $o->{modfname} ;
 	my $socket = undef ;
 
 	my $last_words = "timeout\n" ;
 	eval {
-		# local $SIG{ALRM} = sub { die($last_words) ; } ;
-		# alarm($timeout) ;
+		local $SIG{ALRM} = sub { die($last_words) ; } ;
+
+		my $got_alarm = portable("GOT_ALARM") ;
+
+		if ($got_alarm){
+			alarm($timeout) ;
+		}
 
 		while (1){
 			$socket = new IO::Socket::INET(
@@ -756,11 +764,13 @@ sub setup_socket {
 			}
 		}
 
-		# alarm(0) ;
+		if ($got_alarm){
+			alarm(0) ;
+		}
 	} ;
 	if ($@){
 		if ($@ eq $last_words){
-			croak "Java program taking more than $timeout seconds to start. Increase config JAVA_STARTUP_DELAY if necessary." ;
+			croak "Java program taking more than $timeout seconds to start, or died before Perl could connect. Increase config STARTUP_DELAY if necessary." ;
 		}
 		else{
 			croak $@ ;
@@ -804,6 +814,7 @@ sub portable {
 		COPY				=>  'cp -f',
 		RE_FILE				=>  [],
 		IO_REDIR			=>  '2<&1',
+		GOT_ALARM			=>  1,
 	} ;
 
 	my $map = {
@@ -814,6 +825,7 @@ sub portable {
 			COPY				=>  'copy',
 			RE_FILE				=>  ['/', '\\'],
 			IO_REDIR			=>  '',
+			GOT_ALARM			=>  0,
 		}
 	} ;
 
@@ -827,21 +839,26 @@ sub portable {
 				my $f = $map->{$^O}->{$key}->[0] ;
 				my $t = $map->{$^O}->{$key}->[1] ;
 				$val =~ s/$f/$t/eg ;
+				debug("portable: $key => $val for $^O is '$val'") ;
 				return $val ;
 			}
 			else{
+				debug("portable: $key for $^O is 'undef'") ;
 				return undef ;
 			}
 		}
 		else{
+			debug("portable: $key for $^O is '$map->{$^O}->{$key}'") ;
 			return $map->{$^O}->{$key} ;
 		}
 	}
 	else{
 		if ($key =~ /^RE_/){
+			debug("portable: $key => $val for $^O is default '$val'") ;
 			return $val ;
 		}
 		else{
+			debug("portable: $key for $^O is default '$defmap->{$key}'") ;
 			return $defmap->{$key} ;
 		}
 	}
