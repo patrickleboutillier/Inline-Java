@@ -99,7 +99,7 @@ END {
 }
 
 
-# Signal stuff, not really needed with USE_JNI
+# Signal stuff, not really needed with JNI
 use sigtrap 'handler', \&done, 'normal-signals' ;
 
 $SIG{__DIE__} = sub {
@@ -155,6 +155,9 @@ sub _validate {
 	if (! exists($o->{Java}->{DEBUG})){
 		$o->{Java}->{DEBUG} = 0 ;
 	}
+	if (! exists($o->{Java}->{JNI})){
+		$o->{Java}->{JNI} = 0 ;
+	}
 	if (! exists($o->{Java}->{CLASSPATH})){
 		$o->{Java}->{CLASSPATH} = '' ;
 	}
@@ -189,7 +192,7 @@ sub _validate {
 			$o->{Java}->{$key} = $value ;
 			$Inline::Java::DEBUG = $value ;
 		}
-		elsif ($key eq 'USE_JNI'){
+		elsif ($key eq 'JNI'){
 			$o->{Java}->{$key} = $value ;
 		}
 		else{
@@ -199,8 +202,8 @@ sub _validate {
 		}
 	}
 
-	if ($ENV{PERL_INLINE_JAVA_USE_JNI}){
-		$o->{Java}->{USE_JNI} = 1 ;
+	if (defined($ENV{PERL_INLINE_JAVA_JNI})){
+		$o->{Java}->{JNI} = $ENV{PERL_INLINE_JAVA_JNI} ;
 	}
 
 	my $install_lib = $o->{install_lib} ;

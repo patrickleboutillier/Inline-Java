@@ -20,7 +20,7 @@ sub new {
 
 	Inline::Java::debug("Starting JVM...") ;
 
-	if ($o->{Java}->{USE_JNI}){
+	if ($o->{Java}->{JNI}){
 		Inline::Java::debug("  JNI mode") ;
 
 		require Inline::Java::JNI ;
