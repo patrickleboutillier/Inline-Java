@@ -156,8 +156,8 @@ sub portable {
 		SUB_FIX_CLASSPATH	=>	undef,
 		SUB_FIX_CMD_QUOTES	=>	undef,
 		SUB_FIX_MAKE_QUOTES	=>	undef,
-		JVM_LIB				=>	'libjvm.so',
-		JVM_SO				=>	'libjvm.so',
+		JVM_LIB				=>	"libjvm.$Config{dlext}",
+		JVM_SO				=>	"libjvm.$Config{dlext}",
 	} ;
 
 	my $map = {
@@ -198,6 +198,9 @@ sub portable {
 			},
 			JVM_LIB				=>	'jvm.lib',
 			JVM_SO				=>	'jvm.dll',
+		},
+		hpux => {
+			GOT_NEXT_FREE_PORT  =>  0,
 		},
 	} ;
 
