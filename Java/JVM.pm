@@ -269,7 +269,6 @@ sub process_command {
 	my $inline = shift ;
 	my $data = shift ;
 
-	my $ref = undef ;
 	my $resp = undef ;
 	while (1){
 		Inline::Java::debug("  packet sent is $data") ;
@@ -283,6 +282,10 @@ sub process_command {
 			if (! $resp){
 				croak "Can't receive packet from JVM: $!" ;
 			}
+
+			# Release the reference since the object has been sent back
+			# to Java.
+			$Inline::Java::Callback::OBJECT_HOOK = undef ;
 		}
 		if ($this->{JNI}){
 			$Inline::Java::JNI::INLINE_HOOK = $inline ;
@@ -293,7 +296,7 @@ sub process_command {
 
 		# We got an answer from the server. Is it a callback?
 		if ($resp =~ /^callback/){
-			($data, $ref) = Inline::Java::Callback::InterceptCallback($inline, $resp) ;
+			($data, $Inline::Java::Callback::OBJECT_HOOK) = Inline::Java::Callback::InterceptCallback($inline, $resp) ;
 			next ;
 		}
 		else{

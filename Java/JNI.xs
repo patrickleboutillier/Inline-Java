@@ -46,12 +46,12 @@ void check_exception(JNIEnv *env, char *msg){
 
 
 jstring JNICALL jni_callback(JNIEnv *env, jobject obj, jstring cmd){
-
 	dSP ;
-	jstring resp = NULL ;
+	jstring resp ;
 	char *c = (char *)((*(env))->GetStringUTFChars(env, cmd, NULL)) ;
 	char *r = NULL ;
 	int count = 0 ;
+	SV *hook = NULL ;
 
 	ENTER ;
 	SAVETMPS ;
@@ -63,14 +63,31 @@ jstring JNICALL jni_callback(JNIEnv *env, jobject obj, jstring cmd){
 
 	(*(env))->ReleaseStringUTFChars(env, cmd, c) ;
 	count = perl_call_pv("Inline::Java::Callback::InterceptCallback", 
-		G_SCALAR) ;
+		G_ARRAY|G_EVAL) ;
 
 	SPAGAIN ;
 
-	if (count != 1){
-		croak("Invalid return value from Inline::Java::Callback::InterceptCallback: %d",
-			count) ;
+	/* Check the eval */
+	if (SvTRUE(ERRSV)){
+		STRLEN n_a ;
+		croak(SvPV(ERRSV, n_a)) ;
 	}
+	else{
+		if (count != 2){
+			croak("Invalid return value from Inline::Java::Callback::InterceptCallback: %d",
+				count) ;
+		}
+	}
+
+	/* 
+		The first thing to pop is a reference to the returned object,
+		which we must keep around long enough so that it is not deleted
+		before control gets back to Java. This is because this object
+		may be returned be the callback, and when it gets back to Java
+		it will already be deleted.
+	*/
+	hook = get_sv("Inline::Java::Callback::OBJECT_HOOK", FALSE) ;
+	sv_setsv(hook, POPs) ;
 
 	r = (char *)POPp ;
 	resp = (*(env))->NewStringUTF(env, r) ;
@@ -78,7 +95,6 @@ jstring JNICALL jni_callback(JNIEnv *env, jobject obj, jstring cmd){
 	PUTBACK ;
 	FREETMPS ;
 	LEAVE ;
-
 
 	return resp ;
 }
@@ -101,6 +117,7 @@ new(CLASS, classpath, debug)
 	JavaVMInitArgs vm_args ;
 	JavaVMOption options[2] ;
 	JNIEnv *env ;
+	JNINativeMethod nm ;
 	jint res ;
 	char *cp ;
 
@@ -143,6 +160,13 @@ new(CLASS, classpath, debug)
 	RETVAL->process_command_mid = (*(env))->GetMethodID(env, RETVAL->ijs_class, "ProcessCommand", "(Ljava/lang/String;)Ljava/lang/String;") ;
 	check_exception(env, "Can't find method ProcessCommand in class InlineJavaServer") ;
 
+	/* Register the callback function */
+	nm.name = "jni_callback" ;
+	nm.signature = "(Ljava/lang/String;)Ljava/lang/String;" ;
+	nm.fnPtr = jni_callback ;
+	(*(env))->RegisterNatives(env, RETVAL->ijs_class, &nm, 1) ;	
+	check_exception(env, "Can't register method jni_callback in class InlineJavaServer") ;
+	
     OUTPUT:
 	RETVAL
 
@@ -190,6 +214,7 @@ process_command(this, data)
 	JNIEnv *env ;
 	jstring cmd ;
 	jstring resp ;
+	SV *hook = NULL ;
 
 	CODE:
 	env = get_env(this) ;
@@ -198,6 +223,9 @@ process_command(this, data)
 
 	resp = (*(env))->CallObjectMethod(env, this->ijs, this->process_command_mid, cmd) ;
 	check_exception(env, "Can't call ProcessCommand in InlineJavaServer") ;
+
+	hook = get_sv("Inline::Java::Callback::OBJECT_HOOK", FALSE) ;
+	sv_setsv(hook, &PL_sv_undef) ;
 
 	RETVAL = (char *)((*(env))->GetStringUTFChars(env, resp, NULL)) ;
 	

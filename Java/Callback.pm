@@ -9,6 +9,9 @@ $Inline::Java::Callback::VERSION = '0.31' ;
 use Carp ;
 
 
+$Inline::Java::Callback::OBJECT_HOOK = undef ;
+
+
 sub InterceptCallback {
 	my $inline = shift ;
 	my $resp = shift ;
@@ -80,6 +83,10 @@ sub ProcessCallback {
 }
 
 
+
+1 ;
+
+
 __DATA__
 
 /*
@@ -139,5 +146,4 @@ public class InlineJavaPerlCaller {
 		}
 	}
 }
-
 
