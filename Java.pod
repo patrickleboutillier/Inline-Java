@@ -118,10 +118,14 @@ behavior of C<Inline::Java>:
       choices and the sugnature chosen.
       Ex: WARN_METHOD_SELECT => 1
 
-   USE_JNI:
-      Enables the JNI (Java Native Interface) mode instead of the default
-      client/server mode. This mode is still experimental.
-      Ex: USE_JNI => 1
+   JNI:
+      Toggles the execution mode. The default is to use the client/server
+      mode. To use the JNI extension (you must have built it at install 
+      time though. See README and README.JNI for more information), set 
+      JNI to 1. 
+      Note: This can also be set globally by setting the PERL_INLINE_JAVA_JNI
+      environment variable to 1.
+      Ex: JNI => 1
 
 =head1 CLASSES AND OBJECTS
 
@@ -397,25 +401,23 @@ Java array reference obtained from elsewhere, you don't even need to cast:
    $obj->{o} = $obj->{a} ;
 
 
-=head1 JNI (JAVA NATIVE INTERFACE)
+=head1 JNI vs CLIENT/SERVER MODES
 
-Starting in version 0.20, there has been some support for the JNI
-(Java Native Interface). This enables C<Inline::Java> to load the
-Java virtual machine as a shared object instead of running it as a 
-stand-alone server. This brings a dramatic improvement in performance.
+Starting in version 0.20, it is possible to use the JNI (Java Native 
+Interface) extension. This enables C<Inline::Java> to load the Java virtual 
+machine as a shared object instead of running it as a stand-alone server. 
+This brings a dramatic improvement in performance.
 
-To enable the JNI mode, you first must compile the JNI extension when
-you install the c<Inline::Java> module. See README for more information.
+However, the JNI extension is not available on all platforms (see README and
+README.JNI for more information). For that reason, if you have built the 
+JNI extension, you must enable it explicitely by doing one of the following:
 
-Once you have built the JNI extension, you can enable the JNI mode 
-by doing one of the following:
+   - set the JNI configuration option to 1
+   - set the PERL_INLINE_JAVA_JNI environment variable to 1
 
-   - set the USE_JNI configuration option to any true value
-   - set the PERL_INLINE_JAVA_USE_JNI environment variable to any true value
-
-Once JNI mode is enabled, your scripts will use create the Java virtual 
-machine in their own memory space (using a shared object), instead of
-forking and running the Java virtual machine as a server.
+Note: C<Inline::Java> only creates one virtual machine instance. Therefore
+you can't use JNI for some sections and client/server for others. The first
+section determines the execution mode.
 
 =head1 SUPPORTED PLATFORMS
 
@@ -423,7 +425,7 @@ This is an ALPHA release of Inline::Java. Further testing and
 expanded support for other operating systems and platforms will be a
 focus for future releases. It has been tested on: 
 
-   - Solaris 2.5.1 + Perl 5.6 + Java SDK 1.2.1
+   - Solaris 2.5.1 + Perl 5.6 + Java SDK 1.2.2
    - Solaris 2.8   + Perl 5.6 + Java SDK 1.3.0
    - Windows 2000  + Perl 5.6 + Java SDK 1.3.0
    - Windows 95    + Perl 5.6 + Java SDK 1.2.2 (fix required in Makefile)

@@ -9,7 +9,7 @@ use Inline(
 ) ;
 
 BEGIN {
-	plan(tests => 36) ;
+	plan(tests => 40) ;
 }
 
 
@@ -91,6 +91,11 @@ ok($t->_Object(["3", "3456", "cat"])->[2], 'cat') ;
 eval {$t->_int(["3", [], "cat"])} ; ok($@, qr/Java array contains mixed types/) ;
 eval {$t->_StringString([["3"], "string"])} ; ok($@, qr/Java array contains mixed types/) ;
 
+# Invalid operations on arrays.
+eval {@{$b} = ()} ; ok($@, qr/Operation CLEAR/) ;
+eval {pop @{$b}} ; ok($@, qr/Operation POP/) ;
+eval {shift @{$b}} ; ok($@, qr/Operation SHIFT/) ;
+eval {splice(@{$b}, 0, 1)} ; ok($@, qr/Operation SPLICE/) ;
 
 __END__
 

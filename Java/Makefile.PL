@@ -9,6 +9,7 @@ if (! defined($main::JNI_BUILD)){
 	$main::JNI_BUILD = 0 ;
 }
 
+
 my $JNI_BUILD = $main::JNI_BUILD ;
 
 
@@ -68,13 +69,14 @@ else{
 }
 
 
-ExtUtils::MakeMaker::WriteMakefile(
+WriteMakefile(
 	NAME => 'Inline::Java::JNI',
 	VERSION_FROM => 'JNI.pm',
-	INC => join(" ", 
-		"-I$java_include",
-		"-I$java_include_os"
-	),
+	INC => (! $JNI_BUILD ? undef :
+		join(" ", 
+			"-I$java_include",
+			"-I$java_include_os"
+		)),
 	LIBS => (! $JNI_BUILD ? undef :
 		[
 			"-L$java_lib -ljvm"

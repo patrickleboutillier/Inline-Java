@@ -259,6 +259,24 @@ sub DELETE {
 }
 
 
+sub EXTEND {
+ 	my $this = shift ;
+	my $count = shift ;
+
+	croak "Operation EXTEND not supported on Java array" ;
+}
+
+
+sub SPLICE {
+	my $this = shift ;
+	my $offset = shift ;
+	my $length = shift ;
+	my @LIST = @_ ;
+
+	croak "Operation SPLICE not supported on Java array" ;
+}
+
+
 sub DESTROY {
  	my $this = shift ;
 }
