@@ -14,8 +14,8 @@ BEGIN {
 }
 
 
-my $o1 = new object() ;
-my $o2 = new object() ;
+my $o1 = new obj() ;
+my $o2 = new obj() ;
 ok($o1->get_data(), "data") ;
 ok($o2->get_data(), "data") ;
 ok($o1->get_this()->get_data(), "data") ;
@@ -25,12 +25,12 @@ $o1->set_data("new data") ;
 ok($o1->get_data(), "new data") ;
 ok($o2->get_data(), "new data") ;
 
-object->set_data("new new data") ;
+obj->set_data("new new data") ;
 ok($o1->get_data(), "new new data") ;
 ok($o2->get_data(), "new new data") ;
 
-my $so1 = new sub_object(5) ;
-my $so2 = new sub_object(6) ;
+my $so1 = new sub_obj(5) ;
+my $so2 = new sub_obj(6) ;
 ok($so1->get_data(), "new new data") ;
 ok($so1->get_number(), 5) ;
 ok($so2->get_number(), 6) ;
@@ -38,7 +38,7 @@ ok($so2->get_number(), 6) ;
 $so1->set_number(7) ;
 ok($so1->get_number(), 7) ;
 
-my $io = new object::inner_object($o1) ;
+my $io = new obj::inner_obj($o1) ;
 ok($io->get_data(), "new new data") ;
 
 my $al = $o1->new_arraylist() ;
@@ -53,17 +53,17 @@ __Java__
 import java.util.* ;
 
 
-class object {
+class obj {
 	public static String data = "data" ;
 
-	public object(){
+	public obj(){
 	}
 
-	public object get_this(){
+	public obj get_this(){
 		return this ;
 	}
 
-	public object get_that(object o){
+	public obj get_that(obj o){
 		return o ;
 	}
 
@@ -88,21 +88,21 @@ class object {
 	}
 
 	
-	class inner_object {
-		public inner_object(){
+	class inner_obj {
+		public inner_obj(){
 		}
 
 		public String get_data(){
-			return object.this.get_data() ;
+			return obj.this.get_data() ;
 		}
 	}
 }
 
 
-class sub_object extends object {
+class sub_obj extends obj {
 	public int number ;
 
-	public sub_object(int num){
+	public sub_obj(int num){
 		super() ;
 		number = num ;
 	}

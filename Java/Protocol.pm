@@ -194,6 +194,7 @@ sub Send {
 			Inline::Java::debug($perl_class) ;
 
 			my $obj = undef ;
+			no strict 'refs' ;
 			if (defined(${$perl_class . "::" . "EXISTS"})){
 				Inline::Java::debug("  returned class exists!") ;
 				$obj = $perl_class->__new($class, $inline, $id) ;
