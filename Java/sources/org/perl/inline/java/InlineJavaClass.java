@@ -7,6 +7,20 @@ class InlineJavaClass {
 	private InlineJavaServer ijs ;
 	private InlineJavaProtocol ijp ;
 
+	static private HashMap class2jni_code = new HashMap() ;
+	static {
+		class2jni_code.put(byte.class, "B") ;
+		class2jni_code.put(short.class, "S") ;
+		class2jni_code.put(int.class, "I") ;
+		class2jni_code.put(long.class, "J") ;
+		class2jni_code.put(float.class, "F") ;
+		class2jni_code.put(double.class, "D") ;
+		class2jni_code.put(boolean.class, "Z") ;
+		class2jni_code.put(char.class, "C") ;
+		class2jni_code.put(void.class, "V") ;
+	} ;
+
+
 
 	InlineJavaClass(InlineJavaServer _ijs, InlineJavaProtocol _ijp){
 		ijs = _ijs ;
@@ -17,7 +31,7 @@ class InlineJavaClass {
 	/*
 		Makes sure a class exists
 	*/
-	Class ValidateClass(String name) throws InlineJavaException {
+	static Class ValidateClass(String name) throws InlineJavaException {
 		Class pc = FindType(name) ;
 		if (pc != null){
 			return pc ;
@@ -196,12 +210,12 @@ class InlineJavaClass {
 	/* 
 		Returns the number of levels that separate a from b
 	*/
-	int DoesExtend(Class a, Class b){
+	static int DoesExtend(Class a, Class b){
 		return DoesExtend(a, b, 0) ;
 	}
 
 
-	int DoesExtend(Class a, Class b, int level){
+	static int DoesExtend(Class a, Class b, int level){
 		InlineJavaUtils.debug(4, "checking if " + a.getName() + " extends " + b.getName()) ;
 
 		if (a == b){
@@ -234,7 +248,7 @@ class InlineJavaClass {
 	/*
 		Finds the wrapper class for the passed primitive type.
 	*/
-	Class FindWrapper (Class p){
+	static Class FindWrapper (Class p){
 		Class [] list = {
 			byte.class,
 			short.class,
@@ -269,7 +283,7 @@ class InlineJavaClass {
 	/*
 		Finds the primitive type class for the passed primitive type name.
 	*/
-	Class FindType (String name){
+	static Class FindType (String name){
 		String [] list = {
 			"byte",
 			"short",
@@ -317,7 +331,29 @@ class InlineJavaClass {
 	}
 
 
-	boolean ClassIsPrimitive (Class p){
+	static String FindJNICode(Class p){
+		// Strip all the ['s from in front of the class name into some var
+		char name[] = p.getName().toCharArray() ;
+		StringBuffer pref = new StringBuffer() ;
+		for (int i = 0 ; i < name.length ; i++){
+			if (name[i] == '['){
+				pref.append("[") ;
+			}
+			else if (name[i] == '.'){
+				name[i] = '/' ;
+			}
+		}
+
+		String code = (String)class2jni_code.get(p) ;
+		if (code == null){
+			code = "L"  + new String(name) + ";" ;
+		}
+		
+		return pref + code ;
+	}
+
+
+	static boolean ClassIsPrimitive(Class p){
 		String name = p.getName() ;
 
 		if ((ClassIsNumeric(p))||(ClassIsString(p))||(ClassIsChar(p))||(ClassIsBool(p))){
@@ -332,7 +368,7 @@ class InlineJavaClass {
 	/*
 		Determines if class is of numerical type.
 	*/
-	boolean ClassIsNumeric (Class p){
+	static boolean ClassIsNumeric (Class p){
 		String name = p.getName() ;
 
 		Class [] list = {
@@ -365,7 +401,7 @@ class InlineJavaClass {
 	/*
 		Class is String or StringBuffer
 	*/
-	boolean ClassIsString (Class p){
+	static boolean ClassIsString (Class p){
 		String name = p.getName() ;
 
 		Class [] list = {
@@ -387,7 +423,7 @@ class InlineJavaClass {
 	/*
 		Class is Char
 	*/
-	boolean ClassIsChar (Class p){
+	static boolean ClassIsChar (Class p){
 		String name = p.getName() ;
 
 		Class [] list = {
@@ -409,7 +445,7 @@ class InlineJavaClass {
 	/*
 		Class is Bool
 	*/
-	boolean ClassIsBool (Class p){
+	static boolean ClassIsBool (Class p){
 		String name = p.getName() ;
 
 		Class [] list = {
@@ -432,7 +468,7 @@ class InlineJavaClass {
 		Determines if a class is not of a primitive type or of a 
 		wrapper class.
 	*/
-	boolean ClassIsReference (Class p){
+	static boolean ClassIsReference (Class p){
 		String name = p.getName() ;
 
 		if (ClassIsPrimitive(p)){
@@ -444,7 +480,8 @@ class InlineJavaClass {
 		return true ;
 	}
 
-	boolean ClassIsArray (Class p){
+
+	static boolean ClassIsArray (Class p){
 		String name = p.getName() ;
 
 		if ((ClassIsReference(p))&&(name.startsWith("["))){
