@@ -122,7 +122,7 @@ sub __validate_prototype {
 
 	my $nb_matched = scalar(@matched) ;
 	if (! $nb_matched){
-		my $name = $this->__get_private()->{class} ;
+		my $name = (ref($this) ? $this->__get_private()->{class} : $this) ;
 		my $sa = Inline::Java::Protocol->CreateSignature($args) ;
 		my $msg = "In method $method of class $name: Can't find any signature that matches " .
 			"the arguments passed $sa.\nAvailable signatures are:\n"  ;
@@ -282,7 +282,7 @@ sub AUTOLOAD {
 
 	my $name = (ref($this) ? $this->__get_private()->{class} : $this) ;
 	if ($name eq "Inline::Java::Object"){
-		croak "Can't call method $func_name on an object that is not bound to Perl" ;
+		croak "Can't call method $func_name on an object ($name) that is not bound to Perl" ;
 	}
 
 	croak "No public method $func_name defined for class $name" ;
