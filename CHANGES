@@ -6,7 +6,7 @@ Revision history for Perl extension Inline::Java
     - Removed CLASSPATH config option because it didn't behave as
       expected
     - Caching for class information
-    - Added support for default no-arg constructors
+    - Added support for default no-arg constructors for public classes
     - Added error message stating that Inline::Java doesn't currently 
       support multiple sections
 
