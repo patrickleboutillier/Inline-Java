@@ -16,10 +16,10 @@ public class InlineJavaServer {
 
 	private InlineJavaUserClassLoader ijucl = null ;
 	private HashMap thread_objects = new HashMap() ;
-	private HashMap thread_callback_queues = new HashMap() ;
 	private int objid = 1 ;
 	private boolean jni = false ;
 	private Thread creator = null ;
+	private int thread_count = 0 ;
 
 
 	// This constructor is used in JNI mode
@@ -50,7 +50,8 @@ public class InlineJavaServer {
 
 		while (true){
 			try {
-				InlineJavaServerThread ijt = new InlineJavaServerThread(this, ss.accept(), ijucl) ;
+				String name = "IJST-#" + thread_count++ ;
+				InlineJavaServerThread ijt = new InlineJavaServerThread(name, this, ss.accept(), ijucl) ;
 				ijt.start() ;
 				if (! shared_jvm){
 					try {
@@ -246,40 +247,13 @@ public class InlineJavaServer {
 	*/
 	synchronized void AddThread(Thread t){
 		thread_objects.put(t, new HashMap()) ;
-		thread_callback_queues.put(t, new ArrayList()) ;
+		InlineJavaPerlCaller.AddThread(t) ;
 	}
 
 
 	synchronized void RemoveThread(InlineJavaServerThread t){
 		thread_objects.remove(t) ;
-		thread_callback_queues.remove(t) ;
-	}
-	
-
-	synchronized void EnqueueCallback(Thread t, InlineJavaCallback ijc) throws InlineJavaException {
-		ArrayList a = (ArrayList)thread_callback_queues.get(t) ;
-
-		if (a == null){
-			throw new InlineJavaException("Can't find thread " + t.getName() + "!") ;
-		}
-		else{
-			a.add(ijc) ;
-		}
-	}
-
-
-	synchronized InlineJavaCallback DequeueCallback(Thread t) throws InlineJavaException {
-		ArrayList a = (ArrayList)thread_callback_queues.get(t) ;
-
-		if (a == null){
-			throw new InlineJavaException("Can't find thread " + t.getName() + "!") ;
-		}
-		else{
-			if (a.size() > 0){
-				return (InlineJavaCallback)a.remove(0) ;
-			}
-			return null ;
-		}
+		InlineJavaPerlCaller.RemoveThread(t) ;
 	}
 
 

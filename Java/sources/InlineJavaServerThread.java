@@ -13,8 +13,8 @@ class InlineJavaServerThread extends Thread {
 	private InlineJavaUserClassLoader ijucl ;
 
 
-	InlineJavaServerThread(InlineJavaServer _ijs, Socket _client, InlineJavaUserClassLoader _ijucl) throws IOException {
-		super() ;
+	InlineJavaServerThread(String name, InlineJavaServer _ijs, Socket _client, InlineJavaUserClassLoader _ijucl) throws IOException {
+		super(name) ;
 		client = _client ;
 		ijs = _ijs ;
 		ijucl = _ijucl ;

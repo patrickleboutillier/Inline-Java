@@ -6,26 +6,18 @@ use Inline Java => "DATA";
 
 my $cnt = 0 ;
 my $greeter = MyButton->new();
-eval {
-	$greeter->StartCallbackLoop() ;
-	print "done\n" ;
-} ;
-if ($@){
-	$@->printStackTrace() ;
-}
+$greeter->StartCallbackLoop() ;
 
 
 ###########################################
 
 
 sub button_pressed {
-  my $o = shift ;
-  my $id = shift ;
-  print "Button $id Pressed (from perl)\n" ;
-  if ($cnt >= 10){
-	 $o->StopCallbackLoop() ;
-  }
   $cnt++ ;
+  print "Button Pressed $cnt times (from perl)\n" ;
+  if ($cnt >= 10){
+	 $greeter->StopCallbackLoop() ;
+  }
 }
 
 __DATA__
@@ -61,9 +53,7 @@ public class MyButton extends    InlineJavaPerlCaller
   {
     try
     {
-      CallPerl("main", "button_pressed", new Object [] {this,  new Integer(1)});
-      CallPerl("main", "button_pressed", new Object [] {this,  new Integer(2)});
-      CallPerl("main", "button_pressed", new Object [] {this,  new Integer(3)});
+      CallPerl("main", "button_pressed", new Object [] {});
     }
     catch (InlineJavaPerlException pe)  { }
     catch (InlineJavaException pe) { pe.printStackTrace() ;}

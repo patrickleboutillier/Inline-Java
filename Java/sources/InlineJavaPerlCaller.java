@@ -11,8 +11,7 @@ public class InlineJavaPerlCaller {
 	private InlineJavaServer ijs = InlineJavaServer.GetInstance() ;
 	private Thread creator ;
 	private boolean stop_loop = false ;
-	private InlineJavaCallback queued_callback = null ;
-	private Object queued_response = null ;
+	static private HashMap thread_callback_queues = new HashMap() ;
 
 
 	/*
@@ -41,133 +40,116 @@ public class InlineJavaPerlCaller {
 	}
 
 
-	synchronized public Object CallPerl(InlineJavaCallback ijc) throws InlineJavaException, InlineJavaPerlException {
+	public Object CallPerl(InlineJavaCallback ijc) throws InlineJavaException, InlineJavaPerlException {
 		Thread t = Thread.currentThread() ;
 		if (t == creator){
-			return Callback(ijc) ;
+			ijc.Process() ;
+			return ijc.GetResponse() ;
 		}
 		else{
 			// Enqueue the callback into the creator thread's queue and notify it
 			// that there is some work for him.
-			// ijs.EnqueueCallback(creator, ijc) ;
-			queued_callback = ijc ;
-			notify() ;
+			ijc.ClearResponse() ;
+			ArrayList queue = GetQueue(creator) ;
+			synchronized (queue){
+				InlineJavaUtils.debug(3, "enqueing callback for processing for " + creator.getName() + " in " + t.getName() + "...") ;
+				EnqueueCallback(queue, ijc) ;
+				InlineJavaUtils.debug(3, "notifying that a callback request is available for " + creator.getName() + " in " + t.getName() + " (monitor = " + this + ")") ;
+				queue.notify() ;
+			}
 
 			// Now we must wait until the callback is processed and get back the result...
-			while(true){
-				try {
-					wait() ;
-					if (queued_response != null){
-						break ;
-					}
-				}
-				catch (InterruptedException ie){
-					// Do nothing, return and wait() some more...
-				}
-			}
-
-			Object resp = queued_response ;
-			queued_response = null ;
-			
-			return resp ;
+			return ijc.WaitForResponse(t) ;
 		}
 	}
 
 
-	synchronized public void StartCallbackLoop() throws InlineJavaException, InlineJavaPerlException {
+	public void StartCallbackLoop() throws InlineJavaException, InlineJavaPerlException {
 		Thread t = Thread.currentThread() ;
 		if (! ijs.IsThreadPerlContact(t)){
-			throw new InlineJavaException("InlineJavaPerlCaller.start_callback_loop() can only be called by threads that communicate directly with Perl") ;
+			throw new InlineJavaException("InlineJavaPerlCaller.StartCallbackLoop() can only be called by threads that communicate directly with Perl") ;
 		}
 
-		Object resp = null ;
-		CheckForCallback() ;
+		ArrayList queue = GetQueue(t) ;
 		stop_loop = false ;
 		while (! stop_loop){
-			try {
-				wait() ;
-				CheckForCallback() ;
-			}
-			catch (InterruptedException ie){
-				// Do nothing, return and wait() some more...
-			}
-		}
-	}
-
-
-	private void CheckForCallback() throws InlineJavaException, InlineJavaPerlException {
-		//ijc = ijs.DequeueCallback(t) ;
-		//if (ijc != null){
-		//	resp = Callback(ijc) ;
-		// Send resp back to the calling thread?
-		//}
-		if (queued_callback != null){
-			InlineJavaCallback ijc = queued_callback ;
-			queued_callback = null ;
-			queued_response = Callback(ijc) ;
-			notify() ;
-		}
-	}
-
-
-	synchronized public void StopCallbackLoop() {
-		stop_loop = true ;
-		notify() ;
-	}
-
-
-	private Object Callback(InlineJavaCallback ijcb) throws InlineJavaException, InlineJavaPerlException {
-		Object ret = null ;
-		try {
-			InlineJavaProtocol ijp = new InlineJavaProtocol(ijs, null) ;
-			String cmd = ijcb.GetCommand(ijp) ;
-			InlineJavaUtils.debug(2, "callback command: " + cmd) ;
-
-			Thread t = Thread.currentThread() ;
-			String resp = null ;
-			while (true) {
-				InlineJavaUtils.debug(3, "packet sent (callback) is " + cmd) ;
-				if (! ijs.IsJNI()){
-					// Client-server mode.
-					InlineJavaServerThread ijt = (InlineJavaServerThread)t ;
-					ijt.GetWriter().write(cmd + "\n") ;
-					ijt.GetWriter().flush() ;
-
-					resp = ijt.GetReader().readLine() ;
-				}
-				else{
-					// JNI mode
-					resp = ijs.jni_callback(cmd) ;
-				}
-				InlineJavaUtils.debug(3, "packet recv (callback) is " + resp) ;
-
-				StringTokenizer st = new StringTokenizer(resp, " ") ;
-				String c = st.nextToken() ;
-				if (c.equals("callback")){
-					boolean thrown = new Boolean(st.nextToken()).booleanValue() ;
-					String arg = st.nextToken() ;
-					InlineJavaClass ijc = new InlineJavaClass(ijs, ijp) ;
-					ret = ijc.CastArgument(java.lang.Object.class, arg) ;
-
-					if (thrown){
-						throw new InlineJavaPerlException(ret) ;
+			synchronized (queue){
+				while (! CheckForCallback(queue)){
+					try {
+						InlineJavaUtils.debug(3, "waiting for callback request in " + t.getName() + " (monitor = " + this + ")...") ;
+						queue.wait() ;
+						InlineJavaUtils.debug(3, "waiting for callback request finished " + t.getName() + " (monitor = " + this + ")...") ;
 					}
-
-					break ;
+					catch (InterruptedException ie){
+						// Do nothing, return and wait() some more...
+					}						
 				}
-				else{
-					// Pass it on through the regular channel...
-					InlineJavaUtils.debug(3, "packet is not callback response: " + resp) ;
-					cmd = ijs.ProcessCommand(resp, false) ;
-
-					continue ;
-				}
+				InlineJavaUtils.debug(3, "processing callback request in " + t.getName() + "...") ;
+				ProcessCallback(t, queue) ;
 			}
 		}
-		catch (IOException e){
-			throw new InlineJavaException("IO error: " + e.getMessage()) ;
+	}
+
+
+	private boolean CheckForCallback(ArrayList q) throws InlineJavaException, InlineJavaPerlException {
+		return (q.size() > 0) ;
+	}
+
+
+	private void ProcessCallback(Thread t, ArrayList q) throws InlineJavaException, InlineJavaPerlException {
+		InlineJavaCallback ijc = DequeueCallback(q) ;
+		if (ijc != null){
+			ijc.Process() ;
+			ijc.NotifyOfResponse(t) ;
+		}
+	}
+
+
+	public void StopCallbackLoop() throws InlineJavaException {
+		Thread t = Thread.currentThread() ;
+		if (! ijs.IsThreadPerlContact(t)){
+			throw new InlineJavaException("InlineJavaPerlCaller.StopCallbackLoop() can only be called by threads that communicate directly with Perl") ;
 		}
 
-		return ret ;
+		ArrayList queue = GetQueue(t) ;
+		stop_loop = true ;
+		queue.notify() ;
+	}
+
+
+	/*
+		Here the prototype accepts Threads because the JNI thread
+		calls this method also.
+	*/
+	static synchronized void AddThread(Thread t){
+		thread_callback_queues.put(t, new ArrayList()) ;
+	}
+
+
+	static synchronized void RemoveThread(InlineJavaServerThread t){
+		thread_callback_queues.remove(t) ;
+	}
+
+
+	static private ArrayList GetQueue(Thread t) throws InlineJavaException {
+		ArrayList a = (ArrayList)thread_callback_queues.get(t) ;
+
+		if (a == null){
+			throw new InlineJavaException("Can't find thread " + t.getName() + "!") ;
+		}
+		return a ;
+	}
+
+
+	static synchronized void EnqueueCallback(ArrayList q, InlineJavaCallback ijc) throws InlineJavaException {
+		q.add(ijc) ;
+	}
+
+
+	static synchronized InlineJavaCallback DequeueCallback(ArrayList q) throws InlineJavaException {
+		if (q.size() > 0){
+			return (InlineJavaCallback)q.remove(0) ;
+		}
+		return null ;
 	}
 }
