@@ -77,11 +77,11 @@ jobject extract_va_arg(JNIEnv *env, va_list *list, char f){
 	*/
 	switch(f){
 		case 'B':
-			val.i = (jbyte)va_arg(*list, int) ;
+			val.b = (jbyte)va_arg(*list, int) ;
 			ret = create_primitive_object(env, f, "java/lang/Byte", val) ;
 			break ;
 		case 'S':
-			val.i = (jshort)va_arg(*list, int) ;
+			val.s = (jshort)va_arg(*list, int) ;
 			ret = create_primitive_object(env, f, "java/lang/Short", val) ;
 			break ;
 		case 'I':
@@ -102,11 +102,11 @@ jobject extract_va_arg(JNIEnv *env, va_list *list, char f){
 			ret = create_primitive_object(env, f, "java/lang/Double", val) ;
 			break ;
 		case 'Z':
-			val.i = (jint)va_arg(*list, int) ;
+			val.z = (jint)va_arg(*list, int) ;
 			ret = create_primitive_object(env, f, "java/lang/Boolean", val) ;
 			break ;
 		case 'C':
-			val.i = (jchar)va_arg(*list, int) ;
+			val.c = (jchar)va_arg(*list, int) ;
 			ret = create_primitive_object(env, f, "java/lang/Character", val) ;
 			break ;
 	}

@@ -35,6 +35,7 @@ Java/sources/org/perl/inline/java/InlineJavaUtils.java
 Java/sources/org/perl/inline/java/InlineJavaCallback.java
 Java/sources/org/perl/inline/java/InlineJavaCallbackQueue.java
 Java/sources/org/perl/inline/java/InlineJavaPerlNatives.java
+Java/sources/org/perl/inline/java/InlineJavaPerlInterpreter.java
 Java/Natives/Makefile.PL
 Java/Natives/Natives.pm
 Java/Natives/Natives.xs
