@@ -138,6 +138,7 @@ sub validate {
 	$o->set_option('PORT',					-1,		'i', 1, \%opts) ;
 	$o->set_option('STARTUP_DELAY',			15,		'i', 1, \%opts) ;
 	$o->set_option('SHARED_JVM',			0,		'b', 1, \%opts) ;
+	$o->set_option('START_JVM',				1,		'b', 1, \%opts) ;
 	$o->set_option('JNI',					0,		'b', 1, \%opts) ;
 	$o->set_option('EMBEDDED_JNI',			0,		'b', 1, \%opts) ;
 
