@@ -23,6 +23,12 @@ Inline::Java - Write Perl classes in Java.
       }   
    END_OF_JAVA_CODE
 
+=head1 WARNING 
+
+THIS IS ALPHA SOFTWARE. It is incomplete and possibly unreliable. 
+It is also possible that some elements of the interface (API) will 
+change in future releases.
+
 =head1 DESCRIPTION
 
 The C<Inline::Java> module allows you to put Java source code

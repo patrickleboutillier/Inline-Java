@@ -40,7 +40,11 @@ make install
 You have to 'make install' before you can run it successfully. 
 
 
-Note 1: Use nmake on Windows systems.
+Note 1: Use nmake on Windows systems. If you are using the COMMAND.COM shell
+under Windows, Inline::Java will try to detect it. If it doesn't, 
+you should set the PERL_INLINE_JAVA_COMMAND_COM environment variable 
+to a true value. You also will need set this whenever you use the module
+later on.
 
 Note 2: In order for 'make test' to run properly, you should put the 
 directory to your Java binaries in either your PATH environment variable 
@@ -50,6 +54,10 @@ if you don't do this.
 
 -------------------------------------------------------------------------------
 FEATURES:
+
+WARNING: THIS IS ALPHA SOFTWARE. It is incomplete and possibly unreliable. 
+         It is also possible that some elements of the interface (API) will 
+         change in future releases.
 
 Inline::Java version 0.01 includes:
 
