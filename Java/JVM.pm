@@ -42,7 +42,7 @@ sub new {
 
 		my $jni = new Inline::Java::JNI(
 			$ENV{CLASSPATH} || "",
-			(Inline::Java::get_DEBUG() ? 1 : 0),
+			Inline::Java::get_DEBUG(),
 		) ;
 		$jni->create_ijs() ;
 

@@ -153,8 +153,14 @@ behavior of C<Inline::Java>:
       make use of the same JVM.
 
    DEBUG:
-      Enables debugging info
-      Ex: DEBUG => 1
+      Enables debugging info. Debugging now uses levels (1 through 5)
+      that loosely follow these definitions:
+        1 = Major program steps
+        2 = Object creation/destruction
+        3 = Method/member accesses + packet dumps
+        4 = Everything else
+        5 = Data structure dumps
+      Ex: DEBUG => 2
 
    WARN_METHOD_SELECT:
       Throws a warning when C<Inline::Java> has to 'choose' between 
