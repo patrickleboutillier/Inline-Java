@@ -1,0 +1,20 @@
+---------------------------- Original Message ----------------------------
+Subject: Re: PerlInterpreter in Java
+From:    "Doug MacEachern" <dougm@covalent.net>
+Date:    Fri, September 26, 2003 12:42 pm
+To:      "Patrick LeBoutillier" <patrick_leboutillier@hotmail.com>
+--------------------------------------------------------------------------
+
+hi patrick,
+
+i never got around to publishing the code.  i've attached the basics, 
+which i haven't touched since march.  never got past the experimental 
+stage.  the libPerlInterpreter.so is actually built using perl -x 
+PerlInterpreter.c.  i think that's the toughest part, getting things to 
+link properly on all platforms.  the code itself is pretty simple. just
+skimmed it and noticed a few leaks, missing ReleaseString calls. there is
+a little test invoked via PerlInterpreter.main()
+you're welcome to use the attached code in Inline::Java.  i don't expect 
+to have time to work on it, the code would be better off in your hands 
+anyhow.  but i haven't lost interest and would be happy to try out any of 
+your work in progress.
