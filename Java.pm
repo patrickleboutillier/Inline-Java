@@ -233,7 +233,7 @@ sub find_file_in_path {
 
 	if (! defined($paths)){
 		my $psep = portable("ENV_VAR_PATH_SEP") ;
-		$paths = [(split(/$psep/, $ENV{PATH}))] ;			
+		$paths = [(split(/$psep/, $ENV{PATH} || ''))] ;			
 	}
 	
 	my $home = $ENV{HOME} ;
