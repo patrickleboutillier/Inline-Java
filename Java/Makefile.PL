@@ -65,7 +65,13 @@ if (($build_jni || AskYN("Do you wish to build the JNI extension?", 'y'))){
 
 	$jdk_dir = Inline::Java::get_default_j2sdk() ;
 
-	find({wanted => \&search, follow => 1, follow_skip => 2}, $jdk_dir) ;
+	my $symlink = Inline::Java::Portable::portable("GOT_SYMLINK") ;
+	find(
+		{
+			wanted => \&search,
+			($symlink ? (follow => 1, follow_skip => 2) : ()),
+		},
+		$jdk_dir) ;
 
 	my $type = FindDefaultVMType() ;
 	if (defined($type)){

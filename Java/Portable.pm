@@ -140,6 +140,7 @@ sub portable {
 		GOT_ALARM			=>  $Config{d_alarm} || 0,
 		GOT_FORK			=>	$Config{d_fork} || 0,
 		GOT_NEXT_FREE_PORT	=>	1,
+		GOT_SYMLINK			=>	1,
 		ENV_VAR_PATH_SEP	=>	$Config{path_sep},
 		SO_EXT				=>	$Config{dlext},
 		PREFIX				=>	$Config{prefix},
@@ -171,6 +172,7 @@ sub portable {
 			JVM_LIB				=>	'jvm.lib',
 			JVM_SO				=>	'jvm.dll',
 			GOT_NEXT_FREE_PORT	=>	0,
+			GOT_SYMLINK			=>	0,
 			SUB_FIX_CMD_QUOTES	=>	($COMMAND_COM ? undef : sub {
 				my $val = shift ;
 				$val = qq{"$val"} ;

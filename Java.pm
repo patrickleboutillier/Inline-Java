@@ -678,10 +678,15 @@ sub bind_jdat {
 		$class_name =~ s/^(.*)::// ;
 
 		my $java_class = $d->{classes}->{$class}->{java_class} ;
+		# This parent stuff is needed for PerlNatives (so that you can call PerlNatives methods
+		# from Perl...)
 		my $parent_java_class = $d->{classes}->{$class}->{parent_java_class} ;
 		my $parent_module = '' ;
+		my $parent_module_declare = '' ;
 		if (defined($parent_java_class)){
-			$parent_module = java2perl($o->get_api('pkg'), $parent_java_class) . ' ' ;
+			$parent_module = java2perl($o->get_api('pkg'), $parent_java_class) ;
+			$parent_module_declare = "\$$parent_module" . "::EXISTS_AS_PARENT = 1 ;" ;
+			$parent_module .= ' ' ;
 		}
 		if (Inline::Java::known_to_perl($o->get_api('pkg'), $java_class)){
 			next ;
@@ -695,6 +700,7 @@ sub bind_jdat {
 package $class ;
 use vars qw(\@ISA \$INLINE \$EXISTS \$JAVA_CLASS \$DUMMY_OBJECT) ;
 
+$parent_module_declare
 \@ISA = qw($parent_module$ijo) ;
 \$INLINE = \$INLINES[$inline_idx] ;
 \$EXISTS = 1 ;
