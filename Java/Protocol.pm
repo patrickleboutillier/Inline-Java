@@ -447,9 +447,19 @@ class InlineJavaProtocol {
 			else{
 				params = ((Method)m).getParameterTypes() ;
 			}
-			ret.add(0, m) ;
-			ret.add(1, ijc.CastArguments(c.getName(), name, params, args)) ;
-			ret.add(2, params) ;
+
+			String msg = "In method " + name + " of class " + c.getName() + ": " ;
+			try {
+				ret.add(0, m) ;			
+				ret.add(1, ijc.CastArguments(params, args)) ;
+				ret.add(2, params) ;
+			}
+			catch (InlineJavaCastException e){
+				throw new InlineJavaCastException(msg + e.getMessage()) ;
+			}
+			catch (InlineJavaException e){
+				throw new InlineJavaException(msg + e.getMessage()) ;
+			}
 		}
 		else{
 			throw new InlineJavaException("Automatic method selection when multiple signatures are found not yet implemented") ;

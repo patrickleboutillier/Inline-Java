@@ -41,7 +41,11 @@ sub __new {
 	$this->{private}->{module} = $inline->{modfname} ;
 	$this->{private}->{proto} = new Inline::Java::Protocol($this->{private}, $inline) ;
 	if ($objid <= 0){
-		$this->{private}->{proto}->CreateJavaObject($java_class, @args) ;
+		eval {
+			$this->{private}->{proto}->CreateJavaObject($java_class, @args) ;
+		} ;		
+		croak "In method new of class $class: $@" if $@ ;
+
 		Inline::Java::debug("Object created in perl script ($class):") ;
 	}
 	else{
@@ -64,9 +68,10 @@ sub __validate_prototype {
 
 	my $new_args = undef ;
 	eval {
-		$new_args = Inline::Java::Class::CastArguments($class, $method, $args, $proto) ;
+		$new_args = Inline::Java::Class::CastArguments($args, $proto) ;
 	} ;
-	croak $@ if $@ ;
+	my $name = (ref($class) ? $class->{private}->{class} : $class) ;
+	croak "In method $method of class $name: $@" if $@ ;
 
 	return @{$new_args} ;
 }
@@ -96,7 +101,10 @@ sub DESTROY {
 
 	if (! $this->{private}->{deleted}){
 		$this->{private}->{deleted} = 1 ;
-		$this->{private}->{proto}->DeleteJavaObject() ;
+		eval {
+			$this->{private}->{proto}->DeleteJavaObject() ;
+		} ;
+		croak "In method DESTROY of class $this->{private}->{class}: $@" if $@ ;
 	}
 	else{
 		Inline::Java::debug("Object destructor called more than once!") ;

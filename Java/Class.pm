@@ -58,17 +58,27 @@ $RANGE->{double} = $RANGE->{'java.lang.Double'} ;
 sub ValidateClass {
 	my $class = shift ;
 
-	if ($class !~ /^(\w+)((\.(\w+))+)?/){
-		croak "Protocol: Invalid Java class name $class" ;
-	}	
+ 	my $ret = ValidateClassSplit($class) ;
+	
+	return $ret ;
+}
 
-	return $class ;
+
+sub ValidateClassSplit {
+	my $class = shift ;
+
+	my $cre = '([\w$]+)(((\.([\w$]+))+)?)' ;
+	if (($class =~ /^($cre)()()()$/)||
+		($class =~ /^(\[+)([BCDFIJSZ])()()$/)||
+		($class =~ /^(\[+)([L])($cre)(;)$/)){
+		return (wantarray ? ($1, $2, $3, $4) : $class) ;
+	}
+
+	croak "Invalid Java class name $class" ;
 }
 
 
 sub CastArguments {
-	my $class = shift ;
-	my $method = shift ;
 	my $args = shift ;
 	my $proto = shift ;
 
@@ -76,12 +86,12 @@ sub CastArguments {
 	Inline::Java::debug_obj($proto) ;
 
 	if (scalar(@{$args}) != scalar(@{$proto})){
-		croak "Wrong number of arguments for method $method of class $class" ;
+		croak "Wrong number of arguments" ;
 	}
 
 	my $ret = [] ;
 	for (my $i = 0 ; $i < scalar(@{$args}) ; $i++){
-		$ret->[$i] = CastArgument($class, $method, $args->[$i], $proto->[$i]) ;
+		$ret->[$i] = CastArgument($args->[$i], $proto->[$i]) ;
 	}
 
 	return $ret ;
@@ -89,16 +99,16 @@ sub CastArguments {
 
 
 sub CastArgument {
-	my $class = shift ;
-	my $method = shift ;
 	my $arg = shift ;
 	my $proto = shift ;
 
+	ValidateClass($proto) ;
+
 	if ((ClassIsReference($proto))&&(! UNIVERSAL::isa($arg, "Inline::Java::Object"))){
-		croak "Can't convert $arg to $proto in method $method of class $class" ;
+		croak "Can't convert $arg to object $proto" ;
 	}
 	if ((ClassIsPrimitive($proto))&&(ref($arg))){
-		croak "Can't convert $arg to $proto in method $method of class $class" ;
+		croak "Can't convert $arg to primitive $proto" ;
 	}
 
 	if (ClassIsNumeric($proto)){
@@ -113,9 +123,9 @@ sub CastArgument {
 			if (($arg >= $min)&&($arg <= $max)){
 				return $arg ;
 			}
-			croak "$arg out of range for type $proto in method $method of class $class" ;			
+			croak "$arg out of range for type $proto" ;
 		}
-		croak "Can't convert $arg to $proto in method $method of class $class" ;
+		croak "Can't convert $arg to $proto" ;
 	}
 	elsif (ClassIsChar($proto)){
 		if (! defined($arg)){
@@ -124,7 +134,7 @@ sub CastArgument {
 		if (length($arg) == 1){
 			return $arg ;
 		}
-		croak "Can't convert $arg to $proto in method $method of class $class" ;
+		croak "Can't convert $arg to $proto" ;
 	}
 	elsif (ClassIsBool($proto)){
 		if ($arg){
@@ -250,6 +260,17 @@ sub ClassIsReference {
 }
 
 
+sub ClassIsArray {
+	my $class = shift ;
+
+	if ((ClassIsReference($class))&&($class =~ /^(\[+)(.*)$/)){
+		return 1 ;
+	}
+
+	return 0 ;
+}
+
+
 1 ;
 
 
@@ -282,19 +303,16 @@ class InlineJavaClass {
 	/*
 		This is the monster method that determines how to cast arguments
 	*/
-	Object [] CastArguments (String class_name, String method_name, Class [] params, ArrayList args) throws InlineJavaException {
+	Object [] CastArguments (Class [] params, ArrayList args) throws InlineJavaException {
 		Object ret[] = new Object [params.length] ;
 	
-		// Used for exceptions
-		String msg = " in method " + method_name + " of class " + class_name ;
-
 		for (int i = 0 ; i < params.length ; i++){	
 			// Here the args are all strings or objects (or undef)
 			// we need to match them to the prototype.
 			Class p = params[i] ;
 			ijs.debug("    arg " + String.valueOf(i) + " of signature is " + p.getName()) ;
 
-			ret[i] = CastArgument(class_name, method_name, p, (String)args.get(i)) ;
+			ret[i] = CastArgument(p, (String)args.get(i)) ;
 		}
 
 		return ret ;
@@ -304,12 +322,9 @@ class InlineJavaClass {
 	/*
 		This is the monster method that determines how to cast arguments
 	*/
-	Object CastArgument (String class_name, String method_name, Class p, String argument) throws InlineJavaException {
+	Object CastArgument (Class p, String argument) throws InlineJavaException {
 		Object ret = null ;
 	
-		// Used for exceptions
-		String msg = " in method " + method_name + " of class " + class_name ;
-
 		ArrayList tokens = new ArrayList() ;
 		StringTokenizer st = new StringTokenizer(argument, ":") ;
 		for (int j = 0 ; st.hasMoreTokens() ; j++){
@@ -343,11 +358,11 @@ class InlineJavaClass {
 					ijs.debug("    result is " + ret.toString()) ;
 				}
 				catch (NumberFormatException e){
-					throw new InlineJavaCastException("Can't convert " + arg + " to " + p.getName() + msg) ;
+					throw new InlineJavaCastException("Can't convert " + arg + " to " + p.getName()) ;
 				}
 			}
 			else{
-				throw new InlineJavaCastException("Can't convert reference to " + p.getName() + msg) ;
+				throw new InlineJavaCastException("Can't convert reference to " + p.getName()) ;
 			}
 		}
 		else if (ClassIsBool(p)){
@@ -369,7 +384,7 @@ class InlineJavaClass {
 				ijs.debug("    result is " + ret.toString()) ;
 			}
 			else{
-				throw new InlineJavaCastException("Can't convert reference to " + p.getName() + msg) ;
+				throw new InlineJavaCastException("Can't convert reference to " + p.getName()) ;
 			}
 		}
 		else if (ClassIsChar(p)){
@@ -386,13 +401,13 @@ class InlineJavaClass {
 					c = arg.toCharArray()[0] ;
 				}
 				else if (arg.length() > 1){
-					throw new InlineJavaCastException("Can't convert " + arg + " to " + p.getName() + msg) ;
+					throw new InlineJavaCastException("Can't convert " + arg + " to " + p.getName()) ;
 				}
 				ret = new Character(c) ;
 				ijs.debug("    result is " + ret.toString()) ;
 			}
 			else{
-				throw new InlineJavaCastException("Can't convert reference to " + p.getName() + msg) ;
+				throw new InlineJavaCastException("Can't convert reference to " + p.getName()) ;
 			}
 		}
 		else {
@@ -410,7 +425,7 @@ class InlineJavaClass {
 					ret = arg ;
 				}
 				else{
-					throw new InlineJavaCastException("Can't convert primitive type to " + p.getName() + msg) ;
+					throw new InlineJavaCastException("Can't convert primitive type to " + p.getName()) ;
 				}
 			}
 			else{
@@ -434,17 +449,17 @@ class InlineJavaClass {
 				}
 
 				if (got_it){
-					ijs.debug("    " + c.getName() + " is a kind of " + p.getName() + msg) ;
+					ijs.debug("    " + c.getName() + " is a kind of " + p.getName()) ;
 					// get the object from the hash table
 					Integer oid = new Integer(objid) ;
 					Object o = ijs.objects.get(oid) ;
 					if (o == null){
-						throw new InlineJavaException("Object " + oid.toString() + " of type " + c_name + " is not in object table " + msg) ;
+						throw new InlineJavaException("Object " + oid.toString() + " of type " + c_name + " is not in object table ") ;
 					}
 					ret = o ;
 				}
 				else{
-					throw new InlineJavaCastException("Can't cast a " + c.getName() + " to a " + p.getName() + msg) ;
+					throw new InlineJavaCastException("Can't cast a " + c.getName() + " to a " + p.getName()) ;
 				}
 			}
 		}

@@ -10,7 +10,7 @@ use Inline(
 
 
 BEGIN {
-	plan(tests => 18) ;
+	plan(tests => 20) ;
 }
 
 
@@ -34,6 +34,9 @@ ok($t->_boolean(""), 0) ;
 ok($t->_Boolean("0"), 0) ; 
 ok($t->_char("1"), '1') ;
 ok($t->_Character("1"), '1') ;
+
+ok($t->_String("string"), 'string') ;
+ok($t->_StringBuffer("string_buffer"), 'string_buffer') ;
 
 
 __END__
@@ -106,6 +109,14 @@ class types {
 
 	public Character _Character(Character c){
 		return c ;
+	}
+
+	public String _String(String s){
+		return s ;
+	}
+
+	public StringBuffer _StringBuffer(StringBuffer sb){
+		return sb ;
 	}
 }
 

@@ -10,7 +10,7 @@ use Inline(
 
 
 BEGIN {
-	plan(tests => 14) ;
+	plan(tests => 15) ;
 }
 
 
@@ -45,6 +45,12 @@ my $al = $o1->new_arraylist() ;
 $o1->set_arraylist($al, "array data") ;
 ok($o1->get_arraylist($al), "array data") ;
 
+
+my $so3 = new sub_obj_test(100) ;
+my $ow = new obj_wrap($so3) ;
+my $do = new obj_do($ow) ;
+$do->get_obj()->set_obj($so2) ;
+ok($do->get_obj_data()->get_number(), 6) ;
 
 __END__
 
@@ -113,5 +119,35 @@ class sub_obj_test extends obj_test {
 
 	public void set_number(int num){
 		number = num ;
+	}
+}
+
+
+/* Has an object as a member variable */
+class obj_wrap {
+	public sub_obj_test obj ;
+
+	public obj_wrap(sub_obj_test o){
+		obj = o ;
+	}
+
+	public void set_obj(sub_obj_test o){
+		obj = o ;
+	}
+}
+
+
+class obj_do {
+	public obj_wrap obj ;
+
+	public obj_do(obj_wrap o){
+		obj = o ;
+	}
+
+	public obj_wrap get_obj(){
+		return obj ;
+	}
+	public sub_obj_test get_obj_data(){
+		return obj.obj ;
 	}
 }

@@ -696,6 +696,7 @@ sub bind_jdat {
 package $o->{pkg}::$class ;
 \@$o->{pkg}::$class$c:ISA = qw(Inline::Java::Object) ;
 \$$o->{pkg}::$class$c:EXISTS = 1 ;
+use Carp ;
 
 CODE
 
@@ -714,7 +715,13 @@ sub new {
 	
 	my \@new_args = \$class->__validate_prototype('new', [\@args], [$signature]) ;
 
-	return \$class->__new('$java_class', \$Inline::Java::INLINE->{'$modfname'}, -1, \@new_args) ;
+	my \$ret = undef ;
+	eval {
+		\$ret = \$class->__new('$java_class', \$Inline::Java::INLINE->{'$modfname'}, -1, \@new_args) ;
+	} ;
+	croak \$@ if \$@ ;
+
+	return \$ret ;
 }
 
 
@@ -743,7 +750,13 @@ sub $method {
 
 	my \$proto = new Inline::Java::Protocol(undef, \$Inline::Java::INLINE->{'$modfname'}) ;	
 
-	return \$proto->CallStaticJavaMethod('$java_class', '$method', \@new_args) ;
+	my \$ret = undef ;
+	eval {
+		\$ret = \$proto->CallStaticJavaMethod('$java_class', '$method', \@new_args) ;
+	} ;
+	croak \$@ if \$@ ;
+
+	return \$ret ;
 }
 
 CODE
@@ -764,7 +777,13 @@ sub $method {
 	
 	my \@new_args = \$this->__validate_prototype('$method', [\@args], [$signature]) ;
 	
-	return \$this->{private}->{proto}->CallJavaMethod('$method', \@new_args) ;
+	my \$ret = undef ;
+	eval {
+		\$ret = \$this->{private}->{proto}->CallJavaMethod('$method', \@new_args) ;
+	} ;
+	croak \$@ if \$@ ;
+
+	return \$ret ;
 }
 
 CODE
