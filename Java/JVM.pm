@@ -91,10 +91,13 @@ sub DESTROY {
 	my $this = shift ;
 
 	if ($this->{owner}){
+		Inline::Java::debug("JVM owner exiting...") ;
+
 		if ($this->{socket}){
 			# This asks the Java server to stop and die.
 			my $sock = $this->{socket} ;
 			if ($sock->connected()){
+				Inline::Java::debug("Sending 'die' message to JVM...") ;
 				print $sock "die\n" ;
 			}
 			else{
@@ -106,7 +109,9 @@ sub DESTROY {
 				# Here we go ahead and send the signals anyway to be very 
 				# sure it's dead...
 				# Always be polite first, and then insist.
+				Inline::Java::debug("Sending 15 signal to JVM...") ;
 				kill(15, $this->{pid}) ;
+				Inline::Java::debug("Sending 9 signal to JVM...") ;
 				kill(9, $this->{pid}) ;
 	
 				# Reap the child...
@@ -117,6 +122,7 @@ sub DESTROY {
 	else{
 		# We are not the JVM owner, so we simply politely disconnect
 		if ($this->{socket}){
+			Inline::Java::debug("JVM non-owner exiting...") ;
 			close($this->{socket}) ;
 			$this->{socket} = undef ;
 		}
