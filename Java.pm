@@ -73,12 +73,14 @@ sub done {
 
 	# Ask the children to die and close the sockets
 	foreach my $o (values %{$Inline::Java::INLINE}){
-		my $sock = $o->{Java}->{socket} ;
-		# This asks the Java server to stop and die.
-		if ($sock->connected()){
-			print $sock "die\n" ;
+		if (! $o->{Java}->{USE_JNI}){
+			my $sock = $o->{Java}->{socket} ;
+			# This asks the Java server to stop and die.
+			if ($sock->connected()){
+				print $sock "die\n" ;
+			}
+			close($sock) ;
 		}
-		close($sock) ;
 	}
 
 	foreach my $pid (@CHILDREN){
@@ -184,24 +186,18 @@ sub _validate {
 		}
 	}
 
+	if ($ENV{PERL_INLINE_JAVA_USE_JNI}){
+		$o->{Java}->{USE_JNI} = 1 ;
+	}
+
 	if ($o->{Java}->{USE_JNI}){
-		$o->boot_jni() ;
+		require Inline::Java::JNI ;
 	}
 
 	$o->set_classpath($install) ;
 	$o->set_java_bin() ;
 
 	Inline::Java::debug("validate done.") ;
-}
-
-
-sub boot_jni {
-	my $o = shift ;
-
-	require DynaLoader ;
-	@Inline::Java::ISA = qw(DynaLoader) ;
-
-	Inline::Java->bootstrap($Inline::Java::VERSION) ;
 }
 
 
@@ -416,7 +412,7 @@ sub write_java {
 	my $modfname = $o->{modfname} ;
 	my $code = $o->{code} ;
 
-	$o->mymkpath($o->{build_dir}) ;
+	$o->mkpath($o->{build_dir}) ;
 
 	open(JAVA, ">$build_dir/$modfname.java") or
 		croak "Can't open $build_dir/$modfname.java: $!" ;
@@ -458,7 +454,6 @@ sub report {
 
 		if (! $o->{Java}->{USE_JNI}){
 			my $class_str = join(" ", @classes) ;
-			Inline::Java::debug($class_str) ;
 
 			my $cmd = "\"$pjava\" InlineJavaServer report $debug $modfname $class_str > cmd.out $predir" ;
 			if ($o->{config}->{UNTAINT}){
@@ -506,7 +501,7 @@ sub compile {
 	my $install_lib = $o->{install_lib} ;
 
 	my $install = "$install_lib/auto/$modpname" ;
-	$o->mymkpath($install) ;
+	$o->mkpath($install) ;
 
 	my $javac = $o->{Java}->{BIN} . "/javac" . portable("EXE_EXTENSION") ;
 	my $java = $o->{Java}->{BIN} . "/java" . portable("EXE_EXTENSION") ;
@@ -516,7 +511,7 @@ sub compile {
 	my $pjavac = portable("RE_FILE", $javac) ;
 	my $pjava = portable("RE_FILE", $java) ;
 
-	my $cwd = Cwd::getcwd() ;
+	my $cwd = Cwd::cwd() ;
 	if ($o->{config}->{UNTAINT}){
 		($cwd) = $cwd =~ /(.*)/ ;
 	}
@@ -531,11 +526,11 @@ sub compile {
 	# to be copied, and if not will exit the script.
 	foreach my $cmd (
 		"\"$pjavac\" $modfname.java > cmd.out $predir",
-		["copy_pattern", $o, "*.class"],
+		{CMD => ["copy_pattern", $o, "*.class"]},
 		"\"$pjavac\" InlineJavaServer.java > cmd.out $predir",
-		["copy_pattern", $o, "*.class"],
-		["report", $o, "*.class"],
-		["copy_pattern", $o, "*.jdat", ],
+		{CMD => ["copy_pattern", $o, "*.class"]},
+		{CMD => ["report", $o, "*.class"], RET_IS_CMD => (! $o->{Java}->{USE_JNI})},
+		{CMD => ["copy_pattern", $o, "*.jdat"]},
 		) {
 
 		if ($cmd){
@@ -543,36 +538,43 @@ sub compile {
 			chdir $build_dir ;
 			if (ref($cmd)){
 				Inline::Java::debug_obj($cmd) ;
-				my $func = shift @{$cmd} ;
-				my @args = @{$cmd} ;
+				my $func = shift @{$cmd->{CMD}} ;
+				my @args = @{$cmd->{CMD}} ;
 
 				Inline::Java::debug("$func" . "(" . join(", ", @args) . ")") ;
 
 				no strict 'refs' ;
 				my $ret = $func->(@args) ;
-				if ($ret){
-					croak $ret ;
+				if (! $cmd->{RET_IS_CMD}){
+					if ($ret){
+						croak $ret ;
+					}
+					chdir $cwd ;
+					next ;
+				}
+				else{
+					$cmd = $ret ;
 				}
 			}
-			else{
-				if ($o->{config}->{UNTAINT}){
-					($cmd) = $cmd =~ /(.*)/ ;
-				}
 
-				Inline::Java::debug("$cmd") ;
-				my $res = system($cmd) ;
-				$res and do {
-					$o->error_copy ;
-					croak $o->compile_error_msg($cmd, $cwd) ;
-				} ;
+			if ($o->{config}->{UNTAINT}){
+				($cmd) = $cmd =~ /(.*)/ ;
 			}
+
+			Inline::Java::debug("$cmd") ;
+			my $res = system($cmd) ;
+			$res and do {
+				$o->error_copy ;
+				croak $o->compile_error_msg($cmd, $cwd) ;
+			} ;
+
 			chdir $cwd ;
 		}
 	}
 
 	if ($o->{config}->{CLEAN_AFTER_BUILD} and
 		not $o->{config}->{REPORTBUG}){
-		$o->myrmpath($o->{config}->{DIRECTORY} . 'build/', $modpname) ;
+		$o->rmpath($o->{config}->{DIRECTORY} . 'build/', $modpname) ;
 	}
 
 	Inline::Java::debug("compile done.") ;
@@ -650,7 +652,7 @@ sub load {
 	my $java = $o->{Java}->{BIN} . "/java" . portable("EXE_EXTENSION") ;
 	my $pjava = portable("RE_FILE", $java) ;
 
-	Inline::Java::debug("  cwd is: " . Cwd::getcwd()) ;
+	Inline::Java::debug("  cwd is: " . Cwd::cwd()) ;
 
 	if (! $o->{Java}->{USE_JNI}){
 		Inline::Java::debug("  load is forking.") ;
@@ -888,7 +890,7 @@ sub $method {
 
 	my \$ret = undef ;
 	eval {
-		\$ret = \$this->{private}->{proto}->CallJavaMethod('$method', \$proto, \$new_args) ;
+		\$ret = \$this->__get_private()->{proto}->CallJavaMethod('$method', \$proto, \$new_args) ;
 	} ;
 	croak \$@ if \$@ ;
 
@@ -1001,24 +1003,6 @@ sub copy_pattern {
 
 
 ######################## General Functions ########################
-
-
-sub mymkpath {
-	my $o = shift ;
-	my $path = shift ;	
-
-	my $sub = \&Inline::mkpath ;
-	return $o->$sub($path) ;
-}
-
-sub myrmpath {
-	my $o = shift ;
-	my $path = shift ;	
-
-	my $sub = \&Inline::rmpath ;
-
-	return $o->$sub($path) ;
-}
 
 
 sub debug {
