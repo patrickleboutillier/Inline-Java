@@ -35,14 +35,49 @@ sub use_alone {
 }
 
 
+# Here in Inline <= 0.43 there is a portability issue
+# with the mkpath function. It splits directly on '/'.
+# We assume this will be fixed in 0.44
+sub mkpath {
+	my $o = shift ;
+	my $path = shift ;
+
+	if ($Inline::VERSION <= 0.43){
+		my $sep = File::Spec->catdir('', '') ;
+		$sep = quotemeta($sep) ;
+		$path =~ s/$sep/\//g ;
+	}
+	
+	return $o->Inline::mkpath($path) ;
+} ;
+
+
+# Here in Inline <= 0.43 there is a portability issue
+# with the rmpath function. It splits directly on '/'.
+# We assume this will be fixed in 0.44
+sub rmpath {
+	my $o = shift ;
+	my $prefix = shift ;
+	my $path = shift ;
+	
+	if ($Inline::VERSION <= 0.43){
+		my $sep = File::Spec->catdir('', '') ;
+		$sep = quotemeta($sep) ;
+		$path =~ s/$sep/\//g ;
+	}
+	
+	return $o->Inline::rmpath($prefix, $path) ;
+} ;
+
+
 sub portable {
 	my $key = shift ;
 	my $val = shift ;
 
 	my $defmap = {
 		EXE_EXTENSION		=>	$Config{exe_ext},
-		GOT_ALARM			=>  $Config{d_alarm},
-		GOT_FORK			=>	$Config{d_fork},
+		GOT_ALARM			=>  $Config{d_alarm} || 0,
+		GOT_FORK			=>	$Config{d_fork} || 0,
 		ENV_VAR_PATH_SEP	=>	$Config{path_sep},
 		SO_EXT				=>	$Config{dlext},
 		SO_LIB_PATH_VAR		=>	'LD_LIBRARY_PATH',

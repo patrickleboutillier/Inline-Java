@@ -380,7 +380,7 @@ sub write_java {
 	my $build_dir = $o->get_api('build_dir') ;
 	my $modfname = $o->get_api('modfname') ;
 
-	$o->mkpath($build_dir) ;
+	Inline::Java::Portable::mkpath($o, $build_dir) ;
 
 	if (! $study_only){
 		my $p = File::Spec->catfile($build_dir, "$modfname.java") ;
@@ -419,7 +419,7 @@ sub compile {
 
 	my $install = File::Spec->catdir($install_lib, "auto", $modpname) ;
 
-	$o->mkpath($install) ;
+	Inline::Java::Portable::mkpath($o, $install) ;
 	$o->set_classpath($install) ;
 
 	my $javac = File::Spec->catfile($o->{ILSM}->{BIN}, 
@@ -484,7 +484,7 @@ sub compile {
 	}
 
 	if ($o->get_api('cleanup')){
-		$o->rmpath('', $build_dir) ;
+		Inline::Java::Portable::rmpath($o, '', $build_dir) ;
 	}
 
 	Inline::Java::debug("compile done.") ;
@@ -658,7 +658,7 @@ sub set_classpath {
 				# Here we must make sure that the directory exists, or
 				# else it is removed from the CLASSPATH by Java
 				my $path = File::Spec->catdir($dir, $m) ;
-				$o->mkpath($path) ;
+				Inline::Java::Portable::mkpath($o, $path) ;
 
 				$paths{$path} = 1 ;
 			}
