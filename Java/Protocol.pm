@@ -394,6 +394,7 @@ sub DeserializeObject {
 				if (Inline::Java::Class::ClassIsReference($elem_class)){
 					if (! Inline::Java::known_to_perl($pkg, $elem_class)){
 						if (($thrown)||($this->{inline}->get_java_config('AUTOSTUDY'))){
+							Inline::Java::debug(2, "autostudying $elem_class...") ;
 							$this->{inline}->_study([$elem_class]) ;
 						}
 						else{	
