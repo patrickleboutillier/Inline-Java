@@ -4,8 +4,9 @@ package Inline::Java::Object ;
 
 use strict ;
 
+$Inline::Java::Object::VERSION = '0.01' ;
+
 use Carp ;
-use Data::Dumper ;
 use Tie::Hash ;
 use Inline::Java::Protocol ;
 
@@ -25,8 +26,7 @@ sub new {
 sub __new {
 	my $class = shift ;
 	my $java_class = shift ;
-	my $pkg = shift ;
-	my $module = shift ;
+	my $inline = shift ;
 	my $objid = shift ;
 	my @args = @_ ;
 
@@ -36,9 +36,10 @@ sub __new {
 
 	my $this = \%this ;
 	$this->{private} = {} ;
-	$this->{private}->{class} = $java_class ;
-	$this->{private}->{pkg} = $pkg ;
-	$this->{private}->{proto} = new Inline::Java::Protocol($this->{private}, $module) ;
+	$this->{private}->{class} = $class ;
+	$this->{private}->{java_class} = $java_class ;
+	$this->{private}->{module} = $inline->{modfname} ;
+	$this->{private}->{proto} = new Inline::Java::Protocol($this->{private}, $inline) ;
 	if ($objid <= 0){
 		$this->{private}->{proto}->CreateJavaObject($java_class, @args) ;
 		Inline::Java::debug("Object created in perl script ($class):") ;
@@ -47,21 +48,31 @@ sub __new {
 		$this->{private}->{id} = $objid ;
 		Inline::Java::debug("Object created in java ($class):") ;
 	}
-	Inline::Java::debug_obj($this->private()) ;
+	Inline::Java::debug_obj($this) ;
 
 	return $this ;
 }
 
 
+# Checks to make sure all the arguments can be "cast" to prototype
+# types.
 sub __validate_prototype {
-	return undef ;
 }
 
 
-sub private {
+sub AUTOLOAD {
 	my $this = shift ;
+	my @args = @_ ;
 
-	return $this->{private} ;
+	use vars qw($AUTOLOAD) ;
+	my $func_name = $AUTOLOAD ;
+	# Strip package from $func_name, Java will take of finding the correct
+	# method.
+	$func_name =~ s/^(.*)::// ;
+
+	Inline::Java::debug("$func_name") ;
+
+	croak "No public method $func_name defined for class $this->{private}->{class}" ;	
 }
 
 
@@ -74,6 +85,9 @@ sub DESTROY {
 		$this->{private}->{proto}->DeleteJavaObject() ;
 	}
 }
+
+
+######################## Hash methods ########################
 
 
 sub TIEHASH {
@@ -92,40 +106,71 @@ sub STORE {
 		return $this->SUPER::STORE($key, $value) ;
 	}
 
-	my $priv = $this->FETCH("private") ;
-	$priv->{proto}->SetMember($key, $value) ;
+	my $inline = $Inline::Java::INLINE->{$this->{private}->{module}} ;
+	my $fields = $inline->get_fields($this->{private}->{java_class}) ;
+
+	if ($fields->{$key}){
+		croak "Setting of public member variables for Java objects is not yet implemented" ;		
+	}
+	else{
+		croak "No public member variable $key defined for class $this->{private}->{class}" ;
+	}
 }
 
 
 sub FETCH {
-	my $this = shift ;
-	my $key = shift ;
+ 	my $this = shift ;
+ 	my $key = shift ;
 
-	if ($key eq "private"){
-		return $this->SUPER::FETCH($key) ;
+ 	if ($key eq "private"){
+ 		return $this->SUPER::FETCH($key) ;
+ 	}
+
+	my $inline = $Inline::Java::INLINE->{$this->{private}->{module}} ;
+	my $fields = $inline->get_fields($this->{private}->{java_class}) ;
+
+	if ($fields->{$key}){
+		return undef ;
 	}
-
-	my $priv = $this->FETCH("private") ;
-	return $priv->{proto}->GetMember($key) ;
+	else{
+		croak "No public member variable $key defined for class $this->{private}->{class}" ;
+	}
 }
 
 
-sub FIRSTKEY { 
-	croak "Operation FIRSTKEY not supported on Java object" ;
-}
+# sub FIRSTKEY { 
+# 	my $this = shift ;
+
+# 	croak "Operation FIRSTKEY not supported on Java object" ;
+# }
 
 
-sub NEXTKEY { 
-	croak "Operation NEXTKEY not supported on Java object" ;
-}
+# sub NEXTKEY { 
+# 	my $this = shift ;
+
+# 	croak "Operation NEXTKEY not supported on Java object" ;
+# }
 
 
 sub EXISTS { 
-	croak "Operation EXISTS not supported on Java object" ;
+ 	my $this = shift ;
+ 	my $key = shift ;
+
+	my $inline = $Inline::Java::INLINE->{$this->{private}->{module}} ;
+	my $fields = $inline->get_fields($this->{private}->{java_class}) ;
+
+	if ($fields->{$key}){
+		return 1 ;
+	}
+	
+	return 0 ;
 }
 
 
 sub DELETE { 
+ 	my $this = shift ;
+ 	my $key = shift ;
+
 	croak "Operation DELETE not supported on Java object" ;
 }
 
@@ -135,20 +180,6 @@ sub CLEAR {
 }
 
 
-# sub AUTOLOAD {
-# 	my $this = shift ;
-# 	my @args = @_ ;
-
-# 	use vars qw($AUTOLOAD) ;
-# 	my $func_name = $AUTOLOAD ;
-# 	# Strip package from $func_name, Java will take of finding the correct
-# 	# method.
-# 	$func_name =~ s/^(.*)::// ;
-
-# 	Inline::Java::debug("$func_name") ;
-
-# 	$this->{private}->{proto}->CallJavaMethod($func_name, @args) ;
-# }
 
 
 

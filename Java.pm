@@ -12,6 +12,9 @@ if (! defined($Inline::Java::DEBUG)){
 	$Inline::Java::DEBUG = 0 ;
 }
 
+# This hash will store the $o objects...
+$Inline::Java::INLINE = {} ;
+
 
 require Inline ;
 use Config ;
@@ -108,6 +111,10 @@ sub _validate {
 		$o->{Java}->{JAVA_DEBUG} = 0 ;
 	}
 
+	my $install_lib = $o->{install_lib} ;
+	my $modpname = $o->{modpname} ;
+	my $install = "$install_lib/auto/$modpname" ;
+
     while (@_) {
 		my ($key, $value) = (shift, shift) ;
 		if ($key eq 'JAVA_BIN'){
@@ -139,23 +146,96 @@ sub _validate {
 		}
 	}
 
-	$o->set_classpath() ; 
+	$o->set_classpath($install) ; 
 	$o->set_java_bin() ; 
 
 	debug("validate done.") ;
 }
 
 
+sub set_classpath {
+	my $o = shift ;
+	my $path = shift ;
+
+	my @cp = split(/:/, join(":", $ENV{CLASSPATH}, $o->{Java}->{JAVA_CLASSPATH}, $path)) ;
+
+	my %cp = map { ($_ !~ /^\s*$/ ? ($_, 1) : ()) } @cp ;
+
+	$ENV{CLASSPATH} = join(":", keys %cp) ;
+
+	debug("  classpath: " . $ENV{CLASSPATH}) ;
+}
+
+
+sub set_java_bin {
+	my $o = shift ;
+
+	my $cjb = $o->{Java}->{JAVA_BIN} ;
+	my $ejb = $ENV{JAVA_BIN} ;
+	if ($cjb){
+		$cjb =~ s/\/+$// ;
+		return $o->find_java_bin($cjb) ;
+	}
+	elsif ($ejb) {
+		$ejb =~ s/\/+$// ;
+		$o->{Java}->{JAVA_BIN} = $ejb ;
+		return $o->find_java_bin($ejb) ;
+	}
+
+	# Java binaries are assumed to be in $ENV{PATH} ;
+	my @path = split(/:/, $ENV{PATH}) ;
+	return $o->find_java_bin(@path) ;
+}
+
+
+sub find_java_bin {
+	my $o = shift ;
+	my @paths = @_ ;
+	
+	my $home = $ENV{HOME} ;
+
+	my $found = 0 ;
+	foreach my $p (@paths){
+		if ($p !~ /^\s*$/){
+			$p =~ s/\/+$// ;
+
+			if ($p =~ /^~/){
+				if ($home){
+					$p =~ s/^~/$home/ ;
+				}
+				else{
+					# -f don't work with ~/...
+					next ;
+				}
+			}
+	
+			my $java = $p . "/java" ;
+			if (-f $java){
+				debug("  found java binaries in $p") ;
+				$o->{Java}->{JAVA_BIN} = $p ;
+				$found = 1 ;
+				last ;
+			}	
+		}
+	}
+
+	if (! $found){
+		croak 
+			"Can't locate your java binaries ('java' and 'javac'). Please set one of the following to the proper directory:\n" .
+		    "  - The JAVA_BIN config option;\n" .
+		    "  - The JAVA_BIN environment variable;\n" .
+		    "  - The PATH environment variable.\n" ;
+	}
+}
+
 
 # Parse and compile Java code
 sub build {
 	my $o = shift ;
 
-	my $install_lib = $o->{install_lib} ;
-	my $modpname = $o->{modpname} ;
-
-	my $install = "$install_lib/auto/$modpname" ;
-	$o->set_classpath($install) ; 
+	if ($o->{Java}->{built}){
+		return ;
+	}
 
 	$o->write_java ;
 	$o->write_makefile ;
@@ -278,82 +358,6 @@ sub write_makefile {
 }
 
 
-sub set_classpath {
-	my $o = shift ;
-	my $path = shift ;
-
-	my @cp = split(/:/, join(":", $ENV{CLASSPATH}, $o->{Java}->{JAVA_CLASSPATH}, $path)) ;
-
-	my %cp = map { ($_ !~ /^\s*$/ ? ($_, 1) : ()) } @cp ;
-
-	$ENV{CLASSPATH} = join(":", keys %cp) ;
-
-	debug("  classpath: " . $ENV{CLASSPATH}) ;
-}
-
-
-sub set_java_bin {
-	my $o = shift ;
-
-	my $cjb = $o->{Java}->{JAVA_BIN} ;
-	my $ejb = $ENV{JAVA_BIN} ;
-	if ($cjb){
-		$cjb =~ s/\/+$// ;
-		return $o->find_java_bin($cjb) ;
-	}
-	elsif ($ejb) {
-		$ejb =~ s/\/+$// ;
-		$o->{Java}->{JAVA_BIN} = $ejb ;
-		return $o->find_java_bin($ejb) ;
-	}
-
-	# Java binaries are assumed to be in $ENV{PATH} ;
-	my @path = split(/:/, $ENV{PATH}) ;
-	return $o->find_java_bin(@path) ;
-}
-
-
-sub find_java_bin {
-	my $o = shift ;
-	my @paths = @_ ;
-	
-	my $home = $ENV{HOME} ;
-
-	my $found = 0 ;
-	foreach my $p (@paths){
-		if ($p !~ /^\s*$/){
-			$p =~ s/\/+$// ;
-
-			if ($p =~ /^~/){
-				if ($home){
-					$p =~ s/^~/$home/ ;
-				}
-				else{
-					# -f don't work with ~/...
-					next ;
-				}
-			}
-	
-			my $java = $p . "/java" ;
-			if (-f $java){
-				debug("  found java binaries in $p") ;
-				$o->{Java}->{JAVA_BIN} = $p ;
-				$found = 1 ;
-				last ;
-			}	
-		}
-	}
-
-	if (! $found){
-		croak 
-			"Can't locate your java binaries ('java' and 'javac'). Please set one of the following to the proper directory:\n" .
-		    "  - The JAVA_BIN config option;\n" .
-		    "  - The JAVA_BIN environment variable;\n" .
-		    "  - The PATH environment variable.\n" ;
-	}
-}
-
-
 # Run the build process.
 sub compile {
 	my $o = shift ;
@@ -429,6 +433,10 @@ MSG
 sub load {
     my $o = shift ;
 	
+	if ($o->{Java}->{loaded}){
+		return ;
+	}
+
 	if ($o->{mod_exists}){
 		# In this case, the options are not rechecked, and therefore
 		# the defaults not registered. We must force it
@@ -473,9 +481,10 @@ sub load {
 
 		push @CHILDREN, $pid ;
 
-		$o->setup_socket($port) ;
-	
-		$Inline::Java::LOADED = 1 ;
+		my $socket = $o->setup_socket($port) ;
+		$o->{Java}->{socket} = $socket ;
+		$Inline::Java::INLINE->{$modfname} = $o ;
+
 		$o->{Java}->{loaded} = 1 ;
 		debug("load done.") ;
 	}
@@ -562,6 +571,24 @@ sub load_jdat {
 }
 
 
+sub get_fields {
+	my $o = shift ;
+	my $class = shift ;
+
+	my $fields = {} ;
+	my $d = $o->{Java}->{data} ;
+
+	while (my ($field, $value) = each %{$d->{classes}->{$class}->{fields}->{static}}){
+		$fields->{$field} = $value ;
+	}
+	while (my ($field, $value) = each %{$d->{classes}->{$class}->{fields}->{instance}}){
+		$fields->{$field} = $value ;
+	}
+	
+	return $fields ;
+}
+
+
 # Binds the classes and the methods to Perl
 sub bind_jdat {
 	my $o = shift ;
@@ -593,10 +620,9 @@ sub new {
 	my \$class = shift ;
 	my \@args = \@_ ;
 	
-	my \$err = \$class->__validate_prototype([\@args], [($signature)]) ;
-	croak \$err if \$err ;
+	\$class->__validate_prototype([\@args], [($signature)]) ;
 
-	return \$class->__new('$java_class', '$pkg', '$modfname', -1, \@_) ;
+	return \$class->__new('$java_class', \$Inline::Java::INLINE->{'$modfname'}, -1, \@_) ;
 }
 
 
@@ -608,8 +634,8 @@ CODE
 		}
 
 
-		foreach my $method (sort keys %{$d->{classes}->{$class}->{methods}->{static}}) {
-			my @sign = @{$d->{classes}->{$class}->{methods}->{static}->{$method}->[0]} ;
+		while (my ($method, $sign) = each %{$d->{classes}->{$class}->{methods}->{static}}){
+			my @sign = @{$sign} ;
 			my $signature = "'" . join("', '", @sign). "'" ;
 			my $pkg = $o->{pkg} ;
 			$code .= <<CODE;
@@ -618,20 +644,19 @@ sub $method {
 	my \$class = shift ;
 	my \@args = \@_ ;
 	
-	my \$err = \$class->__validate_prototype([\@args], [($signature)]) ;
-	croak \$err if \$err ;
+	\$class->__validate_prototype([\@args], [($signature)]) ;
 	
-	my \$proto = new Inline::Java::Protocol(undef, '$modfname') ;
+	my \$proto = new Inline::Java::Protocol(undef, \$Inline::Java::INLINE->{'$modfname'}) ;
 
-	return \$proto->CallStaticJavaMethod('$java_class', '$pkg', '$method', \@args) ;
+	return \$proto->CallStaticJavaMethod('$java_class', '$method', \@args) ;
 }
 
 CODE
 		}
 
 
-		foreach my $method (sort keys %{$d->{classes}->{$class}->{methods}->{instance}}) {
-			my @sign = @{$d->{classes}->{$class}->{methods}->{instance}->{$method}->[0]} ;
+		while (my ($method, $sign) = each %{$d->{classes}->{$class}->{methods}->{instance}}){
+			my @sign = @{$sign} ;
 			my $signature = "'" . join("', '", @sign). "'" ;
 			$code .= <<CODE;
 
@@ -639,8 +664,7 @@ sub $method {
 	my \$this = shift ;
 	my \@args = \@_ ;
 	
-	my \$err = \$this->__validate_prototype([\@args], [($signature)]) ;
-	croak \$err if \$err ;
+	\$this->__validate_prototype([\@args], [($signature)]) ;
 	
 	return \$this->{private}->{proto}->CallJavaMethod('$method', \@args) ;
 }
@@ -697,7 +721,7 @@ sub setup_socket {
 	}
 
 	$socket->autoflush(1) ;
-	$Inline::Java::Protocol::socket->{$modfname} = $socket ;
+	return $socket ;
 }
 
 
