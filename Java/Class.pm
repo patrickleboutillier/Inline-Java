@@ -105,7 +105,11 @@ sub CastArgument {
 	ValidateClass($proto) ;
 
 	if ((ClassIsReference($proto))&&(! UNIVERSAL::isa($arg, "Inline::Java::Object"))){
-		croak "Can't convert $arg to object $proto" ;
+		# Here we allow scalars to be passed in place of java.lang.Object
+		# They will wrapped on the Java side.
+		if ($proto ne "java.lang.Object"){
+			croak "Can't convert $arg to object $proto" ;
+		}
 	}
 	if ((ClassIsPrimitive($proto))&&(ref($arg))){
 		croak "Can't convert $arg to primitive $proto" ;

@@ -10,7 +10,7 @@ use Inline(
 
 
 BEGIN {
-	plan(tests => 20) ;
+	plan(tests => 21) ;
 }
 
 
@@ -38,6 +38,8 @@ ok($t->_Character("1"), '1') ;
 ok($t->_String("string"), 'string') ;
 ok($t->_StringBuffer("string_buffer"), 'string_buffer') ;
 
+# Test if scalars can pass as java.lang.Object (they should).
+ok($t->_Object("object"), 'object') ;
 
 __END__
 
@@ -117,6 +119,10 @@ class types {
 
 	public StringBuffer _StringBuffer(StringBuffer sb){
 		return sb ;
+	}
+
+	public Object _Object(Object o){
+		return o ;
 	}
 }
 

@@ -251,6 +251,8 @@ sub find_file_in_path {
 		$paths = [(split(/$psep/, $ENV{PATH} || ''))] ;
 	}
 
+	debug_obj($paths) ;
+
 	my $home = $ENV{HOME} ;
 	my $sep = portable("PATH_SEP_RE") ;
 
@@ -440,7 +442,7 @@ sub compile {
 				}
 
 				debug("$cmd") ;
-				my $res = my_system($cmd) ;
+				my $res = system($cmd) ;
 				$res and do {
 					$o->error_copy ;
 					croak $o->compile_error_msg($cmd, $cwd) ;
@@ -568,7 +570,7 @@ sub load {
 			}
 		}
 
-		my_exec(@cmd)
+		exec(@cmd)
 			or croak "Can't exec Java interpreter" ;
 	}
 }
@@ -954,31 +956,6 @@ sub copy_pattern {
 
 	return '' ;
 }
-
-
-sub my_system {
-	my @args = @_ ;
-
-	my $envp = $ENV{PATH} ;
-	$ENV{PATH} = '' ;
-	my $ret = system(@args) ;
-	$ENV{PATH} = $envp ;
-
-	return $ret ;
-}
-
-
-sub my_exec {
-	my @args = @_ ;
-
-	my $envp = $ENV{PATH} ;
-	$ENV{PATH} = '' ;
-	my $ret = exec(@args) ;
-	$ENV{PATH} = $envp ;
-
-	return $ret ;
-}
-
 
 
 1 ;
