@@ -1,18 +1,33 @@
 JNI (JAVA NATIVE INTERFACE) EXTENSION
 -------------------------------------
 
+Inline::Java now provides a JNI extension that allows you to load the Java 
+virtual machine as shared object instead of running it as a separate process. 
+
 
 PLATFORM AVAILABILITY
 ---------------------
 
-The JNI extension is available on all platforms.
+The JNI extension is available on all supported platforms.
 
 The extension builds properly on all platform, but problems can occur when
 running it on certain platforms.
 
+Note: Make sure the directories listed at the end of the installation
+procedure are included in your LD_LIBRARY_PATH (PATH on Win32) environment
+variable. This JNI extension will not load properly the the Java shared 
+objects cannot be located at runtime.
+
 WIN32
 -----
 The JNI extension runs without problems on Win32.
+
+LINUX
+-----
+The JNI extension has been run successfully on Linux, but only with
+Java 2 SDK 1.2.2. Please take note that under certain circumstances
+the process would freeze just before terminating. This issue seemed
+to the main thread waiting for other threads to terminate.
 
 SOLARIS
 -------
@@ -46,47 +61,6 @@ in order to run properly on Solaris. Here's what you have to do:
 
 Then use this Perl version to build and run Inline::Java.
 
-LINUX
------
-The JNI extension has been run successfully on Linux, but some runtime
-problems can occur depending on Java 2 SDK version and other factors.
-For best results you need to use Java 1.2.2 with native threads. To do 
-this you need to inspect your Java 2 SDK distribution tree, and put in 
-your LD_LIBRARY_PATH the directories that contain 'native_threads' instead 
-of those that contain 'green_threads'.
-
-You should also use any directory that says 'classic' instead of the others.
-The Classic VM seems to run better under Linux.
-
-On my Linux box, here's what I used as LD_LIBRARY_PATH:
-
-  LD_LIBRARY_PATH=/home/patrickl/apps/jdk1.2.2/jre/lib/i386:
-    /home/patrickl/apps/jdk1.2.2/jre/lib/i386/classic:
-    /home/patrickl/apps/jdk1.2.2/jre/lib/i386/native_threads
-
-
-BUILDING THE JNI EXTENSION
---------------------------
-
-- perl Makefile.PL JNI
-- make
-
-At this point you should have built the JNI extension. If for some reason 
-Makefile.PL tells you in can't find certain files, you can set the paths 
-manually by editing 'Java/Makefile.PL' and setting the following variables 
-that you'll find near the top of the file:
-
-  my $java_include = 	# location of jni.h
-  my $java_include_os = # location of jni_md.h
-  my $java_lib = 		# location of libjvm.so or jvm.lib on MSWin32
-  my $java_so = 		# location of libjvm.so or jvm.dll on MSWin32
-
-Now comes the time to run the test suite using the JNI extension. To achieve 
-this, you will need to set the PERL_INLINE_JAVA_JNI environment variable to 1
-before running 'make test'.
-
-- make test
-
 
 RUNNING INLINE::JAVA WITH THE JNI EXTENSION
 -------------------------------------------
@@ -95,6 +69,9 @@ To run Inline::Java with the JNI extension, do one of the following:
 
    - set the JNI configuration option to 1
    - set the PERL_INLINE_JAVA_JNI environment variable to 1
+
+To run the test suite (make test) with the JNI extension you must use the 
+PERL_INLINE_JAVA_JNI environment variable
 
 
 USING THE 'SHARED_JVM' MODE
