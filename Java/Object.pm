@@ -111,6 +111,7 @@ sub __validate_prototype {
 		my $h = {
 			PROTO =>	$proto,
 			NEW_ARGS =>	$new_args,
+			NB_ARGS =>	scalar(@{$new_args}),
 			SCORE =>	$score,
 			STATIC =>	$stat,
 		} ;
@@ -153,6 +154,25 @@ sub __validate_prototype {
 		# We are trying to call an instance method without an object
 		# reference
 		croak "Method $method of class $inline->{pkg}::$this must be called from an object reference" ;
+	}
+
+	# Here we will be polite and warn the user if we had to choose a 
+	# method by ourselves.
+	if ($inline->{Java}->{WARN_METHOD_SELECT}){
+		if (($nb_matched > 1)&&
+			($chosen->{SCORE} < ($chosen->{NB_ARGS} * 10))){
+			my $msg = "Based on the arguments passed, I had to choose between " .
+				"the following method signatures:\n" ;
+			foreach my $m (@matched){
+				my $s = Inline::Java::Protocol->CreateSignature($m->{PROTO}) ;
+				my $c = ($m eq $chosen ? "*" : " ") ;
+				$msg .= "  $c $method$s\n" ;
+			}
+			$msg .= "I chose the one indicated by a star (*). To force " .
+				"the use of another signature or to disable this warning, use " .
+				"the casting functionnality described in the documentation." ;
+			carp $msg ;		
+		}
 	}
 
 	return (
