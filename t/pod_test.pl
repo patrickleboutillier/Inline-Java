@@ -21,6 +21,9 @@ GetOptions (\%opts,
 ) ;
 
 
+my $skip_to = $opts{s} || 0 ;
+my $cnt = -1 ;
+
 foreach my $podf ('Java.pod', 'Java/Callback.pod', 'Java/PerlNatives/PerlNatives.pod'){
 	open(POD, "<$podf") or 
 		die("Can't open $podf file") ;
@@ -31,9 +34,6 @@ foreach my $podf ('Java.pod', 'Java/Callback.pod', 'Java/PerlNatives/PerlNatives
 
 	my @code_blocks = ($pod =~ m/$del(.*?)$del/gs) ;
 
-	my $skip_to = $opts{s} || 0 ;
-
-	my $cnt = -1 ;
 	foreach my $code (@code_blocks){
 		$cnt++ ;
 
@@ -61,6 +61,7 @@ foreach my $podf ('Java.pod', 'Java/Callback.pod', 'Java/PerlNatives/PerlNatives
 			"print (((($1) eq ('$2')) ? \"ok\" : \"not ok ('$1' ne '$2')\") . \"\\n\") ;" ;
 		}/ge ;
 
+		my $Entry = '$Entry' ;
 		debug($code) ;
 
 		eval $code ;
