@@ -64,8 +64,8 @@ that you add the proper version of libpthread.so to your LD_PRELOAD
 environment variable. On my test system this was /lib/i686/libpthread.so.0
 You can also rebuild Perl and add that library in front of all others.
     Also, make sure you use do not use 'classic' VM. This one should only
-be used with 'green threads', which don't work with JNI. Use either the 
-'client' or the 'server' VMs.
+be used with 'green threads', which don't seem to work with JNI. Use either 
+the 'client' or the 'server' VMs.
 
 	
 SOLARIS
