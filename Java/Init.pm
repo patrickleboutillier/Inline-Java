@@ -86,6 +86,7 @@ public class InlineJavaServer {
 	// This constructor is used in server mode
 	InlineJavaServer(String[] argv) {
 		init() ;
+
 		debug = new Boolean(argv[0]).booleanValue() ;
 		port = Integer.parseInt(argv[1]) ;
 		shared_jvm = new Boolean(argv[2]).booleanValue() ;
@@ -125,6 +126,15 @@ public class InlineJavaServer {
 
 	private void init(){
 		instance = this ;
+
+		try {
+			System.out.close() ;
+			System.in.close() ;
+		}
+		catch (IOException e){
+			System.err.println("IO error: " + e.getMessage()) ;
+			System.err.flush() ;
+		}
 	}
 
 	
@@ -464,9 +474,6 @@ public class InlineJavaServer {
 			finally {
 				ijs.thread_objects.remove(getName()) ;
 			}
-		}
-
-		public void test(){
 		}
 	}
 }
