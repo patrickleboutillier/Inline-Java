@@ -8,9 +8,8 @@ use Inline(
 	Java => 'DATA'
 ) ;
 
-
 BEGIN {
-	plan(tests => 31) ;
+	plan(tests => 36) ;
 }
 
 
@@ -41,6 +40,8 @@ ok($a->[0], "1") ;
 ok($a->[1], "two") ;
 ok(UNIVERSAL::isa($a->[2], "main::types")) ;
 ok($a->[2]->{data}->[1], "a") ;
+$a->[2]->{data} = ["1", "2"] ;
+ok($a->[2]->{data}->[1], 2) ;
 
 # Try some multidimensional arrays.
 $a = $t->_StringString([
@@ -57,6 +58,10 @@ $a = $t->_StringString([
 ]) ;
 ok($a->[1]->[0], undef) ;
 
+
+my $b = $a->[1] ;
+ok($t->_String($b)->[0], "STRING") ;
+
 # Arrays of other arrays
 $a = $t->_StringString([
 	$a->[0],
@@ -66,6 +71,17 @@ ok($a->[0]->[2], "02") ;
 # This is one of the things that won't work. 
 # Try passing an array as an Object.
 eval {$t->_o(["a", "b", "c"])} ; ok($@, qr/Can't create Java array/) ;
+ok($t->_o(Inline::Java::cast(
+	"java.lang.Object", 
+	["a", "b", "c"], 
+	"[Ljava.lang.String;"))->[0], "a") ;
+$t->{o} = Inline::Java::cast(
+	"java.lang.Object", 
+	["a", "b", "c"], 
+	"[Ljava.lang.String;") ;
+ok($t->{o}->[0], "a") ;
+$t->{o} = $t->{i} ;
+ok($t->{o}->[0], "1") ;
 
 # Mixed types
 eval {$t->_int(["3", "3456", "cat"])} ; ok($@, qr/Can't convert/) ;
@@ -82,6 +98,8 @@ __Java__
 
 
 class types {
+	public Object o ;
+	public int i[] = {1, 2, 3} ;
 	public String data[] = {"d", "a", "t", "a"} ;
 	public types(){
 	}

@@ -15,8 +15,9 @@ if (! defined($Inline::Java::DEBUG)){
 	$Inline::Java::DEBUG = 0 ;
 }
 
+
 # Set DEBUG stream
-*DEBUG = *STDERR ;
+*DEBUG_STREAM = *STDERR ;
 
 
 require Inline ;
@@ -560,6 +561,7 @@ sub load_jdat {
 	
 	my $re = '[\w.\$\[;]+' ;
 
+	my $idx = 0 ;
 	my $current_class = undef ;
 	foreach my $line (@lines){
 		chomp($line) ;
@@ -579,6 +581,7 @@ sub load_jdat {
 				{
 					SIGNATURE => [split(", ", $signature)],
 					STATIC => 1,
+					IDX => $idx,
 				} ;
 		}
 		elsif ($line =~ /^method (\w+) ($re) (\w+)\((.*)\)$/){
@@ -595,6 +598,7 @@ sub load_jdat {
 				{
 					SIGNATURE => [split(", ", $signature)],
 					STATIC => ($static eq "static" ? 1 : 0),
+					IDX => $idx,
 				} ;
 		}
 		elsif ($line =~ /^field (\w+) ($re) (\w+) ($re)$/){
@@ -611,8 +615,10 @@ sub load_jdat {
 				{
 					TYPE => $type,
 					STATIC => ($static eq "static" ? 1 : 0),
+					IDX => $idx,
 				} ;
 		}
+		$idx++ ;
 	}
 
 	Inline::Java::debug_obj($d) ;
@@ -926,7 +932,7 @@ sub debug {
 	if ($Inline::Java::DEBUG){
 		my $str = join("", @_) ;
 		while (chomp($str)) {}
-		print DEBUG "perl $$: $str\n" ;
+		print DEBUG_STREAM "perl $$: $str\n" ;
 	}
 }
 
@@ -936,10 +942,10 @@ sub debug_obj {
 	my $pre = shift || "perl: " ;
 
 	if ($Inline::Java::DEBUG){
-		print DEBUG $pre . Dumper($obj) ;
+		print DEBUG_STREAM $pre . Dumper($obj) ;
 		if (UNIVERSAL::isa($obj, "Inline::Java::Object")){
 			# Print the guts as well...
-			print DEBUG $pre . Dumper($obj->__get_private()) ;
+			print DEBUG_STREAM $pre . Dumper($obj->__get_private()) ;
 		}
 	}
 }

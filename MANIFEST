@@ -14,6 +14,7 @@ Java/Makefile.PL
 Java/JVM.pm
 Java/JNI.pm
 Java/JNI.xs
+Java/typemap
 t/1_init.t
 t/2_primitives.t
 t/3_objects.t

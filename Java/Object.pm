@@ -87,6 +87,7 @@ sub __validate_prototype {
 	foreach my $s (values %{$protos}){
 		my $proto = $s->{SIGNATURE} ;
 		my $stat = $s->{STATIC} ;
+		my $idx = $s->{IDX} ;
 		my $new_args = undef ;
 		my $score = undef ;
 
@@ -114,6 +115,7 @@ sub __validate_prototype {
 			NB_ARGS =>	scalar(@{$new_args}),
 			SCORE =>	$score,
 			STATIC =>	$stat,
+			IDX =>		$idx,
 		} ;
 		push @matched, $h ;
 	}
@@ -139,14 +141,21 @@ sub __validate_prototype {
 	}
 
 	my $chosen = undef ;
-	my $max = 0 ;
 	foreach my $h (@matched){
+		my $idx = ($chosen ? $chosen->{IDX} : 0) ;
+		my $max = ($chosen ? $chosen->{SCORE} : 0) ;
+
 		my $s = $h->{SCORE} ;
-		if ($s >= $max){
+		my $i = $h->{IDX} ;
+		if ($s > $max){
+			$chosen = $h ;
+		}
+		elsif ($s == $max){
 			# Here if the scores are equal we take the last one since
 			# we start with inherited methods and move to class mothods
-			$max = $s ;
-			$chosen = $h ;
+			if ($i > $idx){
+				$chosen = $h ;
+			}
 		}
 	}
 

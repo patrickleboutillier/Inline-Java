@@ -13,7 +13,7 @@ eval {
 	Inline::Java::JNI->bootstrap($Inline::Java::JNI::VERSION) ;
 } ;
 if ($@){
-	croak "Can't load JNI module: $@" ;
+	croak "Can't load JNI module. Did you build it at install time?\nError: $@" ;
 }
 
 
