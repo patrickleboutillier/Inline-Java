@@ -19,7 +19,6 @@ use Inline (
 			}
 		}
 	|, 
-	SHARED_JVM => 1,
 ) ;
 
 Inline::Java::release_JVM() ;
