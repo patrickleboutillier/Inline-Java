@@ -139,7 +139,8 @@ sub search {
 	my $ext = Inline::Java::Portable::portable('SO_EXT') ;
 	if ($File::Find::dir =~ /jre/){
 		if ($file =~ /\.$ext$/){
-			$so_dirs{$File::Find::dir} = 1 ;
+			my $dir = File::Spec->canonpath($File::Find::dir) ;
+			$so_dirs{$dir} = 1 ;
 		}
 	}
 
