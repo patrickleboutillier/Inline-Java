@@ -79,7 +79,11 @@ WARNING: THIS IS ALPHA SOFTWARE. It is incomplete and possibly unreliable.
          It is also possible that some elements of the interface (API) will 
          change in future releases.
 
-Inline::Java version 0.20 includes:
+Inline::Java version 0.21 is a minor upgrade that includes:
++ 'Studying' of external classes
++ Caching of class information increases performance
+
+Inline::Java version 0.20 is a major upgrade that includes:
 + All public member variables are now exported to Perl.
 + Arrays can now be passed as method parameters and assigned to 
   member variables.

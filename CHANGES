@@ -1,6 +1,14 @@
 Revision history for Perl extension Inline::Java
 ------------------------------------------------
 
+0.21  Tue May  8 11:32:28 EDT 2001
+    - Added 'studying' of external Java classes
+    - Removed CLASSPATH config option because it didn't behave as
+      expected
+    - Added error message stating that Inline::Java doesn't currently 
+      support multiple sections.
+    - Caching for class information
+
 0.20  Sat Apr 14 23:00:00 EDT 2001
     - Added optional JNI extension.
     - Added support for arrays.

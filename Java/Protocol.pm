@@ -24,21 +24,6 @@ sub new {
 }
 
 
-sub SetClassPath {
-	my $this = shift ;
-	my $classpath = shift ;
-
-	Inline::Java::debug("setting classpath") ;
-
-	my $data = join(" ", 
-		"set_classpath", 
-		$this->ValidateArgs([$classpath]),
-	) ;
-
-	return $this->Send($data, 1) ;
-}
-
-
 sub Report {
 	my $this = shift ;
 	my $classes = shift ;
@@ -288,16 +273,17 @@ sub Send {
 			return undef ;
 		}
 		else{
-			my $obj = undef ;
 			my $inline = Inline::Java::get_INLINE($this->{module}) ;
-
 			my $perl_class = Inline::Java::known_to_perl($inline->{pkg}, $class) ;
-			if ($perl_class){
-				$obj = $perl_class->__new($class, $inline, $id) ;
+			if (! $perl_class){
+				$perl_class = "Inline::Java::Object" ;
+				if ($inline->{Java}->{AUTOSTUDY}){
+					$inline->_study([$class]) ;
+					$perl_class = Inline::Java::known_to_perl($inline->{pkg}, $class) ;
+				}
 			}
-			else{
-				$obj = Inline::Java::Object->__new($class, $inline, $id) ;
-			}
+
+			my $obj = $perl_class->__new($class, $inline, $id) ;
 
 			Inline::Java::debug("checking if stub is array...") ;
 			if (Inline::Java::Class::ClassIsArray($class)){
@@ -371,9 +357,6 @@ class InlineJavaProtocol {
 		else if (c.equals("isa")){
 			ISA(st) ;
 		}
-		else if (c.equals("set_classpath")){
-			SetClassPath(st) ;
-		}
 		else if (c.equals("create_object")){
 			CreateJavaObject(st) ;
 		}
@@ -393,7 +376,7 @@ class InlineJavaProtocol {
 		Returns a report on the Java classes, listing all public methods
 		and members
 	*/
-	void Report(StringTokenizer st){
+	void Report(StringTokenizer st) throws InlineJavaException {
 		StringBuffer pw = new StringBuffer() ;
 
 		StringTokenizer st2 = new StringTokenizer(st.nextToken(), ":") ;
@@ -404,62 +387,43 @@ class InlineJavaProtocol {
 		ArrayList class_list = new ArrayList() ;
 		while (st3.hasMoreTokens()){
 			String c = st3.nextToken() ;
-			ijs.debug("reporting for " + c) ;
 			class_list.add(class_list.size(), c) ;
 		}
 
-		try {
-			for (int i = 0 ; i < class_list.size() ; i++){
-				String name = (String)class_list.get(i) ;
-				if (! name.startsWith("InlineJavaServer")){
-					Class c = Class.forName(name) ;
-															
-					pw.append("class " + c.getName() + "\n") ;
-					Constructor constructors[] = c.getConstructors() ;
-					Method methods[] = c.getMethods() ;
-					Field fields[] = c.getFields() ;
+		for (int i = 0 ; i < class_list.size() ; i++){
+			String name = (String)class_list.get(i) ;
+			Class c = ijc.ValidateClass(name) ;
 
-					for (int j = 0 ; j < constructors.length ; j++){
-						Constructor x = constructors[j] ;
-						String sign = CreateSignature(x.getParameterTypes()) ;
-						Class decl = x.getDeclaringClass() ;
-						pw.append("constructor" + " " + sign + "\n") ;
-					}
-					for (int j = 0 ; j < methods.length ; j++){
-						Method x = methods[j] ;
-						String stat = (Modifier.isStatic(x.getModifiers()) ? " static " : " instance ") ;
-						String sign = CreateSignature(x.getParameterTypes()) ;
-						Class decl = x.getDeclaringClass() ;
-						pw.append("method" + stat + decl.getName() + " " + x.getName() + sign + "\n") ;
-					}
-					for (int j = 0 ; j < fields.length ; j++){
-						Field x = fields[j] ;
-						String stat = (Modifier.isStatic(x.getModifiers()) ? " static " : " instance ") ;
-						Class decl = x.getDeclaringClass() ;
-						Class type = x.getType() ;
-						pw.append("field" + stat + decl.getName() + " " + x.getName() + " " + type.getName() + "\n") ;
-					}
-				}
+			ijs.debug("reporting for " + c) ;
+													
+			pw.append("class " + c.getName() + "\n") ;
+			Constructor constructors[] = c.getConstructors() ;
+			Method methods[] = c.getMethods() ;
+			Field fields[] = c.getFields() ;
+
+			for (int j = 0 ; j < constructors.length ; j++){
+				Constructor x = constructors[j] ;
+				String sign = CreateSignature(x.getParameterTypes()) ;
+				Class decl = x.getDeclaringClass() ;
+				pw.append("constructor" + " " + sign + "\n") ;
 			}
-		}
-		catch (ClassNotFoundException e){
-			System.err.println("Can't find class: " + e.getMessage()) ;
-			System.exit(1) ;
+			for (int j = 0 ; j < methods.length ; j++){
+				Method x = methods[j] ;
+				String stat = (Modifier.isStatic(x.getModifiers()) ? " static " : " instance ") ;
+				String sign = CreateSignature(x.getParameterTypes()) ;
+				Class decl = x.getDeclaringClass() ;
+				pw.append("method" + stat + decl.getName() + " " + x.getName() + sign + "\n") ;
+			}
+			for (int j = 0 ; j < fields.length ; j++){
+				Field x = fields[j] ;
+				String stat = (Modifier.isStatic(x.getModifiers()) ? " static " : " instance ") ;
+				Class decl = x.getDeclaringClass() ;
+				Class type = x.getType() ;
+				pw.append("field" + stat + decl.getName() + " " + x.getName() + " " + type.getName() + "\n") ;
+			}
 		}
 
 		SetResponse(pw.toString()) ;
-	}
-
-
-	void SetClassPath(StringTokenizer st) throws InlineJavaException {
-		String classpath = st.nextToken() ;
-		StringTokenizer st2 = new StringTokenizer(classpath, ":") ;
-		st2.nextToken() ;
-
-		String prop = pack(st2.nextToken()) ;
-		System.setProperty("java.class.path", prop) ;
-
-		SetResponse(null) ;
 	}
 
 
