@@ -173,7 +173,7 @@ sub CleanSoDirs {
 			}
 		}
 	}
-	$so_dirs{$files->{$jvm_lib}->{selected}} = 1 ;
+	$so_dirs{$files->{$jvm_so}->{selected}} = 1 ;
 }
 
 
