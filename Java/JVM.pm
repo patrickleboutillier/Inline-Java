@@ -22,7 +22,9 @@ sub new {
 
 	foreach my $sig ('HUP', 'INT', 'PIPE', 'TERM'){
 		local $SIG{__WARN__} = sub {} ;
-		$SIGS{$sig} = $SIGS{$sig} ;
+		if (exists($SIG{$sig})){
+			$SIGS{$sig} = $SIG{$sig} ;
+		}
 	}
 
 	$this->{socket} = undef ;
@@ -328,7 +330,9 @@ sub capture {
 	}
 
 	foreach my $sig ('HUP', 'INT', 'PIPE', 'TERM'){
-		$SIG{$sig} = \&Inline::Java::done ;
+		if (exists($SIG{$sig})){
+			$SIG{$sig} = \&Inline::Java::done ;
+		}
 	}
 
 	$this->{owner} = 1 ;
@@ -351,7 +355,9 @@ sub release {
 
 	foreach my $sig qw(HUP INT PIPE TERM){
 		local $SIG{__WARN__} = sub {} ;
-		$SIG{$sig} = $SIGS{$sig} ;
+		if (exists($SIG{$sig})){
+			$SIG{$sig} = $SIGS{$sig} ;
+		}
 	}
 
 	$this->{owner} = 0 ;
