@@ -1,6 +1,9 @@
 CODE:
 - Do more test for CLASSPATH combinations
 - Document PRIVATE mode
+- Validate information in the cache once and for all.
+- Fix the callback queue bug. the stop_loop variable should be associated
+  with the thread/queue instead of the current object.
 
 TEST:
 - Alpha

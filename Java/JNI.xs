@@ -77,7 +77,7 @@ jstring JNICALL jni_callback(JNIEnv *env, jobject obj, jstring cmd){
 	/* Check the eval */
 	if (SvTRUE(ERRSV)){
 		STRLEN n_a ;
-		fprintf(stderr, "%s", SvPV(ERRSV, n_a)) ;
+		fprintf(stderr, "Exception caught in JNI callback: %s", SvPV(ERRSV, n_a)) ;
 		exit(-1) ;
 	}
 	else{
@@ -106,6 +106,31 @@ jstring JNICALL jni_callback(JNIEnv *env, jobject obj, jstring cmd){
 	LEAVE ;
 
 	return resp ;
+}
+
+
+/* This function loads up a Perl Interpreter */
+static PerlInterpreter *my_perl ;
+JNIEXPORT void JNICALL Java_org_perl_inline_java_InlineJavaPerlInterpreter_jni_1load_1perl_1interpreter(JNIEnv *env, jobject obj){
+	JNINativeMethod nm ;
+	jclass ijs_class ;
+	char *embedding[] = { "", "-e", "0" } ;
+
+    /* Register the callback function */
+	ijs_class = (*(env))->FindClass(env, "org/perl/inline/java/InlineJavaServer") ;
+	check_exception(env, "Can't find class InlineJavaServer") ;
+
+    nm.name = "jni_callback" ;
+    nm.signature = "(Ljava/lang/String;)Ljava/lang/String;" ;
+    nm.fnPtr = jni_callback ;
+    (*(env))->RegisterNatives(env, ijs_class, &nm, 1) ;
+    check_exception(env, "Can't register method jni_callback in class InlineJavaServer") ;
+
+	my_perl = perl_alloc() ;
+	perl_construct(my_perl) ;
+                                                                                             
+	perl_parse(my_perl, NULL, 3, embedding, NULL) ;
+	perl_run(my_perl) ;
 }
 
 
@@ -259,6 +284,9 @@ process_command(this, data)
 	check_exception(env, "Can't create java.lang.String") ;
 
 	resp = (*(env))->CallObjectMethod(env, this->ijs, this->process_command_mid, cmd) ;
+	/* Thanks Dave Blob for spotting this. This is necessary since this codes never really returns to Java
+	   It simply calls into Java and comes back. */
+	(*(env))->DeleteLocalRef(env, cmd);
 	check_exception(env, "Can't call ProcessCommand in InlineJavaServer") ;
 
 	hook = perl_get_sv("Inline::Java::Callback::OBJECT_HOOK", FALSE) ;
