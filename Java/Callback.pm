@@ -3,7 +3,7 @@ package Inline::Java::Callback ;
 use strict ;
 use Carp ;
 
-$Inline::Java::Callback::VERSION = '0.48' ;
+$Inline::Java::Callback::VERSION = '0.48_01' ;
 
 $Inline::Java::Callback::OBJECT_HOOK = undef ;
 
