@@ -205,6 +205,13 @@ behavior of C<Inline::Java>:
         5 = Data structure dumps
       Ex: DEBUG => 2
 
+   DEBUGGER:
+      Starts jdb, (the Java debugger) instead of the regular Java JVM.
+      This option will also cause the Java code to be compiled using the
+      '-g' switch for extra debugging information. EXTRA_JAVA_ARGS can
+      be used use to pass extra options to the debugger.
+      Ex: DEBUGGER => 1
+
    WARN_METHOD_SELECT:
       Throws a warning when C<Inline::Java> has to 'choose' between 
       different method signatures. The warning states the possible 

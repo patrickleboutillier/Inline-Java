@@ -136,8 +136,10 @@ else{
 		NAME => 'Inline::Java::JNI',
 		VERSION_FROM => 'JNI.pm',
 		DIR => [],
+		PMLIBDIRS => [File::Spec->catdir('sources', 'org', 'perl', 'inline', 'java')],
 		XS => {},
-		C => []) ;
+		C => []
+	) ;
 }
 
 

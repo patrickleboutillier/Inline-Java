@@ -90,12 +90,14 @@ SAVE_J2SDK
 
 # We will now add the building of our Java files to the Makefile.
 my $javac = File::Spec->catfile($jdk_dir, 'bin', 'javac' . $ext) ;
-my $jar = File::Spec->catfile($jdk_dir, 'bin', 'jar' . $ext) ;
-my $src_dir = File::Spec->catdir('Java', 'sources') ;
+my $jar = File::Spec->catfile($jdk_dir, 'bin', 'jar' . $ext) ;                      
+my $src_dir = File::Spec->catdir('Java', 'sources', 'org', 'perl', 'inline', 'java') ;
 my $src = File::Spec->catfile($src_dir, '*.java') ;
 my $obj_dir = File::Spec->catdir('Java', 'classes') ;
 my $server_arch = File::Spec->catfile('Java', 'InlineJavaServer.jar') ;
 my $user_arch = File::Spec->catfile('Java', 'InlineJavaUser.jar') ;
+my $src_arch = File::Spec->catfile('Java', 'InlineJavaSource.jar') ;
+
 
 sub MY::top_targets {
 	my $this = shift ;
@@ -116,7 +118,7 @@ sub MY::postamble {
 # Added by Inline::Java installation
 java ::
 	\@\$(MKPATH) $obj_dir
-	"$javac" -d $obj_dir $src
+	"$javac" -g -d $obj_dir $src
 	"$jar" cf $server_arch -C $obj_dir org
 	"$jar" cf $user_arch -C $obj_dir InlineJavaUserClassLink.class
 MAKE

@@ -127,6 +127,7 @@ sub validate {
 
 	$o->set_option('EXTRA_JAVA_ARGS',		'',		's', 1, \%opts) ;
 	$o->set_option('EXTRA_JAVAC_ARGS',		'',		's', 1, \%opts) ;
+	$o->set_option('DEBUGGER',				0,		'b', 1, \%opts) ;
 
 	$o->set_option('PRIVATE',				'',		'b', 1, \%opts) ;
 
@@ -155,10 +156,26 @@ sub validate {
 	if (($o->get_java_config('JNI'))&&($o->get_java_config('SHARED_JVM'))){
 		croak("You can't use the 'SHARED_JVM' option in 'JNI' mode") ;
 	}
+	if (($o->get_java_config('JNI'))&&($o->get_java_config('DEBUGGER'))){
+		croak("You can't invoke the Java debugger ('DEBUGGER' option) in 'JNI' mode") ;
+	}
 
 	if ($o->get_java_config('JNI')){
 		require Inline::Java::JNI ;
 	}
+
+	if ($o->get_java_config('DEBUGGER')){
+		# Here we want to tweak a few settings to help debugging...
+		Inline::Java::debug(1, "Debugger mode activated") ;
+		# Add the -g compile option
+		$o->set_java_config('EXTRA_JAVAC_ARGS', $o->get_java_config('EXTRA_JAVAC_ARGS') . " -g ") ;
+		# Add the -sourcepath runtime option
+		$o->set_java_config('EXTRA_JAVA_ARGS', $o->get_java_config('EXTRA_JAVA_ARGS') .
+			" -sourcepath " . $o->get_api('build_dir') .
+			portable("ENV_VAR_PATH_SEP_CP") .
+			get_source_dir()
+		) ;
+	}	
 
 	my $study = $o->get_java_config('STUDY') ;
 	if ((defined($study))&&(ref($study) ne 'ARRAY')){
@@ -352,7 +369,7 @@ sub build {
 
 	# Go back and clean up
 	chdir $cwd ;
-	if ($o->get_api('cleanup')){
+	if (($o->get_api('cleanup'))&&(! $o->get_java_config('DEBUGGER'))){
 		$o->rmpath('', $build_dir) ;
 	}
 
