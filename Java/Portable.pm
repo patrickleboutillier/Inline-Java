@@ -182,11 +182,16 @@ sub portable {
 				$val = qq{"$val"} ;
 				return $val ;
 			}),
-			SUB_FIX_MAKE_QUOTES	=>	sub {
-				my $val = shift ;
-				$val = qq{"$val"} ;
-				return $val ;
-			},
+
+# Can't remember what this was supposed to fix, but it breaks
+# when there are spaces in the J2SDK directory...
+#
+#			SUB_FIX_MAKE_QUOTES	=>	sub {
+#				my $val = shift ;
+#				$val = qq{"$val"} ;
+#				return $val ;
+#			},
+#
 			PRE_WHOLE_ARCHIVE	=>  '',
 			POST_WHOLE_ARCHIVE	=>  '',
 		},
