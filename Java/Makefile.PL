@@ -64,8 +64,10 @@ if ($JNI_BUILD){
 			"variable in order to be able to use the JNI mode.\n" ;
 	}
 	else{
-		print "\nNote: You may need to add $l to your LD_LIBRARY_PATH environment " .
-			"variable in order to be able to use the JNI mode.\n" ;
+		print "\nNote: You will need to add $l (and maybe other Java " .
+			"directories) to your LD_LIBRARY_PATH environment variable in " .
+			"order to be able to use the JNI mode. See README.JNI for more " .
+			"information.\n" ;
 	}
 
 	print "\n" ;
