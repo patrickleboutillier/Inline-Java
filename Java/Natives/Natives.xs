@@ -74,42 +74,40 @@ jobject extract_va_arg(JNIEnv *env, va_list *list, char f){
 
 	/*
 		A bit of voodoo going on for J and F, but the rest I think is pretty
-		kosher...
+		kosher (on a 32 bit machine at least)
 	*/
 	switch(f){
 		case 'B':
-			val.i = (jbyte)va_arg(*list, jint) ;
+			val.i = (jbyte)va_arg(*list, int) ;
 			ret = create_primitive_object(env, f, "java/lang/Byte", val) ;
 			break ;
 		case 'S':
-			val.i = (jshort)va_arg(*list, jint) ;
+			val.i = (jshort)va_arg(*list, int) ;
 			ret = create_primitive_object(env, f, "java/lang/Short", val) ;
 			break ;
 		case 'I':
-			val.i = (jint)va_arg(*list, jint) ;
+			val.i = (jint)va_arg(*list, int) ;
 			ret = create_primitive_object(env, f, "java/lang/Integer", val) ;
 			break ;
 		case 'J':
-			val.d = (jdouble)va_arg(*list, jdouble) ;
+			val.d = (jdouble)va_arg(*list, double) ;
 			ret = create_primitive_object(env, f, "java/lang/Long", val) ;
 			break ;
 		case 'F':
 			/* Seems float is not properly promoted to double... */
-			fi = (int)va_arg(*list, int) ;
-			ff = (float *)&fi ;
-			val.f = *ff ;
+			val.i = (jint)va_arg(*list, int) ;
 			ret = create_primitive_object(env, f, "java/lang/Float", val) ;
 			break ;
 		case 'D':
-			val.d = (jdouble)va_arg(*list, jdouble) ;
+			val.d = (jdouble)va_arg(*list, double) ;
 			ret = create_primitive_object(env, f, "java/lang/Double", val) ;
 			break ;
 		case 'Z':
-			val.i = (jint)va_arg(*list, jint) ;
+			val.i = (jint)va_arg(*list, int) ;
 			ret = create_primitive_object(env, f, "java/lang/Boolean", val) ;
 			break ;
 		case 'C':
-			val.i = (jchar)va_arg(*list, jint) ;
+			val.i = (jchar)va_arg(*list, int) ;
 			ret = create_primitive_object(env, f, "java/lang/Character", val) ;
 			break ;
 	}

@@ -1,5 +1,10 @@
 Revision history for Perl extension Inline::Java
 ------------------------------------------------
+0.45  Mon Jan 19 20:00:00 EST 2004
+    - Fixed Makefile.PL arguments that were getting lost
+    - Fixed deprecated require call
+	- Fixed support for symbolic links in J2SDK directory
+	- Added new experimental feature: PerlNatives
 
 0.44  Sun Nov 23 15:47:06 EST 2003
     - Callbacks from multiple threads are now supported

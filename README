@@ -66,6 +66,12 @@ second time you test loading of an already built module.
 -------------------------------------------------------------------------------
 FEATURES:
 
+Inline::Java version 0.45 is a major upgrade that includes:
++ Fixed Makefile.PL arguments that were getting lost
++ Fixed deprecated require call
++ Fixed support for symbolic links in J2SDK directory
++ Added new experimental feature: PerlNatives
+
 Inline::Java version 0.44 is a major upgrade that includes:
 + Callbacks from multiple threads are now supported
 + Refactored (again...) studying/.jdat/cache stuff

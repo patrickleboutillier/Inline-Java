@@ -7,14 +7,13 @@ import java.io.* ;
 
 public class InlineJavaPerlNatives extends InlineJavaPerlCaller {
 	static private boolean inited = false ;
-    static private ResourceBundle resources = null ;
 	static private HashMap registered_classes = new HashMap() ;
 	static private HashMap registered_methods = new HashMap() ;
 
 
 	protected InlineJavaPerlNatives() throws InlineJavaException {
 		init() ;
-		RegisterPerlNatives(new Caller().getCaller()) ;
+		RegisterPerlNatives(this.getClass()) ;
 	}
 
 
@@ -24,34 +23,32 @@ public class InlineJavaPerlNatives extends InlineJavaPerlCaller {
 
 
 	synchronized static protected void init(String mode) throws InlineJavaException {
+		InlineJavaPerlCaller.init() ;
 		if (! inited){
 			try {
-				resources = ResourceBundle.getBundle("InlineJava") ;
-
-				String jni_so_built = resources.getString("jni_so_built") ;
-				if (! jni_so_built.equals("true")){
-					throw new InlineJavaException("Can't use the PerlNatives " +
-						"functionnality because the JNI extension was not built " +
-						"when Inline::Java was installed.") ;
+				String natives_so = GetBundle().getString("inline_java_natives_so_" + mode) ;
+				File f = new File(natives_so) ;
+				if (! f.exists()){
+					throw new InlineJavaException("Can't initialize PerlNatives " +
+						"functionnality: Natives extension (" + natives_so + 
+						") can't be found") ;
 				}
 
-				boolean load_libperl_so = true ;
-				InlineJavaServer ijs = InlineJavaServer.GetInstance() ;
-				if ((ijs != null)&&(ijs.IsJNI())){
-					// InlineJavaServer is loaded and in JNI mode, no need to load Perl.
-					load_libperl_so = false ;
+				try {
+					Class ste_class = Class.forName("java.lang.StackTraceElement") ;
 				}
+				catch (ClassNotFoundException cnfe){
+					throw new InlineJavaException("Can't initialize PerlNatives " +
+                        "functionnality: Java 1.4 or higher required (current is " +
+						System.getProperty("java.version") + ").") ;
+				}      	
 
-				if (load_libperl_so){
-					// Load the perl shared object			
-					load_so_from_property("libperl_so") ;
-				}
-
-				// Load the JNI shared object
-				load_so_from_property("inline_java_jni_so_" + mode) ;
+				// Load the Natives shared object
+				InlineJavaUtils.debug(2, "loading shared library " + natives_so) ;
+				System.load(natives_so) ;
 
 				inited = true ;
-			}
+			}                                   
 			catch (MissingResourceException mre){
 				throw new InlineJavaException("Error loading InlineJava.properties resource: " + mre.getMessage()) ;
 			}
@@ -59,15 +56,8 @@ public class InlineJavaPerlNatives extends InlineJavaPerlCaller {
 	}
 
 
-	synchronized static private void load_so_from_property(String prop) throws MissingResourceException, InlineJavaException {
-		String so = resources.getString(prop) ;
-		InlineJavaUtils.debug(2, "loading shared library " + so) ;
-		System.load(so) ;
-	}
-
-
 	// This method actually does the real work of registering the methods.
-	synchronized public void RegisterPerlNatives(Class c) throws InlineJavaException {
+	synchronized private void RegisterPerlNatives(Class c) throws InlineJavaException {
 		if (registered_classes.get(c) == null){
 			InlineJavaUtils.debug(3, "registering natives for class " + c.getName()) ;
 
@@ -105,11 +95,15 @@ public class InlineJavaPerlNatives extends InlineJavaPerlCaller {
 		StringBuffer fmt = new StringBuffer("L") ;
 		StringBuffer sign = new StringBuffer("(") ;
 		for (int i = 0 ; i < params.length ; i++){
-			if (! Object.class.isAssignableFrom(params[i])){
-				throw new InlineJavaException("Perl native method " + mname + " of class " + cname + " can only have Object arguments (not " + params[i].getName() + ")") ;
+			String code = InlineJavaClass.FindJNICode(params[i]) ;
+			sign.append(code) ;
+			char ch = code.charAt(0) ;
+			char f = ch ;
+			if (f == '['){
+				// Arrays are Objects...
+				f = 'L' ;
 			}
-			sign.append(InlineJavaClass.FindJNICode(params[i])) ;
-			fmt.append("L") ;
+			fmt.append(new String(new char [] {f})) ;
 		}
 		sign.append(")") ;
 
@@ -118,7 +112,12 @@ public class InlineJavaPerlNatives extends InlineJavaPerlCaller {
 		InlineJavaUtils.debug(3, "format is " + fmt) ;
 
 		// For now, no method overloading so no signature necessary
-		registered_methods.put(cname + "." + mname, fmt.toString()) ;
+		String meth = cname + "." + mname ;
+		String prev = (String)registered_methods.get(meth) ;
+		if (prev != null){
+			throw new InlineJavaException("There already is a native method '" + mname + "' registered for class '" + cname + "'") ;
+		}
+		registered_methods.put(meth, fmt.toString()) ;
 
 		// call the native method to hook it up
 		RegisterMethod(c, mname, sign.toString()) ;
@@ -160,8 +159,9 @@ public class InlineJavaPerlNatives extends InlineJavaPerlCaller {
 		// Transform the Java class name into the Perl package name
 		StringTokenizer st = new StringTokenizer(pkg, ".") ;
 		StringBuffer perl_pkg = new StringBuffer() ;
+		// Starting with "::" means that the package is relative to the caller package
 		while (st.hasMoreTokens()){
-			perl_pkg.append(st.nextToken() + "::") ;
+			perl_pkg.append("::" + st.nextToken()) ;
 		}
 
 		for (int i = 0 ; i < args.length ; i++){
@@ -170,7 +170,7 @@ public class InlineJavaPerlNatives extends InlineJavaPerlCaller {
 
 		InlineJavaUtils.debug(3, "exiting InvokePerlMethod") ;
 
-		return CallPerl(perl_pkg + "perl", method, args) ;
+		return CallPerl(perl_pkg.toString(), method, args) ;
 	}
 
 
@@ -223,13 +223,6 @@ public class InlineJavaPerlNatives extends InlineJavaPerlCaller {
 			// None of the methods invoked throw exceptions, so...
 			throw new InlineJavaException("Exception caught while manipulating java.lang.StackTraceElement classes: " +
 				ite.getTargetException()) ;
-		}
-	}
-
-
-	class Caller extends SecurityManager {
-		public Class getCaller(){
-			return getClassContext()[2] ;
 		}
 	}
 }
