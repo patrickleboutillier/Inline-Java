@@ -20,8 +20,9 @@ require Inline ;
 use Config ;
 use Data::Dumper ;
 use FindBin ;
+use File::Copy ;
 use Carp ;
-use Cwd qw(cwd abs_path) ;
+use Cwd ;
 
 use IO::Socket ;
 
@@ -78,22 +79,12 @@ use sigtrap 'handler', \&done, 'normal-signals' ;
 
 # Register this module as an Inline language support module
 sub register {
-    return {
-	    language => 'Java',
-	    aliases => ['JAVA', 'java'],
-	    type => 'interpreted',
-	    suffix => 'jdat',
-	   };
-}
-
-
-# Validate the Java config options
-sub usage_validate {
-    my $key = shift;
-    return <<END;
-The value of config option '$key' must be a string or an array ref
-
-END
+	return {
+		language => 'Java',
+		aliases => ['JAVA', 'java'],
+		type => 'interpreted',
+		suffix => 'jdat',
+	};
 }
 
 
@@ -127,7 +118,7 @@ sub _validate {
 	my $modpname = $o->{modpname} ;
 	my $install = "$install_lib/auto/$modpname" ;
 
-    while (@_) {
+	while (@_) {
 		my ($key, $value) = (shift, shift) ;
 		if ($key eq 'BIN'){
 		    $o->{Java}->{$key} = $value ;
@@ -145,10 +136,10 @@ sub _validate {
 			if (! $value){
 				croak "config '$key' can't be zero" ;
 			}
-		    $o->{Java}->{$key} = $value ;
+			$o->{Java}->{$key} = $value ;
 		}
 		elsif ($key eq 'DEBUG'){
-		    $o->{Java}->{$key} = $value ;
+			$o->{Java}->{$key} = $value ;
 			$Inline::Java::DEBUG = $value ;
 		}
 		else{
@@ -195,39 +186,63 @@ sub set_classpath {
 sub set_java_bin {
 	my $o = shift ;
 
-	my $sep = portable("PATH_SEP") ;
+	my $sep = portable("PATH_SEP_RE") ;
 
 	my $cjb = $o->{Java}->{BIN} ;
 	my $ejb = $ENV{PERL_INLINE_JAVA_BIN} ;
 	if ($cjb){
 		$cjb =~ s/$sep+$// ;
-		return $o->find_java_bin($cjb) ;
+		return $o->find_java_bin([$cjb]) ;
 	}
 	elsif ($ejb) {
 		$ejb =~ s/$sep+$// ;
 		$o->{Java}->{BIN} = $ejb ;
-		return $o->find_java_bin($ejb) ;
+		return $o->find_java_bin([$ejb]) ;
 	}
 
 	# Java binaries are assumed to be in $ENV{PATH} ;
-	my $psep = portable("ENV_VAR_PATH_SEP") ;
-	my @path = split(/$psep/, $ENV{PATH}) ;
-
-	return $o->find_java_bin(@path) ;
+	return $o->find_java_bin() ;
 }
 
 
 sub find_java_bin {
 	my $o = shift ;
-	my @paths = @_ ;
+	my $paths = shift ;
+
+	my $java =  "java" . portable("EXE_EXTENSION") ;
+	my $javac = "javac" . portable("EXE_EXTENSION") ;
+
+	my $path = $o->find_file_in_path([$java, $javac], $paths) ;
+	if (defined($path)){
+		$o->{Java}->{BIN} = $path ;
+	}
+	else{	
+		croak 
+			"Can't locate your java binaries ('java' and 'javac'). Please set one of the following to the proper directory:\n" .
+			"  - The BIN config option;\n" .
+			"  - The PERL_INLINE_JAVA_BIN environment variable;\n" .
+			"  - The PATH environment variable.\n" ;
+	}
+}
+
+
+sub find_file_in_path {
+	my $o = shift ;
+	my $files = shift ;
+	my $paths = shift ;
+
+	if (! defined($paths)){
+		my $psep = portable("ENV_VAR_PATH_SEP") ;
+		$paths = [(split(/$psep/, $ENV{PATH}))] ;			
+	}
 	
 	my $home = $ENV{HOME} ;
+	my $sep = portable("PATH_SEP_RE") ;
 
-	my $found = 0 ;
-	foreach my $p (@paths){
+	foreach my $p (@{$paths}){
 		debug("path element: $p") ;
 		if ($p !~ /^\s*$/){
-			$p =~ s/\/+$// ;
+			$p =~ s/$sep+$// ;
 
 			if ($p =~ /^~/){
 				if ($home){
@@ -239,26 +254,20 @@ sub find_java_bin {
 				}
 			}
 	
-			my $java = $p . "/java" . portable("EXE_EXTENSION") ;
-			my $javac = $p . "/javac" . portable("EXE_EXTENSION") ;
-			debug("  candidate: $java\n") ;
-			debug("  candidate: $javac\n") ;
-			if ((-f $java)&&(-f $javac)){
-				debug("  found java binaries in $p") ;
-				$o->{Java}->{BIN} = $p ;
-				$found = 1 ;
-				last ;
+			foreach my $file (@{$files}){
+				my $f = "$p/$file" ;
+				debug("  candidate: $f\n") ;
+
+				if (-f $f){
+					debug("  found file $file in $p") ;
+
+					return $p ;
+				}
 			}	
 		}
 	}
 
-	if (! $found){
-		croak 
-			"Can't locate your java binaries ('java' and 'javac'). Please set one of the following to the proper directory:\n" .
-		    "  - The BIN config option;\n" .
-		    "  - The PERL_INLINE_JAVA_BIN environment variable;\n" .
-		    "  - The PATH environment variable.\n" ;
-	}
+	return undef ;
 }
 
 
@@ -281,7 +290,7 @@ sub build {
 
 # Return a small report about the Java code.
 sub info {
-    my $o = shift;
+	my $o = shift;
 
 	if (! $o->{Java}->{built}){
 		$o->build ;
@@ -293,9 +302,9 @@ sub info {
 	my $info = '' ;
 	my $d = $o->{Java}->{data} ;
 
-    my %classes = %{$d->{classes}} ;
+	my %classes = %{$d->{classes}} ;
  	$info .= "The following Java classes have been bound to Perl:\n" ;
-    foreach my $class (sort keys %classes) {
+	foreach my $class (sort keys %classes) {
 		$info .= "\tclass $class:\n" ;
 
 		if (defined($d->{classes}->{$class}->{constructors})){
@@ -337,7 +346,7 @@ sub write_java {
 	my $modfname = $o->{modfname} ;
 	my $code = $o->{code} ;
 
-    $o->mkpath($o->{build_dir}) ;
+	$o->mkpath($o->{build_dir}) ;
 
 	open(JAVA, ">$build_dir/$modfname.java") or 
 		croak "Can't open $build_dir/$modfname.java: $!" ;
@@ -363,7 +372,7 @@ sub write_makefile {
 	my $modfname = $o->{modfname} ;
 
 	my $install = "$install_lib/auto/$modpname" ;
-    $o->mkpath($install) ;
+	$o->mkpath($install) ;
 
 	my $javac = $o->{Java}->{BIN} . "/javac" . portable("EXE_EXTENSION") ;
 	my $java = $o->{Java}->{BIN} . "/java" . portable("EXE_EXTENSION") ;
@@ -373,23 +382,18 @@ sub write_makefile {
 	open(MAKE, ">$build_dir/Makefile") or 
 		croak "Can't open $build_dir/Makefile: $!" ;
 
-	my $cp = portable("COPY") ;
-	my $pinstall = portable("RE_FILE", $install) ;
 	my $pjavac = portable("RE_FILE", $javac) ;
 	my $pjava = portable("RE_FILE", $java) ;
 	my $predir = portable("IO_REDIR") ;
 
 	print MAKE "class:\n" ;
 	print MAKE "\t$pjavac $modfname.java > cmd.out $predir\n" ;
-	print MAKE "\t$cp *.class $pinstall\n" ;
 	print MAKE "\n" ;
 	print MAKE "server:\n" ;
 	print MAKE "\t$pjavac InlineJavaServer.java > cmd.out $predir\n" ;
-	print MAKE "\t$cp *.class $pinstall\n" ;
 	print MAKE "\n" ;
 	print MAKE "report:\n" ;
 	print MAKE "\t$pjava InlineJavaServer report $debug $modfname *.class > cmd.out $predir\n" ;
-	print MAKE "\t$cp *.jdat $pinstall\n" ;
 
 	close(MAKE) ;
 
@@ -406,42 +410,77 @@ sub compile {
 	my $modfname = $o->{modfname} ;
 	my $install_lib = $o->{install_lib} ;
 
-	my $cwd = &cwd ;
+	my $install = "$install_lib/auto/$modpname" ;
+	my $pinstall = portable("RE_FILE", $install) ;
+
+	my $cwd = Cwd::getcwd() ;
+	if ($o->{config}->{UNTAINT}){
+	    ($cwd) = $cwd =~ /(.*)/ ;
+	}
 
 	my $make = $Config::Config{make} ;
 	if (! $make){
 		croak "Can't locate your make binary" ;
 	}
+	$make .= portable("EXE_EXTENSION") ;
+	my $path = $o->find_file_in_path([$make]) ;
+	if (! $path){
+		croak "Can't locate your make binary in your PATH" ;
+	}
+	my $pmake = portable("RE_FILE", "$path/$make") ;
 
 	foreach my $cmd (
-		"$make -s class",
-		"$make -s server",
-		"$make -s report",
+		"$pmake -s class",
+		["copy_pattern", $build_dir, "*.class", $pinstall, $o->{config}->{UNTAINT} || 0],
+		"$pmake -s server",
+		["copy_pattern", $build_dir, "*.class", $pinstall, $o->{config}->{UNTAINT} || 0],
+		"$pmake -s report",
+		["copy_pattern", $build_dir, "*.jdat", $pinstall, $o->{config}->{UNTAINT} || 0],
 		) {
 
-		if ($cmd){
-			debug("$cmd") ;
-			chdir $build_dir ;
-			my $res = system($cmd) ;
-			$res and do {
-				$o->error_copy ;
-				croak $o->error_msg($cmd, $cwd) ;
-			} ;
 
-		    chdir $cwd ;
+		if ($cmd){
+
+			chdir $build_dir ;
+			if (ref($cmd)){
+				debug_obj($cmd) ;
+				my $func = shift @{$cmd} ;
+				my @args = @{$cmd} ;
+				
+				debug("$func" . "(" . join(", ", @args) . ")") ;
+
+				no strict 'refs' ;
+				my $ret = $func->(@args) ;
+				if ($ret){
+					croak $ret ;					
+				}
+			}
+			else{
+				if ($o->{config}->{UNTAINT}){
+				    ($cmd) = $cmd =~ /(.*)/ ;
+				}
+
+				debug("$cmd") ;
+				my $res = my_system($cmd) ;
+				$res and do {
+					$o->error_copy ;
+					croak $o->compile_error_msg($cmd, $cwd) ;
+				} ;
+			}
+			chdir $cwd ;
 		}
 	}
 
-    if ($o->{config}{CLEAN_AFTER_BUILD} and 
-		not $o->{config}{REPORTBUG}){
-		$o->rmpath($o->{config}{DIRECTORY} . 'build/', $modpname) ;
-    }	
+	if ($o->{config}->{CLEAN_AFTER_BUILD} and 
+		not $o->{config}->{REPORTBUG}){
+		$o->rmpath($o->{config}->{DIRECTORY} . 'build/', $modpname) ;
+	}	
 
 	debug("compile done.") ;
 }
 
 
-sub error_msg {
+sub compile_error_msg {
 	my $o = shift ;
 	my $cmd = shift ;
 	my $cwd = shift ;
@@ -474,7 +513,7 @@ MSG
 
 # Load and Run the Java Code.
 sub load {
-    my $o = shift ;
+	my $o = shift ;
 	
 	if ($o->{Java}->{loaded}){
 		return ;
@@ -508,7 +547,7 @@ sub load {
 	my $java = $o->{Java}->{BIN} . "/java" . portable("EXE_EXTENSION") ;
 	my $cp = $ENV{CLASSPATH} ;
 
-	debug("  cwd is: " . cwd()) ;
+	debug("  cwd is: " . Cwd::getcwd()) ;
 	debug("  load is forking.") ;
 	my $pid = fork() ;
 	if (! defined($pid)){
@@ -536,9 +575,15 @@ sub load {
 		debug("  child here.") ;
 
 		my $debug = ($Inline::Java::DEBUG ? "true" : "false") ;
-		debug("    $java InlineJavaServer run $debug $port") ;
+		
+		my $cmd = "$java InlineJavaServer run $debug $port" ;
+		debug($cmd) ;
 
-		exec "$java InlineJavaServer run $debug $port"
+		if ($o->{config}->{UNTAINT}){
+		    ($cmd) = $cmd =~ /(.*)/ ;
+		}
+
+		my_exec($cmd)
 			or croak "Can't exec Java interpreter" ;
 	}
 }
@@ -641,8 +686,8 @@ sub bind_jdat {
 	my $modfname = $o->{modfname} ;
 
 	my $c = ":" ;
-    my %classes = %{$d->{classes}} ;
-    foreach my $class (sort keys %classes) {
+	my %classes = %{$d->{classes}} ;
+	foreach my $class (sort keys %classes) {
 		my $java_class = $class ;
 		$java_class =~ s/::/\$/g ;
 		my $class_name = $class ;
@@ -724,12 +769,11 @@ sub $method {
 
 CODE
 		}
-		
 		debug($code) ;
 
 		eval $code ;
+
 		croak $@ if $@ ;
-	
 	}
 }
 
@@ -785,6 +829,11 @@ sub setup_socket {
 }
 
 
+
+######################## General Functions ########################
+
+
+
 sub debug {
 	if ($Inline::Java::DEBUG){
 		my $str = join("", @_) ;
@@ -811,7 +860,7 @@ sub portable {
 		EXE_EXTENSION		=>	'',
 		ENV_VAR_PATH_SEP	=>	':',
 		PATH_SEP			=>	'/',
-		COPY				=>  'cp -f',
+		PATH_SEP_RE			=>	'/',
 		RE_FILE				=>  [],
 		IO_REDIR			=>  '2<&1',
 		GOT_ALARM			=>  1,
@@ -822,7 +871,7 @@ sub portable {
 			EXE_EXTENSION		=>	'.exe',
 			ENV_VAR_PATH_SEP	=>	';',
 			PATH_SEP			=>	'\\',
-			COPY				=>  'copy',
+			PATH_SEP_RE			=>	'\\\\',
 			RE_FILE				=>  ['/', '\\'],
 			IO_REDIR			=>  '',
 			GOT_ALARM			=>  0,
@@ -862,6 +911,52 @@ sub portable {
 			return $defmap->{$key} ;
 		}
 	}
+}
+
+
+sub copy_pattern {
+	my $src_dir = shift ;
+	my $pattern = shift ;
+	my $dest_dir = shift ;
+	my $untaint = shift ;
+
+	chdir($src_dir) ;
+
+	foreach my $file (glob($pattern)){
+		if ($untaint){
+			($file) = $file =~ /(.*)/ ;
+		}
+		debug("copy_pattern: $file, $dest_dir/$file") ;
+		if (! File::Copy::copy($file, "$dest_dir/$file")){
+			return "Can't copy $src_dir/$file to $dest_dir/$file: $!" ;
+		}
+	}
+
+	return '' ;
+}
+
+
+sub my_system {
+	my @args = @_ ;
+
+	my $envp = $ENV{PATH} ;
+	$ENV{PATH} = '' ;
+	my $ret = system(@args) ;
+	$ENV{PATH} = $envp ;
+
+	return $ret ;	
+}
+
+
+sub my_exec {
+	my @args = @_ ;
+
+	my $envp = $ENV{PATH} ;
+	$ENV{PATH} = '' ;
+	my $ret = exec(@args) ;
+	$ENV{PATH} = $envp ;
+
+	return $ret ;
 }
 
 
