@@ -103,6 +103,55 @@ sub __import_from_array {
 }
 
 
+sub __init_from_flat {
+	my $this = shift ;
+	my $dims = shift ;
+	my $list = shift ;
+	my $inline = shift ;
+	my $level = shift ;
+
+	my $extra = $ARRAYS->{$this} ;
+	my $nb_list = scalar(@{$list}) ;
+	my $parts = $dims->[0] ;
+
+	my $req_nb_elem = 1 ;
+	foreach my $d (@{$dims}){
+		$req_nb_elem *= $d ;
+	}
+	if ($req_nb_elem != $nb_list){
+		my $ds = "[" . join("][", @{$dims}) . "]" ;
+		croak "Corrupted array: $ds should contain $req_nb_elem elements, has $nb_list" ;
+	}
+
+	for (my $i = 0 ; $i < $parts ; $i++){
+		my $elem = undef ;
+		if (scalar(@{$dims}) == 1){
+			# We are at the bottom of the list.
+			$elem = $list->[$i] ;
+		}
+		else{
+			my $nb_elems = $nb_list / $parts ;
+			my @sub = splice(@{$list}, 0, $nb_elems) ;
+
+			my $java_class = $extra->{java_class} ;
+			$java_class =~ s/^\[// ;
+
+			my @dims = @{$dims} ;
+			shift @dims ;
+			my $obj = new Inline::Java::Array($java_class, $inline) ;
+			$obj->__init_from_flat(\@dims, \@sub, $inline, $level + 1) ;
+			$elem = $obj ;
+		}
+		my $nb = scalar(@{$this}) ;
+		$this->[$nb] = $elem ;
+	}
+
+	if (! $level){
+		Inline::Java::debug_obj($ARRAYS->{$this}) ;
+	}
+}
+
+
 # Checks if the contents of the Array match the ones prescribed
 # by the Java prototype.
 sub __analyze_array_class {

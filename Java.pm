@@ -38,6 +38,17 @@ my @CHILDREN = () ;
 my $CHILD_CNT = 0 ;
 my $DONE = 0 ;
 
+# Here is some code to figure out if we are running on command.com
+# shell under Windows.
+my $COMMAND_COM = 
+	(
+		($^O eq 'MSWin32')&&
+		(
+			($ENV{PERL_INLINE_JAVA_COMMAND_COM})||
+			(`ver` =~ /Win(dows )?(9[58])/)
+		)
+	) || 0 ;
+
 
 # This stuff is to control the termination of the Java Interpreter
 sub done {
@@ -144,13 +155,13 @@ sub _validate {
 		}
 		else{
 			if (! $ignore_other_configs){
-				croak "'$key' is not a valid config option for Inline::Java\n";	
+				croak "'$key' is not a valid config option for Inline::Java\n";
 			}
 		}
 	}
 
-	$o->set_classpath($install) ; 
-	$o->set_java_bin() ; 
+	$o->set_classpath($install) ;
+	$o->set_java_bin() ;
 
 	debug("validate done.") ;
 }
@@ -216,8 +227,8 @@ sub find_java_bin {
 	if (defined($path)){
 		$o->{Java}->{BIN} = $path ;
 	}
-	else{	
-		croak 
+	else{
+		croak
 			"Can't locate your java binaries ('java' and 'javac'). Please set one of the following to the proper directory:\n" .
 			"  - The BIN config option;\n" .
 			"  - The PERL_INLINE_JAVA_BIN environment variable;\n" .
@@ -233,9 +244,9 @@ sub find_file_in_path {
 
 	if (! defined($paths)){
 		my $psep = portable("ENV_VAR_PATH_SEP") ;
-		$paths = [(split(/$psep/, $ENV{PATH} || ''))] ;			
+		$paths = [(split(/$psep/, $ENV{PATH} || ''))] ;
 	}
-	
+
 	my $home = $ENV{HOME} ;
 	my $sep = portable("PATH_SEP_RE") ;
 
@@ -253,7 +264,7 @@ sub find_file_in_path {
 					next ;
 				}
 			}
-	
+
 			foreach my $file (@{$files}){
 				my $f = "$p/$file" ;
 				debug("  candidate: $f\n") ;
@@ -263,7 +274,7 @@ sub find_file_in_path {
 
 					return $p ;
 				}
-			}	
+			}
 		}
 	}
 
@@ -280,8 +291,7 @@ sub build {
 	}
 
 	$o->write_java ;
-	$o->write_makefile ;
-	
+
 	$o->compile ;
 
 	$o->{Java}->{built} = 1 ;
@@ -303,7 +313,7 @@ sub info {
 	my $d = $o->{Java}->{data} ;
 
 	my %classes = %{$d->{classes}} ;
- 	$info .= "The following Java classes have been bound to Perl:\n" ;
+	$info .= "The following Java classes have been bound to Perl:\n" ;
 	foreach my $class (sort keys %classes) {
 		$info .= "\tclass $class:\n" ;
 
@@ -348,55 +358,17 @@ sub write_java {
 
 	$o->mkpath($o->{build_dir}) ;
 
-	open(JAVA, ">$build_dir/$modfname.java") or 
+	open(JAVA, ">$build_dir/$modfname.java") or
 		croak "Can't open $build_dir/$modfname.java: $!" ;
 	Inline::Java::Init::DumpUserJavaCode(\*JAVA, $modfname, $code) ;
 	close(JAVA) ;
 
-	open(JAVA, ">$build_dir/InlineJavaServer.java") or 
+	open(JAVA, ">$build_dir/InlineJavaServer.java") or
 		croak "Can't open $build_dir/InlineJavaServer.java: $!" ;
 	Inline::Java::Init::DumpServerJavaCode(\*JAVA, $modfname) ;
 	close(JAVA) ;
 
 	debug("write_java done.") ;
-}
-
-
-# Writes the makefile.
-sub write_makefile {
-	my $o = shift ;
-
-	my $build_dir = $o->{build_dir} ;
-	my $install_lib = $o->{install_lib} ;
-	my $modpname = $o->{modpname} ;
-	my $modfname = $o->{modfname} ;
-
-	my $install = "$install_lib/auto/$modpname" ;
-	$o->mkpath($install) ;
-
-	my $javac = $o->{Java}->{BIN} . "/javac" . portable("EXE_EXTENSION") ;
-	my $java = $o->{Java}->{BIN} . "/java" . portable("EXE_EXTENSION") ;
-
-	my $debug = ($Inline::Java::DEBUG ? "true" : "false") ;
-
-	open(MAKE, ">$build_dir/Makefile") or 
-		croak "Can't open $build_dir/Makefile: $!" ;
-
-	my $pjavac = portable("RE_FILE", $javac) ;
-	my $pjava = portable("RE_FILE", $java) ;
-
-	print MAKE "class:\n" ;
-	print MAKE "\t\"$pjavac\" $modfname.java\n" ;
-	print MAKE "\n" ;
-	print MAKE "server:\n" ;
-	print MAKE "\t\"$pjavac\" InlineJavaServer.java\n" ;
-	print MAKE "\n" ;
-	print MAKE "report:\n" ;
-	print MAKE "\t\"$pjava\" InlineJavaServer report $debug $modfname *.class\n" ;
-
-	close(MAKE) ;
-
-	debug("write_makefile done.") ;
 }
 
 
@@ -410,34 +382,37 @@ sub compile {
 	my $install_lib = $o->{install_lib} ;
 
 	my $install = "$install_lib/auto/$modpname" ;
+	$o->mkpath($install) ;
+
+	my $javac = $o->{Java}->{BIN} . "/javac" . portable("EXE_EXTENSION") ;
+	my $java = $o->{Java}->{BIN} . "/java" . portable("EXE_EXTENSION") ;
+
 	my $pinstall = portable("RE_FILE", $install) ;
+	my $predir = portable("IO_REDIR") ;
+	my $pjavac = portable("RE_FILE", $javac) ;
+	my $pjava = portable("RE_FILE", $java) ;
 
 	my $cwd = Cwd::getcwd() ;
 	if ($o->{config}->{UNTAINT}){
 	    ($cwd) = $cwd =~ /(.*)/ ;
 	}
 
-	my $make = $Config::Config{make} ;
-	if (! $make){
-		croak "Can't locate your make binary" ;
-	}
-	$make .= portable("EXE_EXTENSION") ;
-	my $path = $o->find_file_in_path([$make]) ;
-	if (! $path){
-		croak "Can't locate your make binary in your PATH" ;
-	}
-	my $pmake = portable("RE_FILE", "$path/$make") ;
-	my $predir = portable("IO_REDIR") ;
+	my $debug = ($Inline::Java::DEBUG ? "true" : "false") ;
 
+	# When we run the commands, we quote them because in WIN32 you need it if
+	# the programs are in directories which contain spaces. Unfortunately, in
+	# WIN9x, when you quote a command, it masks it's exit value, and 0 is always
+	# returned. Therefore a command failure is not detected.
+	# copy_pattern will take care of checking whether there are actually files
+	# to be copied, and if not will exit the script.
 	foreach my $cmd (
-		"\"$pmake\" -s class > cmd.out $predir",
+		"\"$pjavac\" $modfname.java > cmd.out $predir",
 		["copy_pattern", $build_dir, "*.class", $pinstall, $o->{config}->{UNTAINT} || 0],
-		"\"$pmake\" -s server > cmd.out $predir",
+		"\"$pjavac\" InlineJavaServer.java > cmd.out $predir",
 		["copy_pattern", $build_dir, "*.class", $pinstall, $o->{config}->{UNTAINT} || 0],
-		"\"$pmake\" -s report > cmd.out $predir",
+		"\"$pjava\" InlineJavaServer report $debug $modfname *.class > cmd.out $predir",
 		["copy_pattern", $build_dir, "*.jdat", $pinstall, $o->{config}->{UNTAINT} || 0],
 		) {
-
 
 		if ($cmd){
 
@@ -446,13 +421,13 @@ sub compile {
 				debug_obj($cmd) ;
 				my $func = shift @{$cmd} ;
 				my @args = @{$cmd} ;
-				
+
 				debug("$func" . "(" . join(", ", @args) . ")") ;
 
 				no strict 'refs' ;
 				my $ret = $func->(@args) ;
 				if ($ret){
-					croak $ret ;					
+					croak $ret ;
 				}
 			}
 			else{
@@ -471,10 +446,10 @@ sub compile {
 		}
 	}
 
-	if ($o->{config}->{CLEAN_AFTER_BUILD} and 
+	if ($o->{config}->{CLEAN_AFTER_BUILD} and
 		not $o->{config}->{REPORTBUG}){
 		$o->rmpath($o->{config}->{DIRECTORY} . 'build/', $modpname) ;
-	}	
+	}
 
 	debug("compile done.") ;
 }
@@ -514,7 +489,7 @@ MSG
 # Load and Run the Java Code.
 sub load {
 	my $o = shift ;
-	
+
 	if ($o->{Java}->{loaded}){
 		return ;
 	}
@@ -540,12 +515,16 @@ sub load {
 	close(JDAT) ;
 
 	debug(@lines) ;
+	my $contents = join("", @lines) ;
+	if ($contents =~ /^\s*$/){
+		croak "Corrupted code information file $install/$class.jdat" ;
+	}
 
 	$o->load_jdat(@lines) ;
 	$o->bind_jdat() ;
 
 	my $java = $o->{Java}->{BIN} . "/java" . portable("EXE_EXTENSION") ;
-	my $cp = $ENV{CLASSPATH} ;
+	my $pjava = portable("RE_FILE", $java) ;
 
 	debug("  cwd is: " . Cwd::getcwd()) ;
 	debug("  load is forking.") ;
@@ -575,15 +554,17 @@ sub load {
 		debug("  child here.") ;
 
 		my $debug = ($Inline::Java::DEBUG ? "true" : "false") ;
-		
-		my $cmd = "$java InlineJavaServer run $debug $port" ;
-		debug($cmd) ;
+
+		my @cmd = ($pjava, 'InlineJavaServer', 'run', $debug, $port) ;
+		debug(join(" ", @cmd)) ;
 
 		if ($o->{config}->{UNTAINT}){
-		    ($cmd) = $cmd =~ /(.*)/ ;
+			foreach my $cmd (@cmd){
+			    ($cmd) = $cmd =~ /(.*)/ ;
+			}
 		}
 
-		my_exec($cmd)
+		my_exec(@cmd)
 			or croak "Can't exec Java interpreter" ;
 	}
 }
@@ -611,7 +592,7 @@ sub load_jdat {
 			$d->{classes}->{$current_class}->{methods}->{instance} = {} ;
 			$d->{classes}->{$current_class}->{fields} = {} ;
 			$d->{classes}->{$current_class}->{fields}->{static} = {} ;
-			$d->{classes}->{$current_class}->{fields}->{instance} = {} ; 
+			$d->{classes}->{$current_class}->{fields}->{instance} = {} ;
 		}
 		elsif ($line =~ /^constructor \((.*)\)$/){
 			my $signature = $1 ;
@@ -673,7 +654,7 @@ sub get_fields {
 	while (my ($field, $value) = each %{$d->{classes}->{$class}->{fields}->{instance}}){
 		$fields->{$field} = $value ;
 	}
-	
+
 	return $fields ;
 }
 
@@ -712,7 +693,7 @@ CODE
 sub new {
 	my \$class = shift ;
 	my \@args = \@_ ;
-	
+
 	my \@new_args = \$class->__validate_prototype('new', [\@args], [$signature]) ;
 
 	my \$ret = undef ;
@@ -745,10 +726,10 @@ CODE
 sub $method {
 	my \$class = shift ;
 	my \@args = \@_ ;
-	
+
 	my \@new_args = \$class->__validate_prototype('$method', [\@args], [$signature]) ;
 
-	my \$proto = new Inline::Java::Protocol(undef, \$Inline::Java::INLINE->{'$modfname'}) ;	
+	my \$proto = new Inline::Java::Protocol(undef, \$Inline::Java::INLINE->{'$modfname'}) ;
 
 	my \$ret = undef ;
 	eval {
@@ -774,9 +755,9 @@ CODE
 sub $method {
 	my \$this = shift ;
 	my \@args = \@_ ;
-	
+
 	my \@new_args = \$this->__validate_prototype('$method', [\@args], [$signature]) ;
-	
+
 	my \$ret = undef ;
 	eval {
 		\$ret = \$this->{private}->{proto}->CallJavaMethod('$method', \@new_args) ;
@@ -801,7 +782,7 @@ CODE
 sub setup_socket {
 	my $o = shift ;
 	my $port = shift ;
-	
+
 	my $timeout = $o->{Java}->{STARTUP_DELAY} ;
 
 	my $modfname = $o->{modfname} ;
@@ -883,6 +864,7 @@ sub portable {
 		RE_FILE				=>  [],
 		IO_REDIR			=>  '2>&1',
 		GOT_ALARM			=>  1,
+		COMMAND_COM			=>  0,
 	} ;
 
 	my $map = {
@@ -892,8 +874,10 @@ sub portable {
 			PATH_SEP			=>	'\\',
 			PATH_SEP_RE			=>	'\\\\',
 			RE_FILE				=>  ['/', '\\'],
-			# IO_REDIR			=>  '',
+			# 2>&1 doesn't work under command.com
+			IO_REDIR			=>  ($COMMAND_COM ? '' : undef),
 			GOT_ALARM			=>  0,
+			COMMAND_COM			=>	$COMMAND_COM,
 		}
 	} ;
 
@@ -941,7 +925,20 @@ sub copy_pattern {
 
 	chdir($src_dir) ;
 
-	foreach my $file (glob($pattern)){
+	my @flist = glob($pattern) ;
+
+	if (portable('COMMAND_COM')){
+		if (! scalar(@flist)){
+			croak "No files to copy. Previous command failed under command.com?" ;
+		}
+		foreach my $file (@flist){
+			if (! (-s $file)){
+				croak "File $file has size zero. Previous command failed under WIN9x?" ;
+			}
+		}
+	}
+
+	foreach my $file (@flist){
 		if ($untaint){
 			($file) = $file =~ /(.*)/ ;
 		}
@@ -963,7 +960,7 @@ sub my_system {
 	my $ret = system(@args) ;
 	$ENV{PATH} = $envp ;
 
-	return $ret ;	
+	return $ret ;
 }
 
 
@@ -983,3 +980,4 @@ sub my_exec {
 1 ;
 
 __END__
+
