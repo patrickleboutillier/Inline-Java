@@ -15,7 +15,7 @@ typedef struct {
 	jobject	ijs ;
 	jmethodID jni_main_mid ;
 	jmethodID process_command_mid ;
-	jboolean debug ;
+	jint debug ;
 	int destroyed ;
 } InlineJavaJNIVM ;
 
@@ -138,7 +138,7 @@ new(CLASS, classpath, debug)
 	RETVAL->debug = debug ;
 	RETVAL->destroyed = 0 ;
 
-	options[0].optionString = (RETVAL->debug ? "-verbose" : "-verbose:") ;
+	options[0].optionString = ((RETVAL->debug > 5) ? "-verbose" : "-verbose:") ;
 	cp = (char *)malloc((strlen(classpath) + 128) * sizeof(char)) ;
 	sprintf(cp, "-Djava.class.path=%s", classpath) ;
 	options[1].optionString = cp ;
