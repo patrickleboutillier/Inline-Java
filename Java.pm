@@ -4,8 +4,8 @@ package Inline::Java ;
 
 use strict ;
 
+$Inline::Java::VERSION = '0.10' ;
 
-$Inline::Java::VERSION = '0.01' ;
 
 # DEBUG is set via the DEBUG config
 if (! defined($Inline::Java::DEBUG)){
@@ -17,17 +17,18 @@ $Inline::Java::INLINE = {} ;
 
 
 require Inline ;
+use Carp ;
 use Config ;
-use Data::Dumper ;
 use FindBin ;
 use File::Copy ;
-use Carp ;
 use Cwd ;
+use Data::Dumper ;
 
 use IO::Socket ;
 
 use Inline::Java::Class ;
 use Inline::Java::Object ;
+use Inline::Java::Array ;
 use Inline::Java::Protocol ;
 # Must be last.
 use Inline::Java::Init ;
@@ -62,10 +63,10 @@ sub done {
 
 	my $ec = 0 ;
 	if (! $signal){
-		debug("killed by natural death.") ;
+		Inline::Java::debug("killed by natural death.") ;
 	}
 	else{
-		debug("killed by signal SIG$signal.") ;
+		Inline::Java::debug("killed by signal SIG$signal.") ;
 		$ec = 1 ;
 	}
 
@@ -81,10 +82,10 @@ sub done {
 
 	foreach my $pid (@CHILDREN){
 		my $ok = kill 9, $pid ;
-		debug("killing $pid...", ($ok ? "ok" : "failed")) ;
+		Inline::Java::debug("killing $pid...", ($ok ? "ok" : "failed")) ;
 	}
 
-	debug("exiting with $ec") ;
+	Inline::Java::debug("exiting with $ec") ;
 
 	# In Windows, it is possible that the process will hang here if
 	# the children are not all dead. But they should be. Really.
@@ -153,9 +154,6 @@ sub _validate {
 		if ($key eq 'BIN'){
 		    $o->{Java}->{$key} = $value ;
 		}
-		elsif ($key eq 'USE_JNI'){
-		    $o->{Java}->{$key} = $value ;
-		}
 		elsif ($key eq 'CLASSPATH'){
 		    $o->{Java}->{$key} = $value ;
 		}
@@ -175,6 +173,9 @@ sub _validate {
 			$o->{Java}->{$key} = $value ;
 			$Inline::Java::DEBUG = $value ;
 		}
+		elsif ($key eq 'USE_JNI'){
+			$o->{Java}->{$key} = $value ;
+		}
 		else{
 			if (! $ignore_other_configs){
 				croak "'$key' is not a valid config option for Inline::Java\n";
@@ -189,7 +190,7 @@ sub _validate {
 	$o->set_classpath($install) ;
 	$o->set_java_bin() ;
 
-	debug("validate done.") ;
+	Inline::Java::debug("validate done.") ;
 }
 
 
@@ -226,7 +227,7 @@ sub set_classpath {
 
 	$ENV{CLASSPATH} = join($sep, keys %cp) ;
 
-	debug("  classpath: " . $ENV{CLASSPATH}) ;
+	Inline::Java::debug("  classpath: " . $ENV{CLASSPATH}) ;
 }
 
 
@@ -283,13 +284,13 @@ sub find_file_in_path {
 		$paths = [(split(/$psep/, $ENV{PATH} || ''))] ;
 	}
 
-	debug_obj($paths) ;
+	Inline::Java::debug_obj($paths) ;
 
 	my $home = $ENV{HOME} ;
 	my $sep = portable("PATH_SEP_RE") ;
 
 	foreach my $p (@{$paths}){
-		debug("path element: $p") ;
+		Inline::Java::debug("path element: $p") ;
 		if ($p !~ /^\s*$/){
 			$p =~ s/$sep+$// ;
 
@@ -306,10 +307,10 @@ sub find_file_in_path {
 			my $found = 0 ;
 			foreach my $file (@{$files}){
 				my $f = "$p/$file" ;
-				debug("  candidate: $f\n") ;
+				Inline::Java::debug("  candidate: $f\n") ;
 
 				if (-f $f){
-					debug("  found file $file in $p") ;
+					Inline::Java::debug("  found file $file in $p") ;
 					$found++ ;
 				}
 			}
@@ -409,7 +410,7 @@ sub write_java {
 	Inline::Java::Init::DumpServerJavaCode(\*JAVA, $modfname) ;
 	close(JAVA) ;
 
-	debug("write_java done.") ;
+	Inline::Java::debug("write_java done.") ;
 }
 
 
@@ -459,11 +460,11 @@ sub compile {
 
 			chdir $build_dir ;
 			if (ref($cmd)){
-				debug_obj($cmd) ;
+				Inline::Java::debug_obj($cmd) ;
 				my $func = shift @{$cmd} ;
 				my @args = @{$cmd} ;
 
-				debug("$func" . "(" . join(", ", @args) . ")") ;
+				Inline::Java::debug("$func" . "(" . join(", ", @args) . ")") ;
 
 				no strict 'refs' ;
 				my $ret = $func->(@args) ;
@@ -476,7 +477,7 @@ sub compile {
 					($cmd) = $cmd =~ /(.*)/ ;
 				}
 
-				debug("$cmd") ;
+				Inline::Java::debug("$cmd") ;
 				my $res = system($cmd) ;
 				$res and do {
 					$o->error_copy ;
@@ -492,7 +493,7 @@ sub compile {
 		$o->rmpath($o->{config}->{DIRECTORY} . 'build/', $modpname) ;
 	}
 
-	debug("compile done.") ;
+	Inline::Java::debug("compile done.") ;
 }
 
 
@@ -555,7 +556,7 @@ sub load {
 	my @lines = <JDAT> ;
 	close(JDAT) ;
 
-	debug(@lines) ;
+	Inline::Java::debug(@lines) ;
 	my $contents = join("", @lines) ;
 	if ($contents =~ /^\s*$/){
 		croak "Corrupted code information file $install/$class.jdat" ;
@@ -567,8 +568,8 @@ sub load {
 	my $java = $o->{Java}->{BIN} . "/java" . portable("EXE_EXTENSION") ;
 	my $pjava = portable("RE_FILE", $java) ;
 
-	debug("  cwd is: " . Cwd::getcwd()) ;
-	debug("  load is forking.") ;
+	Inline::Java::debug("  cwd is: " . Cwd::getcwd()) ;
+	Inline::Java::debug("  load is forking.") ;
 	my $pid = fork() ;
 	if (! defined($pid)){
 		croak "Can't fork to start Java interpreter" ;
@@ -579,7 +580,7 @@ sub load {
 
 	if ($pid){
 		# parent here
-		debug("  parent here.") ;
+		Inline::Java::debug("  parent here.") ;
 
 		push @CHILDREN, $pid ;
 
@@ -588,16 +589,16 @@ sub load {
 		$Inline::Java::INLINE->{$modfname} = $o ;
 
 		$o->{Java}->{loaded} = 1 ;
-		debug("load done.") ;
+		Inline::Java::debug("load done.") ;
 	}
 	else{
 		# child here
-		debug("  child here.") ;
+		Inline::Java::debug("  child here.") ;
 
 		my $debug = ($Inline::Java::DEBUG ? "true" : "false") ;
 
 		my @cmd = ($pjava, 'InlineJavaServer', 'run', $debug, $port) ;
-		debug(join(" ", @cmd)) ;
+		Inline::Java::debug(join(" ", @cmd)) ;
 
 		if ($o->{config}->{UNTAINT}){
 			foreach my $cmd (@cmd){
@@ -618,11 +619,13 @@ sub load_jdat {
 
 	$o->{Java}->{data} = {} ;
 	my $d = $o->{Java}->{data} ;
+	
+	my $re = '[\w.\$\[;]+' ;
 
 	my $current_class = undef ;
 	foreach my $line (@lines){
 		chomp($line) ;
-		if ($line =~ /^class ([\w.\$]+)$/){
+		if ($line =~ /^class ($re)$/){
 			# We found a class definition
 			$current_class = $1 ;
 			$current_class =~ s/[\$.]/::/g ;
@@ -641,44 +644,33 @@ sub load_jdat {
 			if (! defined($d->{classes}->{$current_class}->{constructors})){
 				$d->{classes}->{$current_class}->{constructors} = [] ;
 			}
-			else {
-				croak "Can't bind class $current_class: class has more than one constructor" ;
-			}
 			push @{$d->{classes}->{$current_class}->{constructors}}, [split(", ", $signature)] ;
 		}
-		elsif ($line =~ /^method (\w+) ([\w.\$]+) (\w+)\((.*)\)$/){
+		elsif ($line =~ /^method (\w+) ($re) (\w+)\((.*)\)$/){
 			my $static = $1 ;
 			my $declared_in = $2 ;
 			my $method = $3 ;
 			my $signature = $4 ;
 
-			if ($declared_in eq 'java.lang.Object'){
-				next ;
-			}
-
 			if (! defined($d->{classes}->{$current_class}->{methods}->{$static}->{$method})){
 				$d->{classes}->{$current_class}->{methods}->{$static}->{$method} = [] ;
 			}
-			else{
-				croak "Can't bind class $current_class: class has more than one '$method' method (including inherited methods)" ;
-			}
 			push @{$d->{classes}->{$current_class}->{methods}->{$static}->{$method}}, [split(", ", $signature)] ;
 		}
-		elsif ($line =~ /^field (\w+) ([\w.\$]+) (\w+) ([\w.]+)$/){
+		elsif ($line =~ /^field (\w+) ($re) (\w+) ($re)$/){
 			my $static = $1 ;
 			my $declared_in = $2 ;
 			my $field = $3 ;
 			my $type = $4 ;
 
-			if ($declared_in eq 'java.lang.Object'){
-				next ;
+			if (! defined($d->{classes}->{$current_class}->{fields}->{$static}->{$field})){
+				$d->{classes}->{$current_class}->{fields}->{$static}->{$field} = [] ;
 			}
-
-			$d->{classes}->{$current_class}->{fields}->{$static}->{$field} = $type ;
+			push @{$d->{classes}->{$current_class}->{fields}->{$static}->{$field}}, $type ;
 		}
 	}
 
-	# debug_obj($d) ;
+	# Inline::Java::debug_obj($d) ;
 }
 
 
@@ -718,16 +710,13 @@ sub bind_jdat {
 package $o->{pkg}::$class ;
 \@$o->{pkg}::$class$c:ISA = qw(Inline::Java::Object) ;
 \$$o->{pkg}::$class$c:EXISTS = 1 ;
+\$$o->{pkg}::$class$c:JAVA_CLASS = '$java_class' ;
+
 use Carp ;
 
 CODE
 
 		if (defined($d->{classes}->{$class}->{constructors})){
-			my @sign = @{$d->{classes}->{$class}->{constructors}->[0]} ;
-			my $signature = '' ;
-			if (scalar(@sign)){
-				$signature = "'" . join("', '", @sign). "'" ;
-			}
 			my $pkg = $o->{pkg} ;
 			$code .= <<CODE;
 
@@ -735,11 +724,14 @@ sub new {
 	my \$class = shift ;
 	my \@args = \@_ ;
 
-	my \@new_args = \$class->__validate_prototype('new', [\@args], [$signature]) ;
+	my \$o = \$Inline::Java::INLINE->{'$modfname'} ;
+	my \$d = \$o->{Java}->{data} ;
+	my \$signatures = \$d->{classes}->{'$class'}->{constructors} ;
+	my (\$proto, \$new_args) = \$class->__validate_prototype('new', [\@args], \$signatures, \$o) ;
 
 	my \$ret = undef ;
 	eval {
-		\$ret = \$class->__new('$java_class', \$Inline::Java::INLINE->{'$modfname'}, -1, \@new_args) ;
+		\$ret = \$class->__new('$java_class', \$o, -1, \$proto, \$new_args) ;
 	} ;
 	croak \$@ if \$@ ;
 
@@ -768,13 +760,16 @@ sub $method {
 	my \$class = shift ;
 	my \@args = \@_ ;
 
-	my \@new_args = \$class->__validate_prototype('$method', [\@args], [$signature]) ;
+	my \$o = \$Inline::Java::INLINE->{'$modfname'} ;
+	my \$d = \$o->{Java}->{data} ;
+	my \$signatures = \$d->{classes}->{'$class'}->{methods}->{static}->{'$method'} ;
+	my (\$proto, \$new_args) = \$class->__validate_prototype('$method', [\@args], \$signatures, \$o) ;
 
-	my \$proto = new Inline::Java::Protocol(undef, \$Inline::Java::INLINE->{'$modfname'}) ;
+	my \$pc = new Inline::Java::Protocol(undef, \$o) ;
 
 	my \$ret = undef ;
 	eval {
-		\$ret = \$proto->CallStaticJavaMethod('$java_class', '$method', \@new_args) ;
+		\$ret = \$pc->CallStaticJavaMethod('$java_class', '$method', \$proto, \$new_args) ;
 	} ;
 	croak \$@ if \$@ ;
 
@@ -797,11 +792,14 @@ sub $method {
 	my \$this = shift ;
 	my \@args = \@_ ;
 
-	my \@new_args = \$this->__validate_prototype('$method', [\@args], [$signature]) ;
+	my \$o = \$Inline::Java::INLINE->{'$modfname'} ;
+	my \$d = \$o->{Java}->{data} ;
+	my \$signatures = \$d->{classes}->{'$class'}->{methods}->{instance}->{'$method'} ;
+	my (\$proto, \$new_args) = \$this->__validate_prototype('$method', [\@args], \$signatures, \$o) ;
 
 	my \$ret = undef ;
 	eval {
-		\$ret = \$this->{private}->{proto}->CallJavaMethod('$method', \@new_args) ;
+		\$ret = \$this->{private}->{proto}->CallJavaMethod('$method', \$proto, \$new_args) ;
 	} ;
 	croak \$@ if \$@ ;
 
@@ -810,7 +808,8 @@ sub $method {
 
 CODE
 		}
-		debug($code) ;
+
+		# Inline::Java::debug($code) ;
 
 		eval $code ;
 
@@ -874,12 +873,11 @@ sub setup_socket {
 ######################## General Functions ########################
 
 
-
 sub debug {
 	if ($Inline::Java::DEBUG){
 		my $str = join("", @_) ;
 		while (chomp($str)) {}
-		print STDERR "perl: $str\n" ;
+		print STDERR "perl $$: $str\n" ;
 	}
 }
 
@@ -932,26 +930,26 @@ sub portable {
 				my $f = $map->{$^O}->{$key}->[0] ;
 				my $t = $map->{$^O}->{$key}->[1] ;
 				$val =~ s/$f/$t/eg ;
-				debug("portable: $key => $val for $^O is '$val'") ;
+				Inline::Java::debug("portable: $key => $val for $^O is '$val'") ;
 				return $val ;
 			}
 			else{
-				debug("portable: $key for $^O is 'undef'") ;
+				Inline::Java::debug("portable: $key for $^O is 'undef'") ;
 				return undef ;
 			}
 		}
 		else{
-			debug("portable: $key for $^O is '$map->{$^O}->{$key}'") ;
+			Inline::Java::debug("portable: $key for $^O is '$map->{$^O}->{$key}'") ;
 			return $map->{$^O}->{$key} ;
 		}
 	}
 	else{
 		if ($key =~ /^RE_/){
-			debug("portable: $key => $val for $^O is default '$val'") ;
+			Inline::Java::debug("portable: $key => $val for $^O is default '$val'") ;
 			return $val ;
 		}
 		else{
-			debug("portable: $key for $^O is default '$defmap->{$key}'") ;
+			Inline::Java::debug("portable: $key for $^O is default '$defmap->{$key}'") ;
 			return $defmap->{$key} ;
 		}
 	}
@@ -983,7 +981,7 @@ sub copy_pattern {
 		if ($untaint){
 			($file) = $file =~ /(.*)/ ;
 		}
-		debug("copy_pattern: $file, $dest_dir/$file") ;
+		Inline::Java::debug("copy_pattern: $file, $dest_dir/$file") ;
 		if (! File::Copy::copy($file, "$dest_dir/$file")){
 			return "Can't copy $src_dir/$file to $dest_dir/$file: $!" ;
 		}
