@@ -22,6 +22,7 @@ my @files = (
 	'jni.h',
 	'jni_md.h',
 	$jvm_lib,
+	'jvm.cfg',
 ) ;
 if ($jvm_so ne $jvm_lib){
 	push @files, $jvm_so ;
@@ -35,6 +36,8 @@ my $files = {
 		discard		=> qr/include-old/,
 	},
 	$jvm_lib	=> {
+	},
+	'jvm.cfg'	=> {
 	},
 	$jvm_so		=> {
 	},
@@ -174,27 +177,30 @@ sub CleanSoDirs {
 
 sub FindDefaultVMType {
 	my $type = undef ;
-	my $cfg = File::Spec->catfile($jdk_dir, "jre", "lib", "jvm.cfg") ;
-	if (open(CFG, "<$cfg")){
-		while (<CFG>){
-			my $line = $_ ;
-			chomp($line) ;
-			$line =~ s/^\s+// ;
-			$line =~ s/\s+$// ;
+	my $choices = $files->{'jvm.cfg'}->{choices} ;
+	if (scalar(@{$choices})){
+		my $cfg = File::Spec->catfile($choices->[0], 'jvm.cfg') ;
+		if (open(CFG, "<$cfg")){
+			while (<CFG>){
+				my $line = $_ ;
+				chomp($line) ;
+				$line =~ s/^\s+// ;
+				$line =~ s/\s+$// ;
 
-			if (! $line){
-				next ;
+				if (! $line){
+					next ;
+				}
+				elsif ($line =~ /^#/){
+					next ;
+				}
+				else{
+					$type = split(/\s+/, $line) ;
+					$type =~ s/^-// ;
+					last ;
+				}
 			}
-			elsif ($line =~ /^#/){
-				next ;
-			}
-			else{
-				$type = $line ;
-				$type =~ s/^-// ;
-				last ;
-			}
+			close(CFG) ;
 		}
-		close(CFG) ;
 	}
 
 	return $type ;
