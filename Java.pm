@@ -384,16 +384,15 @@ sub write_makefile {
 
 	my $pjavac = portable("RE_FILE", $javac) ;
 	my $pjava = portable("RE_FILE", $java) ;
-	my $predir = portable("IO_REDIR") ;
 
 	print MAKE "class:\n" ;
-	print MAKE "\t$pjavac $modfname.java > cmd.out $predir\n" ;
+	print MAKE "\t\"$pjavac\" $modfname.java\n" ;
 	print MAKE "\n" ;
 	print MAKE "server:\n" ;
-	print MAKE "\t$pjavac InlineJavaServer.java > cmd.out $predir\n" ;
+	print MAKE "\t\"$pjavac\" InlineJavaServer.java\n" ;
 	print MAKE "\n" ;
 	print MAKE "report:\n" ;
-	print MAKE "\t$pjava InlineJavaServer report $debug $modfname *.class > cmd.out $predir\n" ;
+	print MAKE "\t\"$pjava\" InlineJavaServer report $debug $modfname *.class\n" ;
 
 	close(MAKE) ;
 
@@ -428,13 +427,14 @@ sub compile {
 		croak "Can't locate your make binary in your PATH" ;
 	}
 	my $pmake = portable("RE_FILE", "$path/$make") ;
+	my $predir = portable("IO_REDIR") ;
 
 	foreach my $cmd (
-		"$pmake -s class",
+		"\"$pmake\" -s class > cmd.out $predir",
 		["copy_pattern", $build_dir, "*.class", $pinstall, $o->{config}->{UNTAINT} || 0],
-		"$pmake -s server",
+		"\"$pmake\" -s server > cmd.out $predir",
 		["copy_pattern", $build_dir, "*.class", $pinstall, $o->{config}->{UNTAINT} || 0],
-		"$pmake -s report",
+		"\"$pmake\" -s report > cmd.out $predir",
 		["copy_pattern", $build_dir, "*.jdat", $pinstall, $o->{config}->{UNTAINT} || 0],
 		) {
 
@@ -881,7 +881,7 @@ sub portable {
 		PATH_SEP			=>	'/',
 		PATH_SEP_RE			=>	'/',
 		RE_FILE				=>  [],
-		IO_REDIR			=>  '2<&1',
+		IO_REDIR			=>  '2>&1',
 		GOT_ALARM			=>  1,
 	} ;
 
@@ -892,7 +892,7 @@ sub portable {
 			PATH_SEP			=>	'\\',
 			PATH_SEP_RE			=>	'\\\\',
 			RE_FILE				=>  ['/', '\\'],
-			IO_REDIR			=>  '',
+			# IO_REDIR			=>  '',
 			GOT_ALARM			=>  0,
 		}
 	} ;
