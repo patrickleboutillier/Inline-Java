@@ -21,7 +21,7 @@ WriteMakefile(
 
 
 if (Inline::Java::Portable::portable('COMMAND_COM')){
-	print "\nFixing Makefile for Win32...\n" ;
+	print "\nFixing Makefile for Win9x...\n" ;
 	open(MAKEFILE, "<Makefile") or die "Can't open Makefile for reading" ;
 	my @lines = <MAKEFILE> ;
 	close(MAKEFILE) ;
