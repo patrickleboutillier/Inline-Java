@@ -240,7 +240,7 @@ sub Choose {
 		}
 		print "[$cnt] $f $hint\n" ;
 	}
-	my $idx = AskSub("Please select from the above list which '$f' to use $type [1-$cnt]",
+	my $idx = AskSub("Please select from the above list which '$f' to use [1-$cnt]",
 		sub {(($_[0] >= 1)&&($_[0] <= $cnt))}) ;
 
 	$o->{selected} = $o->{choices}->[int($idx) - 1] ;
