@@ -294,10 +294,6 @@ created the following functions:
    sub main::Pod_::DESTROY { ... }
 
 Note that only the public methods are exported to Perl. 
-Note also that the class itself is not public. With 
-C<Inline::Java> you cannot create public classes because Java 
-requires that they be defined in a .java file of the same 
-name (C<Inline::Java> can't work this way).
 
 Inner classes are also supported, you simply need to supply a reference
 to an outer class object as the first parameter of the constructor:
@@ -391,7 +387,8 @@ are not known to C<Inline::Java>. This is also true for return types:
 =for comment
 
 Objects of types unknown to Perl can exist in the Perl space, you just 
-can't call any of their methods.
+can't call any of their methods. See the STUDYING section for more
+information on how to tell C<Inline::Java> to learn about these classes.
    Z<>
 
 
@@ -430,8 +427,8 @@ Note: Watch out for typos when accessing members in the static fashion,
 
 =head1 ARRAYS
 
-You can also send and receive arrays. This is done simply by using Perl 
-lists:
+You can also send, receive and modify arrays. This is done simply by
+using Perl lists:
 
 =for comment
 
@@ -537,7 +534,7 @@ parameter version of the cast function to do this:
 
 This tells C<Inline::Java> to validate your Perl list as a String [], and 
 then cast it as an Object.
- 
+
 Here is how to construct the array type representations:
 
   [<type>  -> 1 dimensional <type> array
@@ -573,9 +570,9 @@ type of the exception. Here is a example of a typical use:
 
       class Pod_9 {
          public Pod_9(boolean t) throws Exception {
-			if (t){
+            if (t){
                throw new Exception("ouch!") ;
-			}
+            }
          }
       }
    END
@@ -615,7 +612,7 @@ You can now (as of 0.31), call Perl functions from Java. To do this you
 need to create an org.perl.inline.java.InlinePerlJavaCaller object. You 
 can then use the CallPerl method to call your Perl function. You pass the
 parameters using an array of Objects. The method will return the result in 
-an Object, which you must then cast to as a String (if your Perl method 
+an Object, which you must then cast as a String (if your Perl method 
 returns a Perl scalar), or anything else if your Perl function returns 
 an "Inline::Java" object. Here is a example of a typical use:
 
@@ -652,7 +649,6 @@ an "Inline::Java" object. Here is a example of a typical use:
    my $match = $re->match("Inline::Java", "^Inline") ;
    print($match . "\n") ; # prints 1
 
-	
    sub regexp { 
       my $target = shift ;
       my $pattern = shift ;
@@ -703,8 +699,12 @@ SWING events in Perl. Here's an example:
             try {
                CallPerl("main", "button_pressed", new Object [] {}) ;
             }
-            catch (InlineJavaPerlException pe){ }
-            catch (InlineJavaException pe) { pe.printStackTrace() ;}
+            catch (InlineJavaPerlException pe){
+               // $@ is in pe.GetObject()
+			}
+            catch (InlineJavaException pe) {
+               pe.printStackTrace() ;
+            }
          }
       }
    END
@@ -984,7 +984,7 @@ For information about other Inline languages, see L<Inline-Support>.
 Inline::Java's mailing list is <inline@perl.org>. 
 To subscribe, send an email to <inline-subscribe@perl.org>
 
-Inline::Java's home page is <http://inline.perl.org/java/>
+Inline::Java's home page is http://inline.perl.org/java/
    Z<>
 
 
@@ -1010,7 +1010,7 @@ represent the primitive types.
 =item 2
 
 If you upgrade C<Inline::Java> from a previous version, be sure to delete
-your Inline directory so that C<Inline::Java>'s own Java classes get 
+your _Inline directory so that C<Inline::Java>'s own Java classes get 
 rebuilt to match the Perl code.
 
 =back
@@ -1025,12 +1025,11 @@ Brian Ingerson <ingy@cpan.org> is the author of Inline.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2003, Patrick LeBoutillier.
+Copyright (c) 2001-2004, Patrick LeBoutillier.
 
 All Rights Reserved. This module is free software. It may be used,
 redistributed and/or modified under the terms of the Perl Artistic
-License.
-
-(see http://www.perl.com/perl/misc/Artistic.html)
+License. See http://www.perl.com/perl/misc/Artistic.html for more
+details.
 
 =cut
