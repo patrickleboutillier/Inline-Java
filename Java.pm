@@ -1,4 +1,4 @@
-package Inline::Java;
+package Inline::Java ;
 @Inline::Java::ISA = qw(Inline) ;
 
 
@@ -8,7 +8,9 @@ use strict ;
 $Inline::Java::VERSION = '0.01' ;
 
 # DEBUG is set via the JAVA_DEBUG config
-$Inline::Java::private::DEBUG = undef ;
+if (! defined($Inline::Java::DEBUG)){
+	$Inline::Java::DEBUG = 0 ;
+}
 
 
 require Inline ;
@@ -20,10 +22,10 @@ use Cwd qw(cwd abs_path) ;
 
 use IO::Socket ;
 
-use Inline::Java::private::Object ;
-use Inline::Java::private::Protocol ;
+use Inline::Java::Object ;
+use Inline::Java::Protocol ;
 # Must be last.
-use Inline::Java::private::Init ;
+use Inline::Java::Init ;
 
 
 # Stores a list of the Java interpreters running
@@ -128,7 +130,7 @@ sub _validate {
 		}
 		elsif ($key eq 'JAVA_DEBUG'){
 		    $o->{Java}->{$key} = $value ;
-			$Inline::Java::private::DEBUG = $value ;
+			$Inline::Java::DEBUG = $value ;
 		}
 		else{
 			if (! $ignore_other_configs){
@@ -151,15 +153,16 @@ sub build {
 
 	my $install_lib = $o->{install_lib} ;
 	my $modpname = $o->{modpname} ;
+
 	my $install = "$install_lib/auto/$modpname" ;
+	$o->set_classpath($install) ; 
 
 	$o->write_java ;
 	$o->write_makefile ;
+	
 	$o->compile ;
 
 	$o->{Java}->{built} = 1 ;
-
-	set_classpath($install) ;
 }
 
 
@@ -225,9 +228,12 @@ sub write_java {
 
 	open(JAVA, ">$build_dir/$modfname.java") or 
 		croak "Can't open $build_dir/$modfname.java: $!" ;
+	Inline::Java::Init::DumpUserJavaCode(\*JAVA, $modfname, $code) ;
+	close(JAVA) ;
 
-	Inline::Java::private::Init::DumpJavaCode(\*JAVA, $modfname, $code) ;
-
+	open(JAVA, ">$build_dir/InlineJavaServer.java") or 
+		croak "Can't open $build_dir/InlineJavaServer.java: $!" ;
+	Inline::Java::Init::DumpServerJavaCode(\*JAVA, $modfname) ;
 	close(JAVA) ;
 
 	debug("write_java done.") ;
@@ -249,7 +255,7 @@ sub write_makefile {
 	my $javac = $o->{Java}->{JAVA_BIN} . "/javac" ;
 	my $java = $o->{Java}->{JAVA_BIN} . "/java" ;
 
-	my $debug = ($Inline::Java::private::DEBUG ? "true" : "false") ;
+	my $debug = ($Inline::Java::DEBUG ? "true" : "false") ;
 
 	open(MAKE, ">$build_dir/Makefile") or 
 		croak "Can't open $build_dir/Makefile: $!" ;
@@ -258,8 +264,12 @@ sub write_makefile {
 	print MAKE "\t$javac $modfname.java > cmd.out 2<&1\n" ;
 	print MAKE "\tcp -f *.class $install\n" ;
 	print MAKE "\n" ;
+	print MAKE "server:\n" ;
+	print MAKE "\t$javac InlineJavaServer.java > cmd.out 2<&1\n" ;
+	print MAKE "\tcp -f *.class $install\n" ;
+	print MAKE "\n" ;
 	print MAKE "report:\n" ;
-	print MAKE "\t$java $modfname report $debug *.class > cmd.out 2<&1\n" ;
+	print MAKE "\t$java InlineJavaServer report $debug $modfname *.class > cmd.out 2<&1\n" ;
 	print MAKE "\tcp -f *.jdat $install\n" ;
 
 	close(MAKE) ;
@@ -272,7 +282,8 @@ sub set_classpath {
 	my $o = shift ;
 	my $path = shift ;
 
-	my @cp = split(/:/, "$ENV{CLASSPATH}:$o->{Java}->{JAVA_CLASSPATH}:$path") ;
+	my @cp = split(/:/, join(":", $ENV{CLASSPATH}, $o->{Java}->{JAVA_CLASSPATH}, $path)) ;
+
 	my %cp = map { ($_ !~ /^\s*$/ ? ($_, 1) : ()) } @cp ;
 
 	$ENV{CLASSPATH} = join(":", keys %cp) ;
@@ -306,12 +317,22 @@ sub find_java_bin {
 	my $o = shift ;
 	my @paths = @_ ;
 	
+	my $home = $ENV{HOME} ;
+
 	my $found = 0 ;
 	foreach my $p (@paths){
 		if ($p !~ /^\s*$/){
 			$p =~ s/\/+$// ;
-			my $home = (getpwuid($<))[7] ;
-			$p =~ s/^~/$home/ ;
+
+			if ($p =~ /^~/){
+				if ($home){
+					$p =~ s/^~/$home/ ;
+				}
+				else{
+					# -f don't work with ~/...
+					next ;
+				}
+			}
 	
 			my $java = $p . "/java" ;
 			if (-f $java){
@@ -351,17 +372,21 @@ sub compile {
 
 	foreach my $cmd (
 		"make -s class",
+		"make -s server",
 		"make -s report",
 		) {
 
-		chdir $build_dir ;
-		my $res = system($cmd) ;
-		$res and do {
-			$o->error_copy ;
-			croak $o->error_msg($cmd, $cwd) ;
-		} ;
+		if ($cmd){
+			debug("$cmd") ;
+			chdir $build_dir ;
+			my $res = system($cmd) ;
+			$res and do {
+				$o->error_copy ;
+				croak $o->error_msg($cmd, $cwd) ;
+			} ;
 
-	    chdir $cwd ;
+		    chdir $cwd ;
+		}
 	}
 
     if ($o->{config}{CLEAN_AFTER_BUILD} and 
@@ -414,12 +439,12 @@ sub load {
 	my $modpname = $o->{modpname} ;
 	my $modfname = $o->{modfname} ;
 
-	my $class_dir = "$install_lib/auto/$modpname" ;
+	my $install = "$install_lib/auto/$modpname" ;
 	my $class = $modfname ;
 
 	# Now we must open the jdat file and read it's contents.
-	if (! open(JDAT, "$class_dir/$class.jdat")){
-		croak "Can't open $class_dir/$class.jdat code information file" ;
+	if (! open(JDAT, "$install/$class.jdat")){
+		croak "Can't open $install/$class.jdat code information file" ;
 	}
 	my @lines = <JDAT> ;
 	close(JDAT) ;
@@ -430,7 +455,9 @@ sub load {
 	$o->bind_jdat() ;
 
 	my $java = $o->{Java}->{JAVA_BIN} . "/java" ;
+	my $cp = $ENV{CLASSPATH} ;
 
+	debug("  cwd is: " . cwd()) ;
 	debug("  load is forking.") ;
 	my $pid = fork() ;
 	if (! defined($pid)){
@@ -438,14 +465,17 @@ sub load {
 	}
 	$CHILD_CNT++ ;
 
+	my $port = $o->{Java}->{JAVA_PORT} + ($CHILD_CNT - 1) ;
+
 	if ($pid){
 		# parent here
 		debug("  parent here.") ;
 
 		push @CHILDREN, $pid ;
 
-		$o->setup_socket() ;		
+		$o->setup_socket($port) ;
 	
+		$Inline::Java::LOADED = 1 ;
 		$o->{Java}->{loaded} = 1 ;
 		debug("load done.") ;
 	}
@@ -453,12 +483,10 @@ sub load {
 		# child here
 		debug("  child here.") ;
 
-		my $port = $o->{Java}->{JAVA_PORT} + ($CHILD_CNT - 1) ;
-		my $debug = ($Inline::Java::private::DEBUG ? "true" : "false") ;
-		debug("    $java $class run $debug $port") ;
+		my $debug = ($Inline::Java::DEBUG ? "true" : "false") ;
+		debug("    $java InlineJavaServer run $debug $port") ;
 
-		chdir $class_dir ;
-		exec $java, $class, "run", $debug, $port, 
+		exec "$java InlineJavaServer run $debug $port"
 			or croak "Can't exec Java interpreter" ;
 	}
 }
@@ -550,7 +578,7 @@ sub bind_jdat {
 		$class_name =~ s/^(.*)::// ;
 		my $code = <<CODE;
 package $o->{pkg}::$class ;
-\@$o->{pkg}::$class$c:ISA = qw(Inline::Java::private::Object) ;
+\@$o->{pkg}::$class$c:ISA = qw(Inline::Java::Object) ;
 \$$o->{pkg}::$class$c:EXISTS = 1 ;
 
 CODE
@@ -593,14 +621,9 @@ sub $method {
 	my \$err = \$class->__validate_prototype([\@args], [($signature)]) ;
 	croak \$err if \$err ;
 	
-	my \$proto = new Inline::Java::private::Protocol(undef, '$modfname') ;
+	my \$proto = new Inline::Java::Protocol(undef, '$modfname') ;
 
 	return \$proto->CallStaticJavaMethod('$java_class', '$pkg', '$method', \@args) ;
-}
-
-
-sub $class_name {
-	return new(\@_) ;
 }
 
 CODE
@@ -622,11 +645,6 @@ sub $method {
 	return \$this->{private}->{proto}->CallJavaMethod('$method', \@args) ;
 }
 
-
-sub $class_name {
-	return new(\@_) ;
-}
-
 CODE
 		}
 		
@@ -642,9 +660,9 @@ CODE
 # Sets up the communication socket to the Java program
 sub setup_socket {
 	my $o = shift ;
-
+	my $port = shift ;
+	
 	my $timeout = $o->{Java}->{JAVA_STARTUP_DELAY} ;
-	my $port = $o->{Java}->{JAVA_PORT} + ($CHILD_CNT - 1) ;
 
 	my $modfname = $o->{modfname} ;
 	my $socket = undef ;
@@ -679,12 +697,12 @@ sub setup_socket {
 	}
 
 	$socket->autoflush(1) ;
-	$Inline::Java::private::Protocol::socket->{$modfname} = $socket ;
+	$Inline::Java::Protocol::socket->{$modfname} = $socket ;
 }
 
 
 sub debug {
-	if ($Inline::Java::private::DEBUG){
+	if ($Inline::Java::DEBUG){
 		my $str = join("", @_) ;
 		while (chomp($str)) {}
 		print STDERR "perl: $str\n" ;
@@ -695,7 +713,7 @@ sub debug {
 sub debug_obj {
 	my $obj = shift ;
 
-	if ($Inline::Java::private::DEBUG){
+	if ($Inline::Java::DEBUG){
 		print STDERR Dumper($obj) ;
 	}
 }

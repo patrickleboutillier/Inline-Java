@@ -1,4 +1,4 @@
-package Inline::Java::private::Protocol ;
+package Inline::Java::Protocol ;
 
 
 use strict ;
@@ -9,7 +9,7 @@ use Data::Dumper ;
 
 
 # This will be set when the code is loaded.
-$Inline::Java::private::Protocol::socket = {} ;
+$Inline::Java::Protocol::socket = {} ;
 
 
 sub new {
@@ -150,7 +150,7 @@ sub ValidateArgs {
 			push @ret, "undef:" ;
 		}
 		elsif (ref($arg)){
-			if (! UNIVERSAL::isa($arg, "Inline::Java::private::Object")){
+			if (! UNIVERSAL::isa($arg, "Inline::Java::Object")){
 				croak "A Java method can only have Java objects or scalars as arguments" ;
 			}
 			my $class = $arg->{private}->{class} ;
@@ -171,7 +171,7 @@ sub Send {
 	my $data = shift ;
 	my $const = shift ;
 
-	my $sock = $Inline::Java::private::Protocol::socket->{$this->{module}} ;
+	my $sock = $Inline::Java::Protocol::socket->{$this->{module}} ;
 	print $sock $data . "\n" or
 		croak "Can't send packet over socket: $!" ;
 
@@ -212,7 +212,7 @@ sub Send {
 			}
 			else{
 				Inline::Java::debug("  returned class doesn't exist!") ;
-				$obj = Inline::Java::private::Object->__new($class, $pkg, $this->{module}, $id) ;
+				$obj = Inline::Java::Object->__new($class, $pkg, $this->{module}, $id) ;
 			}
 			return $obj ;
 		}
@@ -228,11 +228,11 @@ __DATA__
 
 
 class InlineJavaProtocol {
-	<INLINE_MODFNAME> main ;
+	InlineJavaServer main ;
 	String cmd ;
 	String response ;
 
-	InlineJavaProtocol(<INLINE_MODFNAME> _m, String _cmd) {
+	InlineJavaProtocol(InlineJavaServer _m, String _cmd) {
 		main = _m ;
 		cmd = _cmd ;
 	}

@@ -1,13 +1,21 @@
-package Inline::Java::private::Init ;
+package Inline::Java::Init ;
 
 my $DATA = join('', <DATA>) ;
-my $OBJECT_DATA = join('', <Inline::Java::private::Object::DATA>) ;
-my $PROTO_DATA = join('', <Inline::Java::private::Protocol::DATA>) ;
+my $OBJECT_DATA = join('', <Inline::Java::Object::DATA>) ;
+my $PROTO_DATA = join('', <Inline::Java::Protocol::DATA>) ;
 
-sub DumpJavaCode {
+sub DumpUserJavaCode {
 	my $fh = shift ;
 	my $modfname = shift ;
 	my $code = shift ;
+
+	print $fh $code ;
+}
+
+
+sub DumpServerJavaCode {
+	my $fh = shift ;
+	my $modfname = shift ;
 
 	my $java = $DATA ;
 	my $java_obj = $OBJECT_DATA ;
@@ -15,9 +23,6 @@ sub DumpJavaCode {
 
 	$java =~ s/<INLINE_JAVA_OBJECT>/$java_obj/g ;
 	$java =~ s/<INLINE_JAVA_PROTOCOL>/$java_proto/g ;
-	$java =~ s/<INLINE_JAVA_CODE>/$code/g ;
-
-	$java =~ s/<INLINE_MODFNAME>/$modfname/g ;
 
 	print $fh $java ;
 }
@@ -29,25 +34,20 @@ sub DumpJavaCode {
 
 
 __DATA__
-
 import java.net.* ;
 import java.io.* ;
 import java.util.* ;
 import java.lang.reflect.* ;
 
 
-<INLINE_JAVA_CODE>
-
-
-public class <INLINE_MODFNAME> {
+public class InlineJavaServer {
 	public ServerSocket ss ;
-	String module = "<INLINE_MODFNAME>" ;
 	boolean debug = false ;
 
 	public HashMap objects = new HashMap() ;
 	public int objid = 1 ;
 
-	<INLINE_MODFNAME>(String[] argv) {
+	InlineJavaServer(String[] argv) {
 		String mode = argv[0] ;
 		debug = new Boolean(argv[1]).booleanValue() ;
 
@@ -103,13 +103,16 @@ public class <INLINE_MODFNAME> {
 
 
 	void Report (String [] class_list, int idx){
+		String module = class_list[idx] ;
+		idx++ ;
+
 		// First we must open the file
 		try {
 			File dat = new File(module + ".jdat") ;
 			PrintWriter pw = new PrintWriter(new FileWriter(dat)) ;
 
 			for (int i = idx ; i < class_list.length ; i++){
-				if (! class_list[i].startsWith(module)){
+				if (! class_list[i].startsWith("InlineJavaServer")){
 					StringBuffer name = new StringBuffer(class_list[i]) ;
 					name.replace(name.length() - 6, name.length(), "") ;
 					Class c = Class.forName(name.toString()) ;
@@ -169,7 +172,7 @@ public class <INLINE_MODFNAME> {
 
 
 	public static void main(String[] argv) {
-		new <INLINE_MODFNAME>(argv) ;
+		new InlineJavaServer(argv) ;
 	}
 
 
@@ -200,6 +203,3 @@ public class <INLINE_MODFNAME> {
 		}
 	}
 }
-
-
-

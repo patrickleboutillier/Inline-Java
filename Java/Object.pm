@@ -1,5 +1,5 @@
-package Inline::Java::private::Object ;
-@Inline::Java::private::Object::ISA = qw(Tie::StdHash) ;
+package Inline::Java::Object ;
+@Inline::Java::Object::ISA = qw(Tie::StdHash) ;
 
 
 use strict ;
@@ -7,7 +7,7 @@ use strict ;
 use Carp ;
 use Data::Dumper ;
 use Tie::Hash ;
-use Inline::Java::private::Protocol ;
+use Inline::Java::Protocol ;
 
 
 
@@ -31,14 +31,14 @@ sub __new {
 	my @args = @_ ;
 
 	my %this = () ;
-	tie %this, 'Inline::Java::private::Object' ;
+	tie %this, 'Inline::Java::Object' ;
 	bless (\%this, $class) ;
 
 	my $this = \%this ;
 	$this->{private} = {} ;
 	$this->{private}->{class} = $java_class ;
 	$this->{private}->{pkg} = $pkg ;
-	$this->{private}->{proto} = new Inline::Java::private::Protocol($this->{private}, $module) ;
+	$this->{private}->{proto} = new Inline::Java::Protocol($this->{private}, $module) ;
 	if ($objid <= 0){
 		$this->{private}->{proto}->CreateJavaObject($java_class, @args) ;
 		Inline::Java::debug("Object created in perl script ($class):") ;
