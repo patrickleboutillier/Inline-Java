@@ -33,7 +33,7 @@ sub __new {
 	my %this = () ;
 
 	my $knot = tie %this, 'Inline::Java::Object' ;
-	my $this = bless (\%this, $class) ;
+	my $this = bless(\%this, $class) ;
 
 	$this->{private} = {} ;
 	$this->{private}->{class} = $class ;
@@ -111,56 +111,37 @@ sub __validate_prototype {
 }
 
 
-sub AUTOLOAD {
+sub __get_member {
 	my $this = shift ;
-	my @args = @_ ;
+	my $key = shift ;
 
-	use vars qw($AUTOLOAD) ;
-	my $func_name = $AUTOLOAD ;
-	# Strip package from $func_name, Java will take of finding the correct
-	# method.
-	$func_name =~ s/^(.*)::// ;
-
-	Inline::Java::debug("$func_name") ;
-
-	croak "No public method $func_name defined for class $this->{private}->{class}" ;	
-}
-
-
-# Here an object in destroyed. this function seems to be called twice
-# for each object. I think it's because the $this reference is both blessed
-# and tied to the same package.
-sub DESTROY {
-	my $this = shift ;
-	
-	if (! $Inline::Java::DONE){
-		if (! $this->{private}->{deleted}){
-			$this->{private}->{deleted} = 1 ;
-			eval {
-				$this->{private}->{proto}->DeleteJavaObject($this) ;
-			} ;
-			croak "In method DESTROY of class $this->{private}->{class}: $@" if $@ ;
-		}
-		else{
-			Inline::Java::debug("Object destructor called more than once!") ;
-		}
+ 	if ($key eq "private"){
+ 		return $this->SUPER::FETCH($key) ;
 	}
+
+	Inline::Java::debug("fetching member variable $key") ;
+
+	my $inline = $Inline::Java::INLINE->{$this->{private}->{module}} ;
+	my $fields = $inline->get_fields($this->{private}->{java_class}) ;
+
+	if ($fields->{$key}){
+		# Here when the user is requesting a field, we can't know which
+		# one the user wants, so we select the first one.
+		my $proto = $fields->{$key}->[0] ;
+
+		my $ret = $this->{private}->{proto}->GetJavaMember($key, [$proto], [undef]) ;
+		Inline::Java::debug("returning member ($ret)") ;
+	
+		return $ret ;
+	}
+	else{
+		croak "No public member variable $key defined for class $this->{private}->{class}" ;
+	}
+
 }
 
 
-
-######################## Hash Methods ########################
-
-
-
-sub TIEHASH {
-	my $class = shift ;
-
-	return $class->SUPER::TIEHASH(@_) ;
-}
-
-
-sub STORE {
+sub __set_member {
 	my $this = shift ;
 	my $key = shift ;
 	my $value = shift ;
@@ -218,32 +199,69 @@ sub STORE {
 }
 
 
+sub AUTOLOAD {
+	my $this = shift ;
+	my @args = @_ ;
+
+	use vars qw($AUTOLOAD) ;
+	my $func_name = $AUTOLOAD ;
+	# Strip package from $func_name, Java will take of finding the correct
+	# method.
+	$func_name =~ s/^(.*)::// ;
+
+	Inline::Java::debug("$func_name") ;
+
+	croak "No public method $func_name defined for class $this->{private}->{class}" ;	
+}
+
+
+# Here an object in destroyed. this function seems to be called twice
+# for each object. I think it's because the $this reference is both blessed
+# and tied to the same package.
+sub DESTROY {
+	my $this = shift ;
+	
+	if (! $Inline::Java::DONE){
+		if (! $this->{private}->{deleted}){
+			$this->{private}->{deleted} = 1 ;
+			eval {
+				$this->{private}->{proto}->DeleteJavaObject($this) ;
+			} ;
+			croak "In method DESTROY of class $this->{private}->{class}: $@" if $@ ;
+		}
+		else{
+			Inline::Java::debug("Object destructor called more than once!") ;
+		}
+	}
+}
+
+
+
+######################## Hash Methods ########################
+
+
+
+sub TIEHASH {
+	my $class = shift ;
+
+	return $class->SUPER::TIEHASH(@_) ;
+}
+
+
+sub STORE {
+	my $this = shift ;
+	my $key = shift ;
+	my $value = shift ;
+
+	return $this->__set_member($key, $value) ;
+}
+
+
 sub FETCH {
  	my $this = shift ;
  	my $key = shift ;
 
- 	if ($key eq "private"){
- 		return $this->SUPER::FETCH($key) ;
-	}
-
-	Inline::Java::debug("fetching member variable $key") ;
-
-	my $inline = $Inline::Java::INLINE->{$this->{private}->{module}} ;
-	my $fields = $inline->get_fields($this->{private}->{java_class}) ;
-
-	if ($fields->{$key}){
-		# Here when the user is requesting a field, we can't know which
-		# one the user wants, so we select the first one.
-		my $proto = $fields->{$key}->[0] ;
-
-		my $ret = $this->{private}->{proto}->GetJavaMember($key, [$proto], [undef]) ;
-		Inline::Java::debug("returning member ($ret)") ;
-	
-		return $ret ;
-	}
-	else{
-		croak "No public member variable $key defined for class $this->{private}->{class}" ;
-	}
+	return $this->__get_member($key) ;
 }
 
 

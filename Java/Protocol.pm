@@ -5,6 +5,7 @@ use strict ;
 
 $Inline::Java::Protocol::VERSION = '0.10' ;
 
+use Inline::Java::Object ;
 use Inline::Java::Array ;
 use Carp ;
 
@@ -249,6 +250,7 @@ sub Send {
 		croak "Can't send packet over socket: $!" ;
 
 	my $resp = <$sock> ;
+
 	Inline::Java::debug("  packet recv is $resp") ;
 
 	if (! $resp){
@@ -292,6 +294,8 @@ sub Send {
 			$this->{obj_priv}->{java_class} = $class ;
 			$this->{obj_priv}->{id} = $id ;
 			$this->{obj_priv}->{known_to_perl} = $known ;
+			
+			return undef ;
 		}
 		else{
 			my $obj = undef ;
@@ -315,6 +319,7 @@ sub Send {
 			}
 
 			Inline::Java::debug("returning stub...") ;
+
 			return $obj ;
 		}
 	}

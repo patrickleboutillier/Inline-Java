@@ -46,6 +46,62 @@ sub length {
 }
 
 
+sub __get_element {
+ 	my $this = shift ;
+ 	my $idx = shift ;
+
+	my $max = $this->length() - 1 ;
+	if ($idx > $max){
+		croak("Java array index out of bounds ($idx > $max)")
+	}
+
+	my $obj = $this->__get_object() ; 
+
+	my $ret = undef ;
+	eval {
+		$ret = $obj->{private}->{proto}->GetJavaMember($idx, ['java.lang.Object'], [undef]) ;
+	} ;
+	croak $@ if $@ ;
+
+	return $ret ;
+}
+
+
+sub __set_element {
+ 	my $this = shift ;
+ 	my $idx = shift ;
+ 	my $s = shift ;
+
+	my $max = $this->length() - 1 ;
+	if ($idx > $max){
+		croak("Java array index out of bounds ($idx > $max)")
+	}
+
+	my $obj = $this->__get_object() ; 
+
+	# Now we need to find out if what we are trying to set matches
+	# the array.
+	my $java_class = $obj->{private}->{java_class} ;
+	my $elem_class = $java_class ;
+	my $an = new Inline::Java::ArrayNorm($java_class) ;
+	if ($an->{req_nb_dim} > 1){
+		$elem_class =~ s/^\[// ;
+	}
+	else{
+		$elem_class = $an->{req_element_class} ;
+	}
+
+	my $ret = undef ;
+	eval {
+		my ($new_args, $score) = Inline::Java::Class::CastArguments([$s], [$elem_class], $obj->{private}->{module}) ;
+		$ret = $obj->{private}->{proto}->SetJavaMember($idx, [$elem_class], $new_args) ;
+	} ;
+	croak $@ if $@ ;
+
+	return $ret ;
+}
+
+
 sub __get_object {
 	my $this = shift ;
 
@@ -109,33 +165,7 @@ sub STORE {
  	my $idx = shift ;
  	my $s = shift ;
 
-	my $max = $this->length() - 1 ;
-	if ($idx > $max){
-		croak("Java array index out of bounds ($idx > $max)")
-	}
-
-	my $obj = $this->__get_object() ; 
-
-	# Now we need to find out if what we are trying to set matches
-	# the array.
-	my $java_class = $obj->{private}->{java_class} ;
-	my $elem_class = $java_class ;
-	my $an = new Inline::Java::ArrayNorm($java_class) ;
-	if ($an->{req_nb_dim} > 1){
-		$elem_class =~ s/^\[// ;
-	}
-	else{
-		$elem_class = $an->{req_element_class} ;
-	}
-
-	my $ret = undef ;
-	eval {
-		my ($new_args, $score) = Inline::Java::Class::CastArguments([$s], [$elem_class], $obj->{private}->{module}) ;
-		$ret = $obj->{private}->{proto}->SetJavaMember($idx, [$elem_class], $new_args) ;
-	} ;
-	croak $@ if $@ ;
-
-	return $ret ;
+	return $this->__set_element($idx, $s) ;
 } 
 
 
@@ -143,20 +173,7 @@ sub FETCH {
  	my $this = shift ;
  	my $idx = shift ;
 
-	my $max = $this->length() - 1 ;
-	if ($idx > $max){
-		croak("Java array index out of bounds ($idx > $max)")
-	}
-
-	my $obj = $this->__get_object() ; 
-
-	my $ret = undef ;
-	eval {
-		$ret = $obj->{private}->{proto}->GetJavaMember($idx, ['java.lang.Object'], [undef]) ;
-	} ;
-	croak $@ if $@ ;
-
-	return $ret ;
+	return $this->__get_element($idx) ;
 }
 
 
