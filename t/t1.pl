@@ -13,12 +13,13 @@ use Inline Config =>
 use Inline (
 	Java => qq|
 		class t  {
-			static int s = 0 ;
+			public static int s = 0 ;
 
 			public t(){
 			}
 		}
 	|, 
+	PRINT_INFO => 1,
 ) ;
 
 Inline::Java::release_JVM() ;
