@@ -14,6 +14,8 @@ my $build_jni = ($jdk_dir ? 1 : 0) ;
 my $jvm_lib = Inline::Java::Portable::portable('JVM_LIB') ;
 my $jvm_so = Inline::Java::Portable::portable('JVM_SO') ;
 
+my %so_dirs = () ;
+
 my @files = (
 	'jni.h',
 	'jni_md.h',
@@ -31,10 +33,8 @@ my $files = {
 		discard		=> qr/include-old/,
 	},
 	$jvm_lib	=> {
-		discard		=> qr/green_threads/,
 	},
 	$jvm_so		=> {
-		discard		=> qr/green_threads/,
 	},
 } ;
 
@@ -124,6 +124,14 @@ else{
 
 sub search {
 	my $file = $_ ;
+
+	my $ext = Inline::Java::Portable::portable('SO_EXT') ;
+	if ($File::Find::dir =~ /jre/){
+		if ($file =~ /\.$ext$/){
+			print $File::Find::dir . "\n" ;
+			$so_dirs{$File::Find::dir} = 1 ;
+		}
+	}
 
 	foreach my $f (@files){
 		if ($file eq $f){

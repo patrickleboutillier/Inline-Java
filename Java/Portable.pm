@@ -44,6 +44,7 @@ sub portable {
 		GOT_ALARM			=>  $Config{d_alarm},
 		GOT_FORK			=>	$Config{d_fork},
 		ENV_VAR_PATH_SEP	=>	$Config{path_sep},
+		SO_EXT				=>	$Config{dlext},
 		ENV_VAR_PATH_SEP_CP	=>	':',
 		IO_REDIR			=>  '2>&1',
 		COMMAND_COM			=>  0,
