@@ -78,25 +78,21 @@ sub __validate_prototype {
 	my $method = shift ;
 	my $args = shift ;
 	my $protos = shift ;
-	my $static = shift ;
 	my $inline = shift ;
 
-	my $matched_protos = [] ;
-	my $new_arguments = [] ;
-	my $scores = [] ;
-
-	my $prototypes = [] ;
-	foreach my $s (values %{$protos}){
-		if ($static == $s->{STATIC}){
-			push @{$prototypes}, $s->{SIGNATURE} ;
-		}
-	}
+	my @matched = () ;
  
-	my $nb_proto = scalar(@{$prototypes}) ;
+	my $nb_proto = scalar(values %{$protos}) ;
 	my @errors = () ;
-	foreach my $proto (@{$prototypes}){
+	foreach my $s (values %{$protos}){
+		my $proto = $s->{SIGNATURE} ;
+		my $stat = $s->{STATIC} ;
 		my $new_args = undef ;
 		my $score = undef ;
+
+		my $s = Inline::Java::Protocol->CreateSignature($proto) ;
+		Inline::Java::debug("Matching arguments to $method$s") ;
+		
 		eval {
 			($new_args, $score) = Inline::Java::Class::CastArguments($args, $proto, $inline->{modfname}) ;
 		} ;
@@ -111,20 +107,29 @@ sub __validate_prototype {
 		}
 
 		# We passed!
-		push @{$matched_protos}, $proto ;
-		push @{$new_arguments}, $new_args ;
-		push @{$scores}, $score ;
+		Inline::Java::debug("Match successful: score is $score") ;
+		my $h = {
+			PROTO =>	$proto,
+			NEW_ARGS =>	$new_args,
+			SCORE =>	$score,
+			STATIC =>	$stat,
+		} ;
+		push @matched, $h ;
 	}
 
-	if (! scalar(@{$matched_protos})){
+	my $nb_matched = scalar(@matched) ;
+	if (! $nb_matched){
 		my $name = $this->__get_private()->{class} ;
 		my $sa = Inline::Java::Protocol->CreateSignature($args) ;
 		my $msg = "In method $method of class $name: Can't find any signature that matches " .
 			"the arguments passed $sa.\nAvailable signatures are:\n"  ;
 		my $i = 0 ;
-		foreach my $proto (@{$prototypes}){
+		foreach my $s (values %{$protos}){
+			my $proto = $s->{SIGNATURE} ;	
+			my $static = ($s->{STATIC} ? "static " : "") ;
+
 			my $s = Inline::Java::Protocol->CreateSignature($proto) ;
-			$msg .= "\t$method$s\n" ;
+			$msg .= "\t$static$method$s\n" ;
 			$msg .= "\t\terror was: $errors[$i]" ;
 			$i++ ;
 		}
@@ -132,23 +137,50 @@ sub __validate_prototype {
 		croak $msg ;
 	}
 
-	# Amongst the ones that matched, we need to select the one with the 
-	# highest score. For now, the last one will do.
-	
-	my $nb = scalar(@{$matched_protos}) ;
-	return ($matched_protos->[$nb - 1], $new_arguments->[$nb - 1]) ;
+	my $chosen = undef ;
+	my $max = 0 ;
+	foreach my $h (@matched){
+		my $s = $h->{SCORE} ;
+		if ($s >= $max){
+			# Here if the scores are equal we take the last one since
+			# we start with inherited methods and move to class mothods
+			$max = $s ;
+			$chosen = $h ;
+		}
+	}
+
+	if ((! $chosen->{STATIC})&&(! ref($this))){
+		# We are trying to call an instance method without an object
+		# reference
+		croak "Method $method of class $inline->{pkg}::$this must be called from an object reference" ;
+	}
+
+	return (
+		$chosen->{PROTO}, 
+		$chosen->{NEW_ARGS}, 
+		$chosen->{STATIC},
+	) ;
 }
 
 
 sub __isa {
 	my $this = shift ;
 	my $proto = shift ;
-
+	
+	my $ret = undef ;
 	eval {
-		$this->__get_private()->{proto}->ISA($proto) ;
+		$ret = $this->__get_private()->{proto}->ISA($proto) ;
 	} ;
+	if ($@){
+		return ($@, 0) ;
+	}
 
-	return $@ ;
+	if ($ret == -1){
+		my $c = $this->__get_private()->{java_class} ;
+		return ("$c is not a kind of $proto", 0) ;
+	}
+
+	return ('', $ret) ;
 }
 
 
@@ -241,15 +273,15 @@ sub DESTROY {
 			} ;
 			my $name = $this->__get_private()->{class} ;
 			croak "In method DESTROY of class $name: $@" if $@ ;
-		}
 		
-		# Here we have a circular reference so we need to break it
-		# so that the memory is collected.
-		my $priv = $this->__get_private() ;
-		my $proto = $priv->{proto} ;
-		$priv->{proto} = undef ;
-		$proto->{obj_priv} = undef ;
-		$PRIVATES->{$this} = undef ;
+			# Here we have a circular reference so we need to break it
+			# so that the memory is collected.
+			my $priv = $this->__get_private() ;
+			my $proto = $priv->{proto} ;
+			$priv->{proto} = undef ;
+			$proto->{obj_priv} = undef ;
+			$PRIVATES->{$this} = undef ;
+		}
 	}
 	else{
 		# Here we can't untie because we still have a reference in $PRIVATES

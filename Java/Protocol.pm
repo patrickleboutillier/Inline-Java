@@ -58,10 +58,11 @@ sub ISA {
 	my $this = shift ;
 	my $proto = shift ;
 
-	Inline::Java::debug("checking if $this is a $proto") ;
-
 	my $id = $this->{obj_priv}->{id} ;
 	my $class = $this->{obj_priv}->{java_class} ;
+
+	Inline::Java::debug("checking if $class is a $proto") ;
+
 	my $data = join(" ", 
 		"isa", 
 		$id,
@@ -93,29 +94,7 @@ sub CreateJavaObject {
 }
 
 
-# Called to call a static Java method
-sub CallStaticJavaMethod {
-	my $this = shift ;
-	my $class = shift ;
-	my $method = shift ;
-	my $proto = shift ;
-	my $args = shift ;
-
-	Inline::Java::debug("calling $class.$method" . $this->CreateSignature($args)) ;
-
-	my $data = join(" ", 
-		"call_static_method", 
-		Inline::Java::Class::ValidateClass($class),
-		$this->ValidateMethod($method),
-		$this->CreateSignature($proto, ","),
-		$this->ValidateArgs($args),
-	) ;
-
-	return $this->Send($data) ;
-}
-
-
-# Calls a regular Java method.
+# Calls a Java method.
 sub CallJavaMethod {
 	my $this = shift ;
 	my $method = shift ;
@@ -249,11 +228,12 @@ sub ValidateArgs {
 				croak "A Java method or member can only have Java objects, Java arrays or scalars as arguments" ;
 			}
 
+			my $obj = $arg ;
 			if (UNIVERSAL::isa($arg, "Inline::Java::Array")){
-				$arg = $arg->__get_object() ; 
+				$obj = $arg->__get_object() ; 
 			}
-			my $class = $arg->__get_private()->{java_class} ;
-			my $id = $arg->__get_private()->{id} ;
+			my $class = $obj->__get_private()->{java_class} ;
+			my $id = $obj->__get_private()->{id} ;
 			push @ret, "object:$class:$id" ;
 		}
 		else{
@@ -291,7 +271,7 @@ sub Send {
 		croak $msg ;
 	}
 	elsif ($resp =~ /^ok scalar:([\d.]*)$/){
-		return pack("C*", split(/\./, $1)) ;
+		return pack("C*", split(/\./, $1)) ; 
 	}
 	elsif ($resp =~ /^ok undef:$/){
 		return undef ;
@@ -304,7 +284,7 @@ sub Send {
 		if ($const){
 			$this->{obj_priv}->{java_class} = $class ;
 			$this->{obj_priv}->{id} = $id ;
-			
+
 			return undef ;
 		}
 		else{
@@ -376,10 +356,7 @@ class InlineJavaProtocol {
 		StringTokenizer st = new StringTokenizer(cmd, " ") ;
 		String c = st.nextToken() ;
 
-		if (c.equals("call_static_method")){
-			CallStaticJavaMethod(st) ;
-		}		
-		else if (c.equals("call_method")){
+		if (c.equals("call_method")){
 			CallJavaMethod(st) ;
 		}		
 		else if (c.equals("set_member")){
@@ -480,7 +457,6 @@ class InlineJavaProtocol {
 		st2.nextToken() ;
 
 		String prop = pack(st2.nextToken()) ;
-		System.out.println(prop) ;
 		System.setProperty("java.class.path", prop) ;
 
 		SetResponse(null) ;
@@ -502,7 +478,7 @@ class InlineJavaProtocol {
 			throw new InlineJavaException("Object " + oid.toString() + " is not in HashMap!") ;
 		}
 
-		SetResponse(new Boolean(ijc.DoesExtend(c, d))) ;
+		SetResponse(new Integer(ijc.DoesExtend(c, d))) ;
 	}
 
 
@@ -546,52 +522,23 @@ class InlineJavaProtocol {
 
 
 	/*
-		Calls a static Java method
-	*/
-	void CallStaticJavaMethod(StringTokenizer st) throws InlineJavaException {
-		String class_name = st.nextToken() ;
-		String method = st.nextToken() ;
-		Class c = ijc.ValidateClass(class_name) ;
-		ArrayList f = ValidateMethod(false, c, method, st) ;
-
-		Method m = (Method)f.get(0) ;
-		String name = m.getName() ;
-		Object p[] = (Object [])f.get(1) ;
-		try {
-			Object ret = m.invoke(null, p) ;
-			SetResponse(ret) ;
-		}
-		catch (IllegalAccessException e){
-			throw new InlineJavaException("You are not allowed to invoke static method " + name + " in class " + class_name + ": " + e.getMessage()) ;
-		}
-		catch (IllegalArgumentException e){
-			throw new InlineJavaException("Arguments for static method " + name + " in class " + class_name + " are incompatible: " + e.getMessage()) ;
-		}
-		catch (InvocationTargetException e){
-			Throwable t = e.getTargetException() ;
-			String type = t.getClass().getName() ;
-			String msg = t.getMessage() ;
-			throw new InlineJavaException(
-				"Static method " + name + " in class " + class_name + " threw exception " + type + ": " + msg) ;
-		}
-	}
-
-
-	/*
-		Calls a regular Java method
+		Calls a Java method
 	*/
 	void CallJavaMethod(StringTokenizer st) throws InlineJavaException {
 		int id = Integer.parseInt(st.nextToken()) ;
 
-		Integer oid = new Integer(id) ;
-		Object o = ijs.objects.get(oid) ;
-		if (o == null){
-			throw new InlineJavaException("Object " + oid.toString() + " is not in HashMap!") ;
-		}
-
 		String class_name = st.nextToken() ;
-		// Use the class of the object
-		class_name = o.getClass().getName() ;
+		Object o = null ;
+		if (id > 0){
+			Integer oid = new Integer(id) ;
+			o = ijs.objects.get(oid) ;
+			if (o == null){
+				throw new InlineJavaException("Object " + oid.toString() + " is not in HashMap!") ;
+			}
+
+			// Use the class of the object
+			class_name = o.getClass().getName() ;
+		}
 
 		Class c = ijc.ValidateClass(class_name) ;
 		String method = st.nextToken() ;
@@ -633,15 +580,18 @@ class InlineJavaProtocol {
 	void SetJavaMember(StringTokenizer st) throws InlineJavaException {
 		int id = Integer.parseInt(st.nextToken()) ;
 
-		Integer oid = new Integer(id) ;
-		Object o = ijs.objects.get(oid) ;
-		if (o == null){
-			throw new InlineJavaException("Object " + oid.toString() + " is not in HashMap!") ;
-		}
-
 		String class_name = st.nextToken() ;
-		// Use the class of the object
-		class_name = o.getClass().getName() ;
+		Object o = null ;
+		if (id > 0){
+			Integer oid = new Integer(id) ;
+			o = ijs.objects.get(oid) ;
+			if (o == null){
+				throw new InlineJavaException("Object " + oid.toString() + " is not in HashMap!") ;
+			}
+
+			// Use the class of the object
+			class_name = o.getClass().getName() ;
+		}
 
 		Class c = ijc.ValidateClass(class_name) ;
 		String member = st.nextToken() ;
@@ -690,15 +640,18 @@ class InlineJavaProtocol {
 	void GetJavaMember(StringTokenizer st) throws InlineJavaException {
 		int id = Integer.parseInt(st.nextToken()) ;
 
-		Integer oid = new Integer(id) ;
-		Object o = ijs.objects.get(oid) ;
-		if (o == null){
-			throw new InlineJavaException("Object " + oid.toString() + " is not in HashMap!") ;
-		}
-
 		String class_name = st.nextToken() ;
-		// Use the class of the object
-		class_name = o.getClass().getName() ;
+		Object o = null ;
+		if (id > 0){
+			Integer oid = new Integer(id) ;
+			o = ijs.objects.get(oid) ;
+			if (o == null){
+				throw new InlineJavaException("Object " + oid.toString() + " is not in HashMap!") ;
+			}
+
+			// Use the class of the object
+			class_name = o.getClass().getName() ;
+		}
 
 		Class c = ijc.ValidateClass(class_name) ;
 		String member = st.nextToken() ;

@@ -9,7 +9,9 @@ Java/Init.pm
 Java/Object.pm
 Java/Protocol.pm
 Java/Class.pm
+Java/Array.pm
 Java/Makefile.PL
+Java/JVM.pm
 Java/JNI.pm
 Java/JNI.xs
 t/1_init.t

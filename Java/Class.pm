@@ -100,8 +100,11 @@ sub CastArguments {
 	my $ret = [] ;
 	my $score = 0 ;
 	for (my $i = 0 ; $i < scalar(@{$args}) ; $i++){
-		my @r = CastArgument($args->[$i], $proto->[$i], $module) ;
+		my $arg = $args->[$i] ;
+		my $pro = $proto->[$i] ;
+		my @r = CastArgument($arg, $pro, $module) ;
 		$ret->[$i] = $r[0] ;
+		
 		$score += $r[1] ;
 	}
 
@@ -116,100 +119,163 @@ sub CastArgument {
 
 	ValidateClass($proto) ;
 
-	if ((ClassIsReference($proto))&&(! UNIVERSAL::isa($arg, "Inline::Java::Object"))){
-		# Here we allow scalars to be passed in place of java.lang.Object
-		# They will wrapped on the Java side.
-		if (defined($arg)){
-			if (UNIVERSAL::isa($arg, "ARRAY")){
-				if (! UNIVERSAL::isa($arg, "Inline::Java::Array")){
-					my $an = new Inline::Java::Array::Normalizer($proto, $arg) ;
-					my $flat = $an->FlattenArray() ; 
-					my $inline = Inline::Java::get_INLINE($module) ;
-					my $obj = Inline::Java::Object->__new($proto, $inline, -1, $flat->[0], $flat->[1]) ;
+	my $arg_ori = $arg ;
+	my $proto_ori = $proto ;
 
-					# We need to create the array on the Java side, and then grab 
-					# the returned object.
-					$arg = new Inline::Java::Array($obj) ;
+	my $sub = sub {
+		my $array_type = undef ;
+		if (UNIVERSAL::isa($arg, "Inline::Java::Class::Cast")){
+			my $v = $arg->get_value() ;
+			$proto = $arg->get_type() ;
+			$array_type = $arg->get_array_type() ;
+			$arg = $v ;
+		}
+
+		if ((ClassIsReference($proto))&&(! UNIVERSAL::isa($arg, "Inline::Java::Object"))){
+			# Here we allow scalars to be passed in place of java.lang.Object
+			# They will wrapped on the Java side.
+			if (defined($arg)){
+				if (UNIVERSAL::isa($arg, "ARRAY")){
+					if (! UNIVERSAL::isa($arg, "Inline::Java::Array")){
+						my $an = new Inline::Java::Array::Normalizer($array_type || $proto, $arg) ;
+						my $flat = $an->FlattenArray() ; 
+						my $inline = Inline::Java::get_INLINE($module) ;
+						my $obj = Inline::Java::Object->__new($array_type || $proto, $inline, -1, $flat->[0], $flat->[1]) ;
+
+						# We need to create the array on the Java side, and then grab 
+						# the returned object.
+						$arg = new Inline::Java::Array($obj) ;
+					}
+					else{
+						Inline::Java::debug("argument is already an Inline::Java array") ;
+					}
 				}
 				else{
-					Inline::Java::debug("argument is already an Inline::Java array") ;
-				}
-			}
-			else{
-				if (ref($arg)){
-					# We got some other type of ref...
-					croak "Can't convert $arg to object $proto" ;
-				}
-				else{
-					# Here we got a scalar
-					# Here we allow scalars to be passed in place of java.lang.Object
-					# They will wrapped on the Java side.
-					if ($proto ne "java.lang.Object"){
+					if (ref($arg)){
+						# We got some other type of ref...
 						croak "Can't convert $arg to object $proto" ;
+					}
+					else{
+						# Here we got a scalar
+						# Here we allow scalars to be passed in place of java.lang.Object
+						# They will wrapped on the Java side.
+						if ($proto ne "java.lang.Object"){
+							croak "Can't convert $arg to object $proto" ;
+						}
 					}
 				}
 			}
 		}
-	}
-	if ((ClassIsPrimitive($proto))&&(ref($arg))){
-		croak "Can't convert $arg to primitive $proto" ;
-	}
+		if ((ClassIsPrimitive($proto))&&(ref($arg))){
+			croak "Can't convert $arg to primitive $proto" ;
+		}
 
-	if (ClassIsNumeric($proto)){
-		if (! defined($arg)){
-			return (0, 0) ;
-		}
-		my $re = $RANGE->{$proto}->{REGEXP} ;
-		my $min = $RANGE->{$proto}->{MIN} ;
-		my $max = $RANGE->{$proto}->{MAX} ;
-		Inline::Java::debug("min = $min, max = $max, val = $arg") ;
-		if ($arg =~ /$re/){
-			if (($arg >= $min)&&($arg <= $max)){
-				return ($arg, 0) ;
+		if (ClassIsNumeric($proto)){
+			if (! defined($arg)){
+				# undef gets lowest score since it can be passed
+				# as anything
+				return (0, 1) ;
 			}
-			croak "$arg out of range for type $proto" ;
+			my $re = $RANGE->{$proto}->{REGEXP} ;
+			my $min = $RANGE->{$proto}->{MIN} ;
+			my $max = $RANGE->{$proto}->{MAX} ;
+			Inline::Java::debug("min = $min, max = $max, val = $arg") ;
+			if ($arg =~ /$re/){
+				if (($arg >= $min)&&($arg <= $max)){
+					# number is a pretty precise match, but it's still
+					# guessing amongst the numeric types
+					return ($arg, 5.5) ;
+				}
+				croak "$arg out of range for type $proto" ;
+			}
+			croak "Can't convert $arg to $proto" ;
 		}
-		croak "Can't convert $arg to $proto" ;
-	}
-	elsif (ClassIsChar($proto)){
-		if (! defined($arg)){
-			return ("\0", 0) ;
+		elsif (ClassIsChar($proto)){
+			if (! defined($arg)){
+				# undef gets lowest score since it can be passed
+				# as anything
+				return ("\0", 1) ;
+			}
+			if (length($arg) == 1){
+				# char is a pretty precise match
+				return ($arg, 5) ;
+			}
+			croak "Can't convert $arg to $proto" ;
 		}
-		if (length($arg) == 1){
-			return ($arg, 0) ;
+		elsif (ClassIsBool($proto)){
+			if (! defined($arg)){
+				# undef gets lowest score since it can be passed
+				# as anything
+				return (0, 1) ;
+			}
+			elsif (! $arg){
+				# bool gets lowest score since anything is a bool
+				return (0, 1) ;
+			}
+			else{
+				# bool gets lowest score since anything is a bool
+				return (1, 1) ;
+			}
 		}
-		croak "Can't convert $arg to $proto" ;
-	}
-	elsif (ClassIsBool($proto)){
-		if ((! defined($arg))||(! $arg)){
-			return (0, 0) ;
+		elsif (ClassIsString($proto)){
+			if (! defined($arg)){
+				# undef gets lowest score since it can be passed
+				# as anything
+				return (undef, 1) ;
+			}
+			# string get almost lowest score since anything can match it
+			# except objects
+			if ($proto eq "java.lang.StringBuffer"){
+				# in case we have both protos, we want to give String
+				# the advantage
+				return ($arg, 1.75) ;
+			}
+			return ($arg, 2) ;
 		}
 		else{
-			return (1, 0) ;
-		}
-	}
-	elsif (ClassIsString($proto)){
-		if (! defined($arg)){
-			return (undef, 0) ;
-		}
-		return ($arg, 0) ;
-	}
-	else{
-		if (! defined($arg)){
-			return ($arg, 0) ;
-		}
-		# Here the prototype calls for an object of type $proto
-		# We must ask Java if our object extends $proto		
-		if (ref($arg)){
-			my $msg = $arg->__isa($proto) ;
-			if ($msg){
-				croak $msg ;
+			if (! defined($arg)){
+				# undef gets lowest score since it can be passed
+				# as anything
+				return ($arg, 1) ;
 			}
-			Inline::Java::debug("$arg is a $proto") ;
-		}
 
-		return ($arg, 0) ;
+			# Here the prototype calls for an object of type $proto
+			# We must ask Java if our object extends $proto		
+			if (ref($arg)){
+				my ($msg, $score) = $arg->__isa($proto) ;
+				if ($msg){
+					croak $msg ;
+				}
+				Inline::Java::debug("$arg is a $proto") ;
+
+				# a matching object, pretty good match, except if proto
+				# is java.lang.Object
+				if ($proto eq "java.lang.Object"){	
+					return ($arg, 1) ;
+				}
+				
+				# Here we deduce point the more our argument is "far"
+				# from the prototype.
+				return ($arg, 7 - ($score * 0.01)) ;
+			}
+
+			# Here we are passing a scalar as an object, this is pretty
+			# vague as well
+			return ($arg, 1) ;
+		}
+	} ;
+
+	my @ret = $sub->() ;
+	
+	if (UNIVERSAL::isa($arg_ori, "Inline::Java::Class::Cast")){
+		# It seems we had casted the variable to a specific type
+		if ($arg_ori->matches($proto_ori)){
+			Inline::Java::debug("Type cast match!") ;
+			$ret[1] = 10 ;
+		}
 	}
+
+	return @ret ;
 }
 
 
@@ -328,8 +394,66 @@ sub ClassIsArray {
 }
 
 
-1 ;
 
+######################## Inline::Java::Class::Cast ########################
+package Inline::Java::Class::Cast ;
+
+
+use Carp ;
+
+sub new {
+	my $class = shift ;
+	my $type = shift ;
+	my $value = shift ;
+	my $array_type = shift ;
+
+	if (UNIVERSAL::isa($value, "Inline::Java::Class::Cast")){
+		# This allows chaining
+		$value = $value->get_value() ;
+	}
+	
+	my $this = {} ;
+	$this->{cast} = Inline::Java::Class::ValidateClass($type) ;
+	$this->{value} = $value ;
+	$this->{array_type} = $array_type ;
+
+	bless($this, $class) ;
+	return $this ;
+}
+
+
+sub get_value {
+	my $this = shift ;
+
+	return $this->{value} ;
+}
+
+
+sub get_type {
+	my $this = shift ;
+
+	return $this->{cast} ;
+}
+
+sub get_array_type {
+	my $this = shift ;
+
+	return $this->{array_type} ;
+}
+
+
+sub matches {
+	my $this = shift ;
+	my $proto = shift ;
+
+	return ($proto eq $this->{cast}) ;
+}
+
+
+package Inline::Java::Class ;
+
+
+1 ;
 
 
 __DATA__
@@ -337,20 +461,10 @@ __DATA__
 class InlineJavaClass {
 	InlineJavaServer ijs ;
 	InlineJavaProtocol ijp ;
-	HashMap hm = new HashMap() ;
 
 	InlineJavaClass(InlineJavaServer _ijs, InlineJavaProtocol _ijp){
 		ijs = _ijs ;
 		ijp = _ijp ;
-
-		hm.put("B", "byte") ;
-		hm.put("S", "short") ;
-		hm.put("I", "int") ;
-		hm.put("J", "long") ;
-		hm.put("F", "float") ;
-		hm.put("D", "double") ;
-		hm.put("C", "char") ;
-		hm.put("Z", "boolean") ;
 	}
 
 
@@ -358,9 +472,9 @@ class InlineJavaClass {
 		Makes sure a class exists
 	*/
 	Class ValidateClass(String name) throws InlineJavaException {
-		String s = (String)hm.get(name) ;
-		if (s != null){
-			name = s ;
+		Class pc = FindType(name) ;
+		if (pc != null){
+			return pc ;
 		}
 
 		try {
@@ -511,7 +625,7 @@ class InlineJavaClass {
 
 				Class c = ValidateClass(c_name) ;
 
-				if (DoesExtend(c, p)){
+				if (DoesExtend(c, p) > -1){
 					ijs.debug("    " + c.getName() + " is a kind of " + p.getName()) ;
 					// get the object from the hash table
 					Integer oid = new Integer(objid) ;
@@ -531,20 +645,23 @@ class InlineJavaClass {
 	}
 
 
-	boolean DoesExtend(Class a, Class b){
+	/* 
+		Returns the number of levels that separate a from b
+	*/
+	int DoesExtend(Class a, Class b){
 		// We need to check if a extends b
 		Class parent = a ;
-		boolean got_it = false ;
+		int level = 0 ;
 		while (parent != null){
 			ijs.debug("    parent is " + parent.getName()) ;
 			if (parent == b){
-				got_it = true ;
-				break ;
+				return level ;
 			}
+			level++ ;
 			parent = parent.getSuperclass() ;
 		}
 
-		return got_it ;
+		return -1 ;
 	}
 
 
@@ -580,6 +697,57 @@ class InlineJavaClass {
 		}
 
 		return p ;
+	}
+
+
+	/*
+		Finds the primitive type class for the passed primitive type name.
+	*/
+	Class FindType (String name){
+		String [] list = {
+			"byte",
+			"short",
+			"int",
+			"long",
+			"float",
+			"double",
+			"boolean",
+			"char",
+			"B",
+			"S",
+			"I",
+			"J",
+			"F",
+			"D",
+			"Z",
+			"C",
+		} ;
+		Class [] listc = {
+			byte.class,
+			short.class,
+			int.class,
+			long.class,
+			float.class,
+			double.class,
+			boolean.class,
+			char.class,
+			byte.class,
+			short.class,
+			int.class,
+			long.class,
+			float.class,
+			double.class,
+			boolean.class,
+			char.class,
+		} ;
+
+		for (int i = 0 ; i < list.length ; i++){
+			if (name.equals(list[i])){
+				return listc[i] ;
+			}
+		}
+
+		return null ;
 	}
 
 

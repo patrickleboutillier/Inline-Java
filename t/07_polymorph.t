@@ -8,15 +8,37 @@ use Inline(
 	Java => 'DATA'
 ) ;
 
+use Inline::Java qw(cast) ;
+
 
 BEGIN {
-	plan(tests => 2) ;
+	plan(tests => 15) ;
 }
 
 
-ok(types->get("key"), undef) ;
 my $t = new types() ;
-ok(types->get("key"), "value") ;
+my $t1 = new t1() ;
+
+ok($t->func(5), "int") ;
+ok($t->func(cast("char", 5)), "char") ;
+ok($t->func(55), "int") ;
+ok($t->func("str"), "string") ;
+ok($t->func(cast("java.lang.StringBuffer", "str")), "stringbuffer") ;
+
+ok($t->f($t->{hm}), "hashmap") ;
+ok($t->f(cast("java.lang.Object", $t->{hm})), "object") ;
+
+ok($t->f(["a", "b", "c"]), "string[]") ;
+ok($t->f(cast("java.lang.Object", ['a'], "[Ljava.lang.String;")), "object") ;
+
+eval {$t->func($t1)} ; ok($@, qr/Can't find any signature/) ;
+eval {$t->func(cast("int", $t1))} ; ok($@, qr/Can't convert (.*) to primitive int/) ;
+
+my $t2 = new t2() ;
+ok($t2->f($t2), "t1") ;
+ok($t1->f($t2), "t1") ;
+ok($t2->f($t1), "t2") ;
+ok($t2->f(cast("t1", $t2)), "t2") ;
 
 
 __END__
@@ -24,16 +46,60 @@ __END__
 __Java__
 
 
-class types {
-	public static int = 5 ;
-	public static HashMap hm = new HashMap() ;
+import java.util.* ;
 
-	public types(){
-		hm.add("key", "value") ;
+class t1 {
+	public t1(){
 	}
 
-	public static HashMap get(String k){
-		return hm.get(k) ; 
+	public String f(t2 o){
+		return "t1" ;
+	}
+}
+
+
+class t2 extends t1 {
+	public t2(){
+	}
+
+	public String f(t1 o){
+		return "t2" ;
+	}
+}
+
+
+class types {
+	public HashMap hm = new HashMap() ;
+
+	public types(){
+	}
+
+	public String func(String o){
+		return "string" ;
+	}
+
+	public String func(StringBuffer o){
+		return "stringbuffer" ;
+	}
+
+	public String func(int o){
+		return "int" ;
+	}
+
+	public String func(char o){
+		return "char" ;
+	}
+
+	public	String f(HashMap o){
+		return "hashmap" ;
+	}
+
+	public String f(Object o){
+		return "object" ;
+	}
+
+	public String f(String o[]){
+		return "string[]" ;
 	}
 }
 

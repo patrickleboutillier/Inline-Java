@@ -48,12 +48,7 @@ sub __isa {
 	my $this = shift ;
 	my $proto = shift ;
 
-	eval {
-		my $obj = $this->__get_object() ;
-		$obj->__get_private()->{proto}->ISA($proto) ;
-	} ;
-
-	return $@ ;
+	return $this->__get_object()->__isa($proto) ;
 }
 
 
