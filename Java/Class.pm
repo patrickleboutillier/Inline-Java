@@ -124,44 +124,44 @@ sub CastArgument {
 
 	my $sub = sub {
 		my $array_type = undef ;
-		if (UNIVERSAL::isa($arg, "Inline::Java::Class::Cast")){
+		if ((defined($arg))&&(UNIVERSAL::isa($arg, "Inline::Java::Class::Cast"))){
 			my $v = $arg->get_value() ;
 			$proto = $arg->get_type() ;
 			$array_type = $arg->get_array_type() ;
 			$arg = $v ;
 		}
 
-		if ((ClassIsReference($proto))&&(! UNIVERSAL::isa($arg, "Inline::Java::Object"))){
+		if ((ClassIsReference($proto))&&
+			(defined($arg))&&
+			(! UNIVERSAL::isa($arg, "Inline::Java::Object"))){
 			# Here we allow scalars to be passed in place of java.lang.Object
 			# They will wrapped on the Java side.
-			if (defined($arg)){
-				if (UNIVERSAL::isa($arg, "ARRAY")){
-					if (! UNIVERSAL::isa($arg, "Inline::Java::Array")){
-						my $an = new Inline::Java::Array::Normalizer($array_type || $proto, $arg) ;
-						my $flat = $an->FlattenArray() ; 
-						my $inline = Inline::Java::get_INLINE($module) ;
-						my $obj = Inline::Java::Object->__new($array_type || $proto, $inline, -1, $flat->[0], $flat->[1]) ;
+			if (UNIVERSAL::isa($arg, "ARRAY")){
+				if (! UNIVERSAL::isa($arg, "Inline::Java::Array")){
+					my $an = new Inline::Java::Array::Normalizer($array_type || $proto, $arg) ;
+					my $flat = $an->FlattenArray() ; 
+					my $inline = Inline::Java::get_INLINE($module) ;
+					my $obj = Inline::Java::Object->__new($array_type || $proto, $inline, -1, $flat->[0], $flat->[1]) ;
 
-						# We need to create the array on the Java side, and then grab 
-						# the returned object.
-						$arg = new Inline::Java::Array($obj) ;
-					}
-					else{
-						Inline::Java::debug("argument is already an Inline::Java array") ;
-					}
+					# We need to create the array on the Java side, and then grab 
+					# the returned object.
+					$arg = new Inline::Java::Array($obj) ;
 				}
 				else{
-					if (ref($arg)){
-						# We got some other type of ref...
+					Inline::Java::debug("argument is already an Inline::Java array") ;
+				}
+			}
+			else{
+				if (ref($arg)){
+					# We got some other type of ref...
+					croak "Can't convert $arg to object $proto" ;
+				}
+				else{
+					# Here we got a scalar
+					# Here we allow scalars to be passed in place of java.lang.Object
+					# They will wrapped on the Java side.
+					if ($proto ne "java.lang.Object"){
 						croak "Can't convert $arg to object $proto" ;
-					}
-					else{
-						# Here we got a scalar
-						# Here we allow scalars to be passed in place of java.lang.Object
-						# They will wrapped on the Java side.
-						if ($proto ne "java.lang.Object"){
-							croak "Can't convert $arg to object $proto" ;
-						}
 					}
 				}
 			}
@@ -267,7 +267,7 @@ sub CastArgument {
 
 	my @ret = $sub->() ;
 	
-	if (UNIVERSAL::isa($arg_ori, "Inline::Java::Class::Cast")){
+	if ((defined($arg_ori))&&(UNIVERSAL::isa($arg_ori, "Inline::Java::Class::Cast"))){
 		# It seems we had casted the variable to a specific type
 		if ($arg_ori->matches($proto_ori)){
 			Inline::Java::debug("Type cast match!") ;
