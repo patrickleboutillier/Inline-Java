@@ -1,5 +1,7 @@
 package Inline::Java::Init ;
 
+$Inline::Java::Init::VERSION = '0.01' ;
+
 my $DATA = join('', <DATA>) ;
 my $OBJECT_DATA = join('', <Inline::Java::Object::DATA>) ;
 my $PROTO_DATA = join('', <Inline::Java::Protocol::DATA>) ;
@@ -40,6 +42,10 @@ import java.util.* ;
 import java.lang.reflect.* ;
 
 
+/*
+	This is the server that will answer all the requests for and on Java
+	objects.
+*/
 public class InlineJavaServer {
 	public ServerSocket ss ;
 	boolean debug = false ;
@@ -102,7 +108,11 @@ public class InlineJavaServer {
 	}
 
 
-	void Report (String [] class_list, int idx){
+	/*
+		Returns a report on the Java classes, listing all public methods
+		and members
+	*/
+	void Report(String [] class_list, int idx){
 		String module = class_list[idx] ;
 		idx++ ;
 
@@ -158,7 +168,10 @@ public class InlineJavaServer {
 	}
 
 
-	String CreateSignature (Class param[]){
+	/*
+		Creates a string representing a method signature
+	*/
+	String CreateSignature(Class param[]){
 		StringBuffer ret = new StringBuffer() ;
 		for (int i = 0 ; i < param.length ; i++){
 			if (i > 0){
@@ -171,6 +184,9 @@ public class InlineJavaServer {
 	}
 
 
+	/*
+		Startup
+	*/
 	public static void main(String[] argv) {
 		new InlineJavaServer(argv) ;
 	}
@@ -183,6 +199,7 @@ public class InlineJavaServer {
 	}
 
 
+
 	<INLINE_JAVA_OBJECT>
 
 
@@ -190,6 +207,9 @@ public class InlineJavaServer {
 	<INLINE_JAVA_PROTOCOL>
 
 
+	/*
+		Exception thrown by this code.
+	*/
 	class InlineJavaException extends Exception {
 		InlineJavaException(String s) {
 			super(s) ;
@@ -197,6 +217,9 @@ public class InlineJavaServer {
 	}
 
 
+	/*
+		Exception thrown by this code while trying to cast arguments
+	*/
 	class InlineJavaCastException extends InlineJavaException {
 		InlineJavaCastException(String m){
 			super(m) ;
