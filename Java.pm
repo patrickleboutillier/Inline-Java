@@ -157,6 +157,9 @@ sub _validate {
 	if (! exists($o->{Java}->{CLASSPATH})){
 		$o->{Java}->{CLASSPATH} = '' ;
 	}
+	if (! exists($o->{Java}->{WARN_METHOD_SELECT})){
+		$o->{Java}->{WARN_METHOD_SELECT} = '' ;
+	}
 
 	while (@_) {
 		my ($key, $value) = (shift, shift) ;
@@ -164,6 +167,9 @@ sub _validate {
 		    $o->{Java}->{$key} = $value ;
 		}
 		elsif ($key eq 'CLASSPATH'){
+		    $o->{Java}->{$key} = $value ;
+		}
+		elsif ($key eq 'WARN_METHOD_SELECT'){
 		    $o->{Java}->{$key} = $value ;
 		}
 		elsif (
