@@ -10,6 +10,7 @@ use Inline Config =>
 use Inline(
 	Java => 'DATA',
 	AUTOSTUDY => 1,
+	CLASSPATH => '.',
 ) ;
 use Inline::Java qw(study_classes) ;
 
