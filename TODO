@@ -1,6 +1,5 @@
 CODE:
-- Localize filehandles
-
+- Callbacks
 
 TEST:
 - Add test script for configuration options (other than BIN)

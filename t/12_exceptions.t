@@ -24,10 +24,10 @@ my $t = new t9(0) ;
 		$t->f() ;
 	} ;
 	if ($@){
-		if (Inline::Java::caught("java.io.IOException")){
+		if (caught("java.io.IOException")){
 			$msg = $@->getMessage() . "io" ;
 		}
-		elsif (Inline::Java::caught("java.lang.Exception")){
+		elsif (caught("java.lang.Exception")){
 			$msg = $@->getMessage() ;
 		}
 		else {

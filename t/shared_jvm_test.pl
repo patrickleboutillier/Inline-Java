@@ -1,3 +1,5 @@
+package shared_jvm_test ;
+
 use strict ;
 
 use blib ;
@@ -12,20 +14,21 @@ use Inline Config =>
            DIRECTORY => './_Inline_test' ;
 
 
-use Inline(
+use Inline (
 	Java => 'DATA',
+	NAME => "shared_jvm_test",
 	SHARED_JVM => 1,
 ) ;
 
 
-$t::i = 0 ;
+$shared_jvm_test::t::i = 0 ;
 
 my $nb = 10 ;
 my $sum = (($nb) * ($nb + 1)) / 2 ;
 for (my $i = 0 ; $i < $nb ; $i++){
 	if (! fork()){
 		print STDERR "." ;
-		do_child($i) ;
+		shared_jvm_test::do_child($i) ;
 	}
 }
 
@@ -37,7 +40,7 @@ for (my $i = 0 ; $i < 5 ; $i++){
 }
 print STDERR "\n" ;
 
-if ($t::i == $sum){
+if ($shared_jvm_test::t::i == $sum){
 	print STDERR "Test succeeded\n" ;
 }
 else{
@@ -50,7 +53,7 @@ sub do_child {
 
 	Inline::Java::reconnect_JVM() ;
 
-	my $t = new t() ;
+	my $t = new shared_jvm_test::t() ;
 	my $j = 0 ;
 	for ( ; $j <= $i ; $j++){
 		$t->incr_i() ;
@@ -59,14 +62,14 @@ sub do_child {
 }
 
 
-__END__
+__DATA__
 
 __Java__
 
 
 import java.util.* ;
 
-class t {
+class t extends InlineJavaPerlCaller {
 	static public int i = 0 ;
 
 	public t(){

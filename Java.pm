@@ -34,6 +34,7 @@ use Inline::Java::Class ;
 use Inline::Java::Object ;
 use Inline::Java::Array ;
 use Inline::Java::Protocol ;
+use Inline::Java::Callback ;
 # Must be last.
 use Inline::Java::Init ;
 use Inline::Java::JVM ;
@@ -49,10 +50,6 @@ my $JVM = undef ;
 
 # This hash will store the $o objects...
 my $INLINES = {} ;
-
-
-# Stores the last uncaught exception
-my $UNCAUGHT_EXCEPTION = undef ;
 
 
 # Here is some code to figure out if we are running on command.com
@@ -202,9 +199,6 @@ sub _validate {
 			}
 			$o->{ILSM}->{$key} = $value ;
 		}
-		elsif ($key eq 'REMOTE_HOST'){
-			$o->{ILSM}->{$key} = $value ;
-		}
 		elsif ($key eq 'SHARED_JVM'){
 			$o->{ILSM}->{$key} = $value ;
 		}
@@ -244,12 +238,6 @@ sub _validate {
 
 	if (($o->{ILSM}->{JNI})&&($o->{ILSM}->{SHARED_JVM})){
 		croak("You can't use the 'SHARED_JVM' option in 'JNI' mode") ;
-	}
-	if (($o->{ILSM}->{JNI})&&($o->{ILSM}->{REMOTE_HOST})){
-		croak("You can't use the 'REMOTE_HOST' option in 'JNI' mode") ;
-	}
-	if (($o->{ILSM}->{REMOTE_HOST})&&($o->{ILSM}->{SHARED_JVM})){
-		croak("You can't use the 'REMOTE_HOST' option in combination with the 'SHARED_JVM' option") ;
 	}
 
 	$o->set_java_bin() ;
@@ -435,13 +423,18 @@ sub write_java {
 	if (! $study_only){
 		open(Inline::Java::JAVA, ">$build_dir/$modfname.java") or
 			croak "Can't open $build_dir/$modfname.java: $!" ;
-		Inline::Java::Init::DumpUserJavaCode(\*Inline::Java::JAVA, $modfname, $code) ;
+		Inline::Java::Init::DumpUserJavaCode(\*Inline::Java::JAVA, $code) ;
 		close(Inline::Java::JAVA) ;
 	}
 
 	open(Inline::Java::JAVA, ">$build_dir/InlineJavaServer.java") or
 		croak "Can't open $build_dir/InlineJavaServer.java: $!" ;
-	Inline::Java::Init::DumpServerJavaCode(\*Inline::Java::JAVA, $modfname) ;
+	Inline::Java::Init::DumpServerJavaCode(\*Inline::Java::JAVA) ;
+	close(Inline::Java::JAVA) ;
+
+	open(Inline::Java::JAVA, ">$build_dir/InlineJavaPerlCaller.java") or
+		croak "Can't open $build_dir/InlineJavaPerlCaller.java: $!" ;
+	Inline::Java::Init::DumpCallbackJavaCode(\*Inline::Java::JAVA) ;
 	close(Inline::Java::JAVA) ;
 
 	Inline::Java::debug("write_java done.") ;
@@ -684,31 +677,33 @@ sub set_classpath {
 	my @cp = split(/$sep/, join($sep, @list)) ;
 	my %cp = map { ($_ !~ /^\s*$/ ? ($_, 1) : ()) } @cp ;
 
-	foreach my $k (keys %cp){
-		if ($k =~ /\s*\[PERL_INLINE_JAVA=(.*?)\]\s*/){
-			my $modules = $1 ;
-			Inline::Java::debug("   found special CLASSPATH entry: $modules") ;
+	my $tmp = join($sep, keys %cp) ;
 
-			my @modules = split(/\s*,\s*/, $modules) ;
-			my $sep = portable("PATH_SEP") ;
-			my $sep_re = portable("PATH_SEP_RE") ;
-			my $dir = $o->get_config('DIRECTORY') . $sep . "lib" . $sep ."auto" ;
+	$tmp =~ s/\s*\[PERL_INLINE_JAVA\s*=\s*(.*?)\s*\]\s*/{
+		my $modules = $1 ;
+		Inline::Java::debug("   found special CLASSPATH entry: $modules") ;
+		
+		my @modules = split(m#\s*,\s*#, $modules) ;
+		my $psep = portable("PATH_SEP") ;
+		my $psep_re = portable("PATH_SEP_RE") ;
+		my $dir = $o->get_config('DIRECTORY') . $psep . "lib" . $psep ."auto" ;
 
-			foreach my $m (@modules){
-				$m =~ s/::/$sep_re/g ;
+		my %paths = () ;
+		foreach my $m (@modules){
+			$m =~ s#::#$psep_re#g ;
 
-				# Here we must make sure that the directory exists, or
-				# else it is removed from the CLASSPATH by Java
-				my $path = "$dir$sep$m" ;
-				$o->mkpath($path) ;
+			# Here we must make sure that the directory exists, or
+			# else it is removed from the CLASSPATH by Java
+			my $path = "$dir$psep$m" ;
+			$o->mkpath($path) ;
 
-				$cp{$path} = 1 ;
-			}
-
-			delete $cp{$k} ;
+			$paths{$path} = 1 ;
 		}
-	}
-	$ENV{CLASSPATH} = join($sep, keys %cp) ;
+
+		join($sep, keys %paths) ;
+	}/eg ;
+
+	$ENV{CLASSPATH} = $tmp ;
 
 	Inline::Java::debug("  classpath: " . $ENV{CLASSPATH}) ;
 }
@@ -755,7 +750,7 @@ sub report {
 		my @cl = glob("$pinstall/*.class") ;
 		foreach my $class (@cl){
 			$class =~ s/^\Q$pinstall\E\/(.*)\.class$/$1/ ;
-			if ($class !~ /^InlineJavaServer/){
+			if ($class !~ /^InlineJava(Server|Perl)/){
 				push @{$classes}, $class ;
 			}
 		}
@@ -1358,44 +1353,6 @@ sub study_classes {
 }
 
 
-sub try (&){
-	my $coderef = shift ;
-	eval {
-		$coderef->() ;
-	} ;
-	my $e = $@ ;
-	if ($e){
-		if (! UNIVERSAL::isa($e, "Inline::Java::Object")){
-			die $e ;
-		}
-
-		$UNCAUGHT_EXCEPTION = $@ ;
-		$@ = undef ;
-	}
-}
-
-
-sub catch ($$){
-	my $class = shift ;
-	my $coderef = shift ;
-
-	$class = Inline::Java::Class::ValidateClass($class) ;
-
-	my $e = $UNCAUGHT_EXCEPTION ;
-	if ($e){
-		if (UNIVERSAL::isa($e, "Inline::Java::Object")){
-			my ($msg, $score) = $e->__isa($class) ;
-			if ($msg){
-				croak $msg ;
-			}
-			$coderef->($e) ;
-			# clear $@ for other blocks that follow
-			$UNCAUGHT_EXCEPTION = undef ;
-		}
-	}
-}
-
-
 sub caught {
 	my $class = shift ;
 
@@ -1414,13 +1371,6 @@ sub caught {
 	$@ = $e ;
 
 	return $ret ;
-}
-
-
-sub with (&){
-	my $coderef = shift ;
-
-	return $coderef ;
 }
 
 

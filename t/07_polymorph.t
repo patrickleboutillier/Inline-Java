@@ -12,7 +12,7 @@ use Inline::Java qw(cast) ;
 
 
 BEGIN {
-	plan(tests => 17) ;
+	plan(tests => 18) ;
 }
 
 
@@ -43,6 +43,10 @@ my $t = new types7() ;
 	ok($t1->f($t2), "t1") ;
 	ok($t2->f($t1), "t2") ;
 	ok($t2->f(cast("t17", $t2)), "t2") ;
+
+	# Interfaces
+	my $al = $t1->get_al() ;
+	ok(0, $t1->count($al)) ;
 }
 
 ok($t->__get_private()->{proto}->ObjectCount(), 1) ;
@@ -61,6 +65,14 @@ class t17 {
 
 	public String f(t27 o){
 		return "t1" ;
+	}
+
+	public ArrayList get_al(){
+		return new ArrayList() ;
+	}
+
+	public int count(Collection c){
+		return c.size() ;
 	}
 }
 
