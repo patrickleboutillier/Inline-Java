@@ -181,7 +181,7 @@ class t15 extends InlineJavaPerlCaller {
 	}
 
 
-	public t15() {
+	public t15() throws InlineJavaException {
 	}
 
 	public int add(int a, int b){
