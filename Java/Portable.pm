@@ -52,7 +52,6 @@ sub make_classpath {
 	foreach my $p (@cp){
 		$p =~ s/^\s+// ;
 		$p =~ s/\s+$// ;
-		$p = portable("SUB_FIX_CLASSPATH", $p) ;
 	}
 
 	# Remove duplicates, remove invalids but preserve order
@@ -60,7 +59,8 @@ sub make_classpath {
 	my %cp = map {$_ => 1} @cp ;
 	foreach my $p (@cp){
 		if (($p)&&($cp{$p})&&(-e $p)){
-			push @fcp, (-d $p ? Cwd::abs_path($p) : $p) ;
+			my $fp = (-d $p ? Cwd::abs_path($p) : $p) ;
+			push @fcp, portable("SUB_FIX_CLASSPATH", $fp) ;
 			delete $cp{$p} ;
 		}
 		else{
@@ -160,7 +160,7 @@ sub portable {
 			DETACH_OK			=>	0,
 			JVM_LIB				=>	'jvm.lib',
 			JVM_SO				=>	'jvm.dll',
-			GOT_NEXT_FREE_PORT	=>	($COMMAND_COM ? 0 : 1),
+			GOT_NEXT_FREE_PORT	=>	0,
 		},
 		cygwin => {
 			ENV_VAR_PATH_SEP_CP	=>	';',

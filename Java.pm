@@ -400,7 +400,7 @@ sub load {
 	# If the JVM is not running, we need to start it here.
 	if (! $JVM){
 		my $cp = $ENV{CLASSPATH} || '' ;
-		$ENV{CLASSPATH} = get_server_jar() ;
+		$ENV{CLASSPATH} = portable("SUB_FIX_CLASSPATH", get_server_jar()) ;
 		Inline::Java::debug(2, "classpath: $ENV{CLASSPATH}") ;
 		$JVM = new Inline::Java::JVM($o) ;
 		$ENV{CLASSPATH}	= $cp ;
@@ -408,7 +408,7 @@ sub load {
 		# Add CLASSPATH entries + user jar + $install_dir to the JVM classpath
 		my @cp = make_classpath($o->get_java_config('CLASSPATH'), get_user_jar()) ;
 		my $pc = new Inline::Java::Protocol(undef, $o) ;
-		$pc->AddClassPath(@cp, $install_dir) ;
+		$pc->AddClassPath(@cp, portable("SUB_FIX_CLASSPATH", $install_dir)) ;
 
 		my $st = $pc->ServerType() ;
 		if ((($st eq "shared")&&(! $o->get_java_config('SHARED_JVM')))||
@@ -419,7 +419,7 @@ sub load {
 	else{
 		# Add $install_dir entry to the JVM classpath.
 		my $pc = new Inline::Java::Protocol(undef, $o) ;
-		$pc->AddClassPath($install_dir) ;
+		$pc->AddClassPath(portable("SUB_FIX_CLASSPATH", $install_dir)) ;
 	}
 
 	# Add our Inline object to the list.
