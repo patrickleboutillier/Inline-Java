@@ -90,7 +90,22 @@ of the following techniques:
      correct directory
 
 If none of these are specified, C<Inline::Java> will use the Java
-2 SDK that was specified a install time.
+2 SDK that was specified a install time (see below).
+
+
+=head1 DEFAULT JAVA 2 SDK
+
+When C<Inline::Java> was installed, the path to the Java 2 SDK that was 
+used was stored in a file called default_j2sdk.pl that resides with
+the C<Inline::Java> module. You can find this file by using the following
+command:
+
+    % perl -MInline::Java -e 'print Inline::Java->find_default_j2sdk()'
+
+If you wish to permanently change the default Java 2 SDK that is used
+by C<Inline::Java>, edit this file and change the value found there. 
+If you wish use a different Java 2 SDK temporarily, see the J2SDK 
+configuration option described below.
 
 
 =head1 CONFIGURATION OPTIONS
@@ -100,7 +115,7 @@ behavior of C<Inline::Java>:
 
    J2SDK: 
       Specifies the path to your Java 2 SDK. 
-	  Ex: BIN => 'my/java/2/sdk/path'
+	  Ex: J2SDK => '/my/java/2/sdk/path'
       Note: This configuration option only has an effect on the first
       'use Inline Java' call inside a Perl script, since all other calls 
       make use of the same JVM.
