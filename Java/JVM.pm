@@ -9,6 +9,8 @@ use Carp ;
 use IPC::Open3 ;
 use IO::File ;
 
+my %SIGS = () ;
+
 sub new {
 	my $class = shift ;
 	my $o = shift ;
@@ -16,15 +18,20 @@ sub new {
 	my $this = {} ;
 	bless($this, $class) ;
 
+	foreach my $sig ('HUP', 'INT', 'PIPE', 'TERM'){
+		local $SIG{__WARN__} = sub {} ;
+		$SIGS{$sig} = $SIGS{$sig} ;
+	}
+
 	$this->{socket} = undef ;
 	$this->{JNI} = undef ;
-	$this->{owner} = 1 ;
 
 	$this->{destroyed} = 0 ;
 
 	Inline::Java::debug("Starting JVM...") ;
 
 	if ($o->get_java_config('JNI')){
+		$this->{owner} = 1 ;
 		Inline::Java::debug("  JNI mode") ;
 
 		my $jni = new Inline::Java::JNI(
@@ -37,7 +44,7 @@ sub new {
 	}
 	else{
 		Inline::Java::debug("  Client/Server mode") ;
-		
+
 		my $debug = (Inline::Java::get_DEBUG() ? "true" : "false") ;
 
 		my $shared_jvm = ($o->get_java_config('SHARED_JVM') ? "true" : "false") ;	
@@ -56,6 +63,7 @@ sub new {
 				return $this ;
 			}
 		}
+		$this->capture(1) ;
 
 		my $java = File::Spec->catfile($o->get_java_config('BIN'), 
 			"java" . Inline::Java::portable("EXE_EXTENSION")) ;
@@ -69,10 +77,7 @@ sub new {
 
 		my $pid = 0 ;
 		eval {
-			my $in = new IO::File() ;
-			$pid = open3($in, ">&STDOUT", ">&STDERR", $cmd) ;
-			# We won't be sending anything to the child in this fashion...
-			close($in) ;
+			$pid = $this->launch($cmd) ;
 		} ;
 		croak "Can't exec JVM: $@" if $@ ;
 
@@ -86,6 +91,36 @@ sub new {
 	}
 
 	return $this ;
+}
+
+
+sub launch {
+	my $this = shift ;
+	my $cmd = shift ;
+
+	my $in = new IO::File() ;
+	my $pid = open3($in, ">&STDOUT", ">&STDERR", $cmd) ;
+	# We won't be sending anything to the child in this fashion...
+	close($in) ;
+
+	return $pid ;
+}
+
+
+sub fork_launch {
+	my $this = shift ;
+	my $cmd = shift ;
+
+	my $pid = fork() ;
+	if (! $pid){
+		# Child 
+		$pid = $this->launch($cmd) ;
+		Inline::Java::set_DONE() ;
+		exit() ;
+	}
+	else{
+		waitpid($pid, 0) ;
+	}
 }
 
 
@@ -242,6 +277,10 @@ sub capture {
 		return ;
 	}
 
+	foreach my $sig ('HUP', 'INT', 'PIPE', 'TERM'){
+		$SIG{$sig} = \&Inline::Java::done ;
+	}
+
 	$this->{owner} = 1 ;
 }
 
@@ -258,6 +297,11 @@ sub release {
 
 	if ($this->{JNI}){
 		return ;
+	}
+
+	foreach my $sig qw(HUP INT PIPE TERM){
+		local $SIG{__WARN__} = sub {} ;
+		$SIG{$sig} = $SIGS{$sig} ;
 	}
 
 	$this->{owner} = 0 ;
@@ -306,3 +350,8 @@ sub process_command {
 
 	return $resp ;
 }
+
+
+
+1 ;
+
