@@ -442,9 +442,6 @@ sub compile {
 	# returned. Therefore a command failure is not detected.
 	# copy_classes will take care of checking whether there are actually files
 	# to be copied, and if not will exit the script.
-	# This strategy doesn't work that well if you have many classes in the same 
-	# file, but we can't penalize the other users just to give better support
-	# for Win9x...
 	foreach my $cmd (
 		"\"$javac\" InlineJavaServer.java $source > cmd.out $predir",
 		["copy_classes", $o, $install],
