@@ -3,7 +3,7 @@ package Inline::Java::Init ;
 
 use strict ;
 
-$Inline::Java::Init::VERSION = '0.10' ;
+$Inline::Java::Init::VERSION = '0.20' ;
 
 my $DATA = join('', <DATA>) ;
 my $OBJECT_DATA = join('', <Inline::Java::Object::DATA>) ;

@@ -3,7 +3,7 @@ package Inline::Java::Object ;
 
 use strict ;
 
-$Inline::Java::Object::VERSION = '0.10' ;
+$Inline::Java::Object::VERSION = '0.20' ;
 
 use Inline::Java::Protocol ;
 use Carp ;

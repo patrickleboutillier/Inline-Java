@@ -1,16 +1,22 @@
 package Inline::Java ;
-@Inline::Java::ISA = qw(Inline) ;
+@Inline::Java::ISA = qw(Inline Exporter) ;
+
+# Export the cast function if wanted
+@EXPORT_OK = qw(cast) ;
 
 
 use strict ;
 
-$Inline::Java::VERSION = '0.10' ;
+$Inline::Java::VERSION = '0.20' ;
 
 
 # DEBUG is set via the DEBUG config
 if (! defined($Inline::Java::DEBUG)){
 	$Inline::Java::DEBUG = 0 ;
 }
+
+# Set DEBUG stream
+*DEBUG = *STDERR ;
 
 
 require Inline ;
@@ -103,6 +109,11 @@ $SIG{__DIE__} = sub {
 	die @_ ;
 } ;
 
+
+# To export the cast function.
+sub import {
+    Inline::Java->export_to_level(1,@_) ;
+}
 
 
 
@@ -388,6 +399,7 @@ sub compile {
 	# to be copied, and if not will exit the script.
 	foreach my $cmd (
 		"\"$pjavac\" InlineJavaServer.java $modfname.java > cmd.out $predir",
+		["copy_pattern", $o, "InlineJavaServer*.class"],
 		["copy_pattern", $o, "*.class"],
 		["touch_file", $o, "$install/$modfname.jdat"],
 		) {
@@ -494,11 +506,11 @@ sub load {
 
 	# Now we read up the symbols and bind them to Perl.
 	$o->load_jdat(@lines) ;
+
+	$INLINES->{$modfname} = $o ;
 	$o->bind_jdat() ;
 
 	$o->{Java}->{loaded} = 1 ;
-
-	$INLINES->{$modfname} = $o ;
 }
 
 
@@ -535,7 +547,7 @@ sub load_jdat {
 	my $o = shift ;
 	my @lines = @_ ;
 
-	Inline::Java::debug(@lines) ;
+	Inline::Java::debug(join("\n", @lines)) ;
 
 	$o->{Java}->{data} = {} ;
 	my $d = $o->{Java}->{data} ;
@@ -550,21 +562,18 @@ sub load_jdat {
 			$current_class = $1 ;
 			$current_class =~ s/[\$.]/::/g ;
 			$d->{classes}->{$current_class} = {} ;
-			$d->{classes}->{$current_class}->{constructors} = undef ;
+			$d->{classes}->{$current_class}->{constructors} = {} ;
 			$d->{classes}->{$current_class}->{methods} = {} ;
-			$d->{classes}->{$current_class}->{methods}->{static} = {} ;
-			$d->{classes}->{$current_class}->{methods}->{instance} = {} ;
 			$d->{classes}->{$current_class}->{fields} = {} ;
-			$d->{classes}->{$current_class}->{fields}->{static} = {} ;
-			$d->{classes}->{$current_class}->{fields}->{instance} = {} ;
 		}
 		elsif ($line =~ /^constructor \((.*)\)$/){
 			my $signature = $1 ;
 
-			if (! defined($d->{classes}->{$current_class}->{constructors})){
-				$d->{classes}->{$current_class}->{constructors} = [] ;
-			}
-			push @{$d->{classes}->{$current_class}->{constructors}}, [split(", ", $signature)] ;
+			$d->{classes}->{$current_class}->{constructors}->{$signature} = 
+				{
+					SIGNATURE => [split(", ", $signature)],
+					STATIC => 1,
+				} ;
 		}
 		elsif ($line =~ /^method (\w+) ($re) (\w+)\((.*)\)$/){
 			my $static = $1 ;
@@ -572,10 +581,15 @@ sub load_jdat {
 			my $method = $3 ;
 			my $signature = $4 ;
 
-			if (! defined($d->{classes}->{$current_class}->{methods}->{$static}->{$method})){
-				$d->{classes}->{$current_class}->{methods}->{$static}->{$method} = [] ;
+			if (! defined($d->{classes}->{$current_class}->{methods}->{$method})){
+				$d->{classes}->{$current_class}->{methods}->{$method} = {} ;
 			}
-			push @{$d->{classes}->{$current_class}->{methods}->{$static}->{$method}}, [split(", ", $signature)] ;
+
+			$d->{classes}->{$current_class}->{methods}->{$method}->{$signature} = 
+				{
+					SIGNATURE => [split(", ", $signature)],
+					STATIC => ($static eq "static" ? 1 : 0),
+				} ;
 		}
 		elsif ($line =~ /^field (\w+) ($re) (\w+) ($re)$/){
 			my $static = $1 ;
@@ -583,10 +597,15 @@ sub load_jdat {
 			my $field = $3 ;
 			my $type = $4 ;
 
-			if (! defined($d->{classes}->{$current_class}->{fields}->{$static}->{$field})){
-				$d->{classes}->{$current_class}->{fields}->{$static}->{$field} = [] ;
+			if (! defined($d->{classes}->{$current_class}->{fields}->{$field})){
+				$d->{classes}->{$current_class}->{fields}->{$field} = {} ;
 			}
-			push @{$d->{classes}->{$current_class}->{fields}->{$static}->{$field}}, $type ;
+
+			$d->{classes}->{$current_class}->{fields}->{$field} = 
+				{
+					TYPE => $type,
+					STATIC => ($static eq "static" ? 1 : 0),
+				} ;
 		}
 	}
 
@@ -601,24 +620,44 @@ sub bind_jdat {
 	my $d = $o->{Java}->{data} ;
 	my $modfname = $o->{modfname} ;
 
-	my $c = ":" ;
 	my %classes = %{$d->{classes}} ;
 	foreach my $class (sort keys %classes) {
 		my $java_class = $class ;
 		$java_class =~ s/::/\$/g ;
 		my $class_name = $class ;
 		$class_name =~ s/^(.*)::// ;
+
+		my $colon = ":" ;
+		my $dash = "-" ;
+		
 		my $code = <<CODE;
 package $o->{pkg}::$class ;
-\@$o->{pkg}::$class$c:ISA = qw(Inline::Java::Object) ;
-\$$o->{pkg}::$class$c:EXISTS = 1 ;
-\$$o->{pkg}::$class$c:JAVA_CLASS = '$java_class' ;
+use vars qw(\@ISA \$EXISTS \$JAVA_CLASS \$DUMMY_OBJECT) ;
+
+\@ISA = qw(Inline::Java::Object) ;
+\$EXISTS = 1 ;
+\$JAVA_CLASS = '$java_class' ;
+\$DUMMY_OBJECT = $o->{pkg}::$class$dash>__new(
+	\$JAVA_CLASS,
+	Inline::Java::get_INLINE('$modfname'),
+	0) ;
 
 use Carp ;
 
 CODE
 
-		if (defined($d->{classes}->{$class}->{constructors})){
+		while (my ($field, $sign) = each %{$d->{classes}->{$class}->{fields}}){
+			if ($sign->{STATIC}){
+				$code .= <<CODE;
+tie \$$o->{pkg}::$class$colon:$field, "Inline::Java::Object::StaticMember", 
+			\$DUMMY_OBJECT,
+			'$field' ;
+CODE
+			}
+		}
+
+
+		if (scalar(keys %{$d->{classes}->{$class}->{constructors}})){
 			my $pkg = $o->{pkg} ;
 			$code .= <<CODE;
 
@@ -629,11 +668,11 @@ sub new {
 	my \$o = Inline::Java::get_INLINE('$modfname') ;
 	my \$d = \$o->{Java}->{data} ;
 	my \$signatures = \$d->{classes}->{'$class'}->{constructors} ;
-	my (\$proto, \$new_args) = \$class->__validate_prototype('new', [\@args], \$signatures, \$o) ;
+	my (\$proto, \$new_args, \$static) = \$class->__validate_prototype('new', [\@args], \$signatures, \$o) ;
 
 	my \$ret = undef ;
 	eval {
-		\$ret = \$class->__new('$java_class', \$o, -1, \$proto, \$new_args) ;
+		\$ret = \$class->__new(\$JAVA_CLASS, \$o, -1, \$proto, \$new_args) ;
 	} ;
 	croak \$@ if \$@ ;
 
@@ -648,47 +687,29 @@ sub $class_name {
 CODE
 		}
 
-
-		while (my ($method, $sign) = each %{$d->{classes}->{$class}->{methods}->{static}}){
-			my @sign = @{$sign->[0]} ;
-			my $signature = '' ;
-			if (scalar(@sign)){
-				$signature = "'" . join("', '", @sign). "'" ;
-			}
-			my $pkg = $o->{pkg} ;
-			$code .= <<CODE;
-
-sub $method {
-	my \$class = shift ;
-	my \@args = \@_ ;
-
-	my \$o = Inline::Java::get_INLINE('$modfname') ;
-	my \$d = \$o->{Java}->{data} ;
-	my \$signatures = \$d->{classes}->{'$class'}->{methods}->{static}->{'$method'} ;
-	my (\$proto, \$new_args) = \$class->__validate_prototype('$method', [\@args], \$signatures, \$o) ;
-
-	my \$pc = new Inline::Java::Protocol(undef, \$o) ;
-
-	my \$ret = undef ;
-	eval {
-		\$ret = \$pc->CallStaticJavaMethod('$java_class', '$method', \$proto, \$new_args) ;
-	} ;
-	croak \$@ if \$@ ;
-
-	return \$ret ;
-}
-
-CODE
+		while (my ($method, $sign) = each %{$d->{classes}->{$class}->{methods}}){
+			$code .= $o->bind_method($class, $method) ;
 		}
 
+		Inline::Java::debug($code) ;
 
-		while (my ($method, $sign) = each %{$d->{classes}->{$class}->{methods}->{instance}}){
-			my @sign = @{$sign->[0]} ;
-			my $signature = '' ;
-			if (scalar(@sign)){
-				$signature = "'" . join("', '", @sign). "'" ;
-			}
-			$code .= <<CODE;
+		eval $code ;
+
+		croak $@ if $@ ;
+	}
+}
+
+
+sub bind_method {
+	my $o = shift ;
+	my $class = shift ;
+	my $method = shift ;
+	my $static = shift ;
+
+	my $modfname = $o->{modfname} ;
+	my $pkg = $o->{pkg} ;
+	
+	my $code = <<CODE;
 
 sub $method {
 	my \$this = shift ;
@@ -696,8 +717,12 @@ sub $method {
 
 	my \$o = Inline::Java::get_INLINE('$modfname') ;
 	my \$d = \$o->{Java}->{data} ;
-	my \$signatures = \$d->{classes}->{'$class'}->{methods}->{instance}->{'$method'} ;
-	my (\$proto, \$new_args) = \$this->__validate_prototype('$method', [\@args], \$signatures, \$o) ;
+	my \$signatures = \$d->{classes}->{'$class'}->{methods}->{'$method'} ;
+	my (\$proto, \$new_args, \$static) = \$this->__validate_prototype('$method', [\@args], \$signatures, \$o) ;
+
+	if ((\$static)&&(! ref(\$this))){
+		\$this = \$DUMMY_OBJECT ;
+	}
 
 	my \$ret = undef ;
 	eval {
@@ -709,14 +734,8 @@ sub $method {
 }
 
 CODE
-		}
 
-		# Inline::Java::debug($code) ;
-
-		eval $code ;
-
-		croak $@ if $@ ;
-	}
+	return $code ; 
 }
 
 
@@ -727,10 +746,7 @@ sub get_fields {
 	my $fields = {} ;
 	my $d = $o->{Java}->{data} ;
 
-	while (my ($field, $value) = each %{$d->{classes}->{$class}->{fields}->{static}}){
-		$fields->{$field} = $value ;
-	}
-	while (my ($field, $value) = each %{$d->{classes}->{$class}->{fields}->{instance}}){
+	while (my ($field, $value) = each %{$d->{classes}->{$class}->{fields}}){
 		$fields->{$field} = $value ;
 	}
 
@@ -759,34 +775,30 @@ sub info {
 	my %classes = %{$d->{classes}} ;
 	$info .= "The following Java classes have been bound to Perl:\n" ;
 	foreach my $class (sort keys %classes) {
-		$info .= "\tclass $class:\n" ;
+		$info .= "\n  class $class:\n" ;
 
-		if (defined($d->{classes}->{$class}->{constructors})){
-			foreach my $const (@{$d->{classes}->{$class}->{constructors}}) {
-				my $sign = $const ;
-				my $name = $class ;
-				$name =~ s/^(.*)::// ;
-				$info .= "\t\tpublic $name(" . join(", ", @{$sign}) . ")\n" ;
-			}
+		$info .= "    public methods:\n" ;
+		while (my ($k, $v) = each %{$d->{classes}->{$class}->{constructors}}){
+			my $name = $class ;
+			$name =~ s/^(.*)::// ;
+			$info .= "      $name($k)\n" ;
 		}
-		foreach my $method (sort keys %{$d->{classes}->{$class}->{methods}->{static}}) {
-			my $sign = $d->{classes}->{$class}->{methods}->{static}->{$method} ;
-			if (defined($sign)){
-				foreach my $s (@{$sign}){
-					$info .= "\t\tpublic static $method(" . join(", ", @{$s}) . ")\n" ;
-				}
-			}
-		}
-		foreach my $method (sort keys %{$d->{classes}->{$class}->{methods}->{instance}}) {
-			my $sign = $d->{classes}->{$class}->{methods}->{instance}->{$method} ;
-			if (defined($sign)){
-				foreach my $s (@{$sign}){
-					$info .= "\t\tpublic $method(" . join(", ", @{$s}) . ")\n" ;
-				}
-			}
-		}
-    }
 
+		while (my ($k, $v) = each %{$d->{classes}->{$class}->{methods}}){
+			while (my ($k2, $v2) = each %{$d->{classes}->{$class}->{methods}->{$k}}){
+				my $static = ($v2->{STATIC} ? "static " : "") ;
+				$info .= "      $static$k($k2)\n" ;
+			}
+		}
+
+		$info .= "    public member variables:\n" ;
+		while (my ($k, $v) = each %{$d->{classes}->{$class}->{fields}}){
+			my $static = ($v->{STATIC} ? "static " : "") ;
+			my $type = $v->{TYPE} ;
+
+			$info .= "      $static$type $k\n" ;
+		}
+	}
 
     return $info ;
 }
@@ -908,7 +920,7 @@ sub debug {
 	if ($Inline::Java::DEBUG){
 		my $str = join("", @_) ;
 		while (chomp($str)) {}
-		print STDERR "perl $$: $str\n" ;
+		print DEBUG "perl $$: $str\n" ;
 	}
 }
 
@@ -918,10 +930,10 @@ sub debug_obj {
 	my $pre = shift || "perl: " ;
 
 	if ($Inline::Java::DEBUG){
-		print STDERR $pre . Dumper($obj) ;
+		print DEBUG $pre . Dumper($obj) ;
 		if (UNIVERSAL::isa($obj, "Inline::Java::Object")){
 			# Print the guts as well...
-			print STDERR $pre . Dumper($obj->__get_private()) ;
+			print DEBUG $pre . Dumper($obj->__get_private()) ;
 		}
 	}
 }
@@ -997,6 +1009,25 @@ sub portable {
 		}
 	}
 }
+
+
+######################## Public Functions ########################
+
+
+sub cast {
+	my $type = shift ;
+	my $val = shift ;
+	my $array_type = shift ;
+
+	my $o = undef ;
+	eval {
+		$o = new Inline::Java::Class::Cast($type, $val, $array_type) ;
+	} ;
+	croak $@ if $@ ;
+
+	return $o ;
+}
+
 
 
 1 ;

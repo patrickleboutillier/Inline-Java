@@ -4,7 +4,7 @@ package Inline::Java::JNI ;
 
 use strict ;
 
-$Inline::Java::JNI::VERSION = '0.10' ;
+$Inline::Java::JNI::VERSION = '0.20' ;
 
 use Carp ;
 

@@ -3,7 +3,7 @@ package Inline::Java::Class ;
 
 use strict ;
 
-$Inline::Java::Class::VERSION = '0.10' ;
+$Inline::Java::Class::VERSION = '0.20' ;
 
 use Carp ;
 

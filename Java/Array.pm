@@ -4,7 +4,7 @@ package Inline::Java::Array ;
 
 use strict ;
 
-$Inline::Java::Array::VERSION = '0.10' ;
+$Inline::Java::Array::VERSION = '0.20' ;
 
 use Carp ;
 
