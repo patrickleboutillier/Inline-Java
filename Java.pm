@@ -45,6 +45,8 @@ my $COMMAND_COM =
 		($^O eq 'MSWin32')&&
 		(
 			($ENV{PERL_INLINE_JAVA_COMMAND_COM})||
+			($ENV{COMSPEC} =~ /command\.com/i)||
+			($ENV{COMSPEC} =~ /4dos\.com/i)||
 			(`ver` =~ /Win(dows )?(9[58])/)
 		)
 	) || 0 ;
