@@ -128,6 +128,8 @@ if (($build_jni || AskYN("Do you wish to build the JNI extension?", 'y'))){
 				LIBS => [join(' ', @L) . " -ljvm"],
 				# CCFLAGS => '-D_REENTRANT',
 			) ;
+
+			$main::build_jni = 'true' ;
 		}
 	}
 }
