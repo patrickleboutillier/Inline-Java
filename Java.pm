@@ -639,10 +639,10 @@ sub set_classpath {
 		push @list, $o->{ILSM}->{CLASSPATH} ;
 	}
 	if (defined($path)){
-		push @list, $path ;
+		push @list, portable("SUB_FIX_CLASSPATH", $path) ;
 	}
 
-	my $sep = portable("ENV_VAR_PATH_SEP") ;
+	my $sep = portable("ENV_VAR_PATH_SEP_CP") ;
 	my @cp = split(/$sep/, join($sep, @list)) ;
 	my %cp = map { ($_ !~ /^\s*$/ ? ($_, 1) : ()) } @cp ;
 
@@ -1158,18 +1158,21 @@ sub portable {
 	my $defmap = {
 		EXE_EXTENSION		=>	'',
 		ENV_VAR_PATH_SEP	=>	':',
+		ENV_VAR_PATH_SEP_CP	=>	':',
 		PATH_SEP			=>	'/',
 		PATH_SEP_RE			=>	'/',
 		RE_FILE				=>  [],
 		IO_REDIR			=>  '2>&1',
 		GOT_ALARM			=>  1,
 		COMMAND_COM			=>  0,
+		SUB_FIX_CLASSPATH	=>	undef,
 	} ;
 
 	my $map = {
 		MSWin32 => {
 			EXE_EXTENSION		=>	'.exe',
 			ENV_VAR_PATH_SEP	=>	';',
+			ENV_VAR_PATH_SEP_CP	=>	';',
 			PATH_SEP			=>	'\\',
 			PATH_SEP_RE			=>	'\\\\',
 			RE_FILE				=>  ['/', '\\'],
@@ -1178,9 +1181,20 @@ sub portable {
 			GOT_ALARM			=>  0,
 			COMMAND_COM			=>	$COMMAND_COM,
 		},
+		cygwin => {
+			ENV_VAR_PATH_SEP_CP	=>	';',
+			SUB_FIX_CLASSPATH	=>	sub {
+				my $val = shift ;
+				if (defined($val)&&($val)){
+					$val = `cygpath -w \"$val\"` ;
+					chomp($val) ;
+				}
+				return $val ;
+			},
+		},
 	} ;
 
-	if (! defined($defmap->{$key})){
+	if (! exists($defmap->{$key})){
 		croak "Portability issue $key not defined!" ;
 	}
 
@@ -1198,6 +1212,17 @@ sub portable {
 				return undef ;
 			}
 		}
+		elsif ($key =~ /^SUB_/){
+			my $sub = $map->{$^O}->{$key} ;
+			if (defined($sub)){
+				$val = $sub->($val) ;
+				Inline::Java::debug("portable: $key => $val for $^O is '$val'") ;
+				return $val ;
+			}
+			else{
+				return $val ;
+			}
+		}
 		else{
 			Inline::Java::debug("portable: $key for $^O is '$map->{$^O}->{$key}'") ;
 			return $map->{$^O}->{$key} ;
@@ -1205,6 +1230,10 @@ sub portable {
 	}
 	else{
 		if ($key =~ /^RE_/){
+			Inline::Java::debug("portable: $key => $val for $^O is default '$val'") ;
+			return $val ;
+		}
+		if ($key =~ /^SUB_/){
 			Inline::Java::debug("portable: $key => $val for $^O is default '$val'") ;
 			return $val ;
 		}
