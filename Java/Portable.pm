@@ -99,18 +99,15 @@ sub get_user_jar {
 sub find_classes_in_dir {
 	my $dir = shift ;
 
-	my $sdir = (File::Spec->splitpath(
-		File::Spec->catfile($dir, 'dummy_file')))[1] ;
-
 	my @ret = () ;
 	find(sub {
 		my $f = $_ ;
 		if ($f =~ /\.class$/){
 			my $file = $File::Find::name ;
-			my $fdir = (File::Spec->splitpath($file))[1] ;
-			$fdir =~ s/^$sdir// ;
-
+			my $fdir = $File::Find::dir ;
 			my @dirs = File::Spec->splitdir($fdir) ;
+			# Remove '.'
+			shift @dirs ; 
 			if ((! scalar(@dirs))||($dirs[-1] ne '')){
 				push @dirs, '' ;
 			}
@@ -133,6 +130,7 @@ sub portable {
 		EXE_EXTENSION		=>	$Config{exe_ext},
 		GOT_ALARM			=>  $Config{d_alarm} || 0,
 		GOT_FORK			=>	$Config{d_fork} || 0,
+		GOT_NEXT_FREE_PORT	=>	1,
 		ENV_VAR_PATH_SEP	=>	$Config{path_sep},
 		SO_EXT				=>	$Config{dlext},
 		PREFIX				=>	$Config{prefix},
@@ -161,6 +159,7 @@ sub portable {
 			DETACH_OK			=>	0,
 			JVM_LIB				=>	'jvm.lib',
 			JVM_SO				=>	'jvm.dll',
+			GOT_NEXT_FREE_PORT	=>	($COMMAND_COM ? 0 : 1),
 		},
 		cygwin => {
 			ENV_VAR_PATH_SEP_CP	=>	';',

@@ -41,22 +41,24 @@ INSTALLATION:
 
 To install Inline::Java do this:
 
-perl Makefile.PL
-make                     (see Note 1)
-make java
-make test                (see Note 2, 3)
-make install
+  % perl Makefile.PL         (see Note 1)
+  % make java                (see Note 2)
+  % make
+  % make test                (see Note 3, 4)
+  % make install
 
 You have to 'make install' before you can run it successfully. 
 
+Note 1: Under Win95/98/Me, you may need to do 'cd ..' to get back to the
+your original directory after the command has completed.
 
-Note 1: Use nmake on Windows systems.
+Note 2: Use nmake on Win32.
 
-Note 2: If you have built the JNI extension and want the test suite to use 
+Note 3: If you have built the JNI extension and want the test suite to use 
 it, you will need to set the PERL_INLINE_JAVA_JNI environment variable to 1 
 BEFORE running 'make test'.
 
-Note 3: When testing Inline::Java, it's always a good idea to run 'make test'
+Note 4: When testing Inline::Java, it's always a good idea to run 'make test'
 twice. The first time you test the building and loading of a module, the 
 second time you test loading of an already built module.
 

@@ -61,22 +61,28 @@ sub new {
 		$this->{host} = "localhost" ;
 
 		# Grab the next free port number and release it.
-		if ($this->{port} < 0){
-			my $sock = IO::Socket::INET->new(
-				Listen => 0, Proto => 'tcp',
-				LocalAddr => 'localhost', LocalPort => 0) ;
-			if ($sock){
-				$this->{port} = $sock->sockport() ;
-				Inline::Java::debug(2, "next available port number is $this->{port}") ;
-				close($sock) ;
+		if ((! $this->{shared})&&($this->{port} < 0)){
+			if (Inline::Java::portable("GOT_NEXT_FREE_PORT")){
+				my $sock = IO::Socket::INET->new(
+					Listen => 0, Proto => 'tcp',
+					LocalAddr => 'localhost', LocalPort => 0) ;
+				if ($sock){
+					$this->{port} = $sock->sockport() ;
+					Inline::Java::debug(2, "next available port number is $this->{port}") ;
+					close($sock) ;
+				}
+				else{
+					# Revert to the default.
+					$this->{port} = - $this->{port} ;
+					carp(
+						"Could not get next available port number, using port " .
+						"$this->{port} instead. Use the PORT configuration " .
+						"option to suppress this warning.\n Error: $!\n") ;
+				}
 			}
 			else{
 				# Revert to the default.
 				$this->{port} = - $this->{port} ;
-				carp(
-					"Could not get next available port number, using port " .
-					"$this->{port} instead. Use the PORT configuration " .
-					"option to suppress this warning.\n") ;
 			}
 		}
 

@@ -448,7 +448,13 @@ sub _study {
 
 	if ($study_module){
 		# We need to add the classes that are in the directory or under...
-		my @fl = Inline::Java::Portable::find_classes_in_dir($install_dir) ;
+		my $cwd = Cwd::cwd() ;
+		if ($o->get_config('UNTAINT')){
+			($cwd) = $cwd =~ /(.*)/ ;
+		}
+		chdir($install_dir) ;
+		my @fl = Inline::Java::Portable::find_classes_in_dir('.') ;
+		chdir $cwd ;
 		foreach my $f (@fl){
 			push @{$classes}, $f->{class} ;
 		}
