@@ -813,6 +813,7 @@ If you want to use C<Inline::Java> in a CGI script, do the following:
          }
    END
       SHARED_JVM => 1,
+      DIRECTORY => '/somewhere/your/web/server/can/write',
    ) ;
 
    Inline::Java::release_JVM() ;
@@ -852,6 +853,7 @@ Here is an example of how to use C<Inline::Java> under mod_perl:
          }
    END
       SHARED_JVM => 1,
+      DIRECTORY => '/somewhere/your/web/server/can/write',
    ) ;
 
    Inline::Java::release_JVM() ;

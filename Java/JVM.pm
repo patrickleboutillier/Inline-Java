@@ -34,11 +34,11 @@ sub new {
 
 	$this->{destroyed} = 0 ;
 
-	Inline::Java::debug("Starting JVM...") ;
+	Inline::Java::debug(1, "starting JVM...") ;
 
 	if ($o->get_java_config('JNI')){
 		$this->{owner} = 1 ;
-		Inline::Java::debug("  JNI mode") ;
+		Inline::Java::debug(1, "JNI mode") ;
 
 		my $jni = new Inline::Java::JNI(
 			$ENV{CLASSPATH} || "",
@@ -49,9 +49,9 @@ sub new {
 		$this->{JNI} = $jni ;
 	}
 	else{
-		Inline::Java::debug("  Client/Server mode") ;
+		Inline::Java::debug(1, "client/server mode") ;
 
-		my $debug = (Inline::Java::get_DEBUG() ? "true" : "false") ;
+		my $debug = Inline::Java::get_DEBUG() ;
 
 		$this->{shared} = $o->get_java_config('SHARED_JVM') ;
 		$this->{port} = $o->get_java_config('PORT') ;
@@ -63,7 +63,7 @@ sub new {
 				$this->reconnect() ;
 			} ;
 			if (! $@){
-				Inline::Java::debug("  Connected to already running JVM!") ;
+				Inline::Java::debug(1, "connected to already running JVM!") ;
 				return $this ;
 			}
 		}
@@ -74,7 +74,7 @@ sub new {
 
 		my $shared_arg = ($this->{shared} ? "true" : "false") ;
 		my $cmd = "\"$java\" InlineJavaServer $debug $this->{port} $shared_arg" ;
-		Inline::Java::debug($cmd) ;
+		Inline::Java::debug(1, $cmd) ;
 
 		if ($o->get_config('UNTAINT')){
 			($cmd) = $cmd =~ /(.*)/ ;
@@ -185,13 +185,13 @@ sub shutdown {
 
 	if (! $this->{destroyed}){
 		if ($this->am_owner()){
-			Inline::Java::debug("JVM owner exiting...") ;
+			Inline::Java::debug(1, "JVM owner exiting...") ;
 
 			if ($this->{socket}){
 				# This asks the Java server to stop and die.
 				my $sock = $this->{socket} ;
 				if ($sock->peername()){
-					Inline::Java::debug("Sending 'die' message to JVM...") ;
+					Inline::Java::debug(1, "Sending 'die' message to JVM...") ;
 					print $sock "die\n" ;
 				}
 				else{
@@ -203,9 +203,9 @@ sub shutdown {
 					# Here we go ahead and send the signals anyway to be very 
 					# sure it's dead...
 					# Always be polite first, and then insist.
-					Inline::Java::debug("Sending 15 signal to JVM...") ;
+					Inline::Java::debug(1, "Sending 15 signal to JVM...") ;
 					kill(15, $this->{pid}) ;
-					Inline::Java::debug("Sending 9 signal to JVM...") ;
+					Inline::Java::debug(1, "Sending 9 signal to JVM...") ;
 					kill(9, $this->{pid}) ;
 		
 					# Reap the child...
@@ -219,7 +219,7 @@ sub shutdown {
 		else{
 			# We are not the JVM owner, so we simply politely disconnect
 			if ($this->{socket}){
-				Inline::Java::debug("JVM non-owner exiting...") ;
+				Inline::Java::debug(1, "JVM non-owner exiting...") ;
 				close($this->{socket}) ;
 				$this->{socket} = undef ;
 			}
@@ -368,7 +368,7 @@ sub process_command {
 
 	my $resp = undef ;
 	while (1){
-		Inline::Java::debug("  packet sent is $data") ;
+		Inline::Java::debug(3, "packet sent is $data") ;
 
 		if ($this->{socket}){
 			my $sock = $this->{socket} ;
@@ -389,7 +389,7 @@ sub process_command {
 			$resp = $this->{JNI}->process_command($data) ;
 		}
 
-		Inline::Java::debug("  packet recv is $resp") ;
+		Inline::Java::debug(3, "packet recv is $resp") ;
 
 		# We got an answer from the server. Is it a callback?
 		if ($resp =~ /^callback/){

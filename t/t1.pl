@@ -19,7 +19,7 @@ use Inline (
 			}
 		}
 	|, 
-	PRINT_INFO => 1,
+	# PRINT_INFO => 1,
 ) ;
 
 Inline::Java::release_JVM() ;
