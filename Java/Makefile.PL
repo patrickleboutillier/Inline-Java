@@ -181,6 +181,9 @@ sub CleanSoDirs {
 		elsif ($d =~ /motif/){
 				delete $so_dirs{$d} ;
 		}
+		elsif ($d =~ /javaws/){
+				delete $so_dirs{$d} ;
+		}
 		elsif ($d =~ /_threads/){
 			if ($d !~ /native_threads/){
 				delete $so_dirs{$d} ;

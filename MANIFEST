@@ -50,6 +50,7 @@ t/10_5_shared_fork.t
 t/10_6_shared_sim.t
 t/11_exceptions.t
 t/12_callbacks.t
+t/13_end.t
 t/types.java
 t/types.class
 t/no_const.java
