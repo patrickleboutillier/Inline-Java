@@ -413,7 +413,7 @@ sub encode {
 	my $s = shift ;
 
 	# If Perl version < 5.6, use C*
-	return join(".", unpack(($] < 5.006 ? "C*" : "U*"), $s)) ;
+	return join(".", unpack("U*", $s)) ;
 }
 
 
@@ -421,7 +421,7 @@ sub decode {
 	my $s = shift ;
 
 	# If Perl version < 5.6, use C*
-	return pack(($] < 5.006 ? "C*" : "U*"), split(/\./, $s)) ;
+	return pack("U*", split(/\./, $s)) ;
 }
 
 
