@@ -22,8 +22,8 @@ Inline::Java - Write Perl classes in Java.
    END_OF_JAVA_CODE
 
    my $alu = new Pod_alu() ;
-   print "9 + 16 = ", $alu->add(9, 16), "\n" ; # prints 9 + 16 = 25
-   print "9 - 16 = ", $alu->subtract(9, 16), "\n" ; # prints 9 - 16 = -7
+   print($alu->add(9, 16) . "\n") ; # prints 25
+   print($alu->subtract(9, 16) . "\n") ; # prints -7
 
 =for comment
 
@@ -228,9 +228,9 @@ Example:
    END
 
    my $obj = new Pod_1 ;
-   print $obj->get_data() . "\n" ; # prints data
+   print($obj->get_data() . "\n") ; # prints data
    $obj->set_data("new data") ;
-   print $obj->get_data() . "\n" ; # prints new data
+   print($obj->get_data() . "\n") ; # prints new data
 
 =for comment
 
@@ -271,7 +271,7 @@ to an outer class object as the first parameter of the constructor:
 
    my $obj = new Pod_2() ;
    my $obj2 = new Pod_2::Pod_2_Inner($obj) ;
-   print $obj2->{name} . "\n" ; # prints Pod_2_Inner
+   print($obj2->{name} . "\n") ; # prints Pod_2_Inner
 
 =for comment
 
@@ -306,7 +306,7 @@ will be automatically converted to the correct type:
 
    my $obj = new Pod_3_arg() ;
    my $obj2 = new Pod_3(5, "toto", $obj) ;
-   print $obj2->{n} . "\n" ; # prints 5
+   print($obj2->{n} . "\n") ; # prints 5
 
 =for comment
 
@@ -330,14 +330,14 @@ are not known to C<Inline::Java>. This is also true for return types:
          }
 
          public String do_stuff_to_hash(HashMap h){
-           return h.get("key") ;
+           return (String)h.get("key") ;
          }
       }
    END
 
    my $obj = new Pod_4() ;
    my $h = $obj->get_hash() ;
-   print $obj->do_stuff_to_hash($h) ; # prints value
+   print($obj->do_stuff_to_hash($h) ."\n") ; # prints value
 
 =for comment
 
@@ -368,7 +368,7 @@ be known to Perl:
 
    my $obj = new Pod_5() ;
    $obj->{i} = 2 ;
-   print $obj->{i} . "\n" ; # prints 2
+   print($obj->{i} . "\n") ; # prints 2
    my $hm1 = $obj->{hm} ; # instance way
    my $hm2 = $Pod_4::hm ; # static way   
 
@@ -407,14 +407,14 @@ lists:
 
    my $obj = new Pod_6() ;
    my $i_2 = $obj->{i}->[2] ; # 7
-   print $i_2 . "\n" ; # prints 7
+   print($i_2 . "\n") ; # prints 7
 
    my $a1 = $obj->f(["a", "b", "c"]) ; # String []
    my $a2 = $obj->f([
       ["00", "01"],
       ["10", "11"],
    ]) ; # String [][]
-   print $a2->[1]->[0] . "\n" ; # prints 10
+   print($a2->[1]->[0] . "\n") ; # prints 10
 
 =for comment
 
@@ -442,7 +442,7 @@ the arguments that are passed:
    END
 
    my $obj = new Pod_7() ;
-   print $obj->f('5') . "\n" # prints int ;
+   print($obj->f('5') . "\n") # prints int ;
 
 =for comment
 
@@ -539,7 +539,7 @@ type of the exception. Here is a example of a typical use:
    if ($@){
       if (caught("java.lang.Exception")){
          my $msg = $@->getMessage() ;
-         print "$msg" . "\n" ; # prints ouch!
+         print($msg . "\n") ; # prints ouch!
       }
       else{
          # It wasn't a Java exception after all...
@@ -601,7 +601,7 @@ use:
 
    my $re = new Pod_regexp() ;
    my $match = $re->match("Inline::Java", "^Inline") ;
-   print $match . "\n" ; # prints 1
+   print($match . "\n") ; # prints 1
 
 	
    sub regexp { 
@@ -640,7 +640,8 @@ script anymore. Here's how to use the 'studying' function:
 
    my $hm = new java::util::HashMap() ;
    $hm->put("key", "value") ;
-   print $hm->get("key") . "\n" ; # prints value
+   my $val = $hm->get("key") ;
+   print($val . "\n") ; # prints value
 
 =for comment
 
@@ -669,7 +670,8 @@ to study all classes that it comes across:
    my $obj = new Pod_10() ;
    my $hm = $obj->get_hm() ;
    $hm->put("key", "value") ;
-   print $hm->get("key") . "\n" ; # prints value
+   my $val = $hm->get("key") ;
+   print($val . "\n") ; # prints value
 
 =for comment
 
@@ -769,18 +771,18 @@ in the child to get a fresh connection to the JVM. Ex:
       SHARED_JVM => 1,
    ) ;
 
-   my $f = new Pod_11() ;
-
    my $nb = 5 ;
    for (my $i = 0 ; $i < $nb ; $i++){
       if (! fork()){
          Inline::Java::reconnect_JVM() ;
-         $f = new Pod_11() ;
+         my $f = new Pod_11() ;
          exit ;
       }
    }
    sleep(5) ;
-   print $f->{i} . "\n" ; # prints 6
+
+   my $f = new Pod_11() ;
+   print($f->{i} . "\n") ; # prints 6
 
 =for comment
 
@@ -814,9 +816,9 @@ If you want to use C<Inline::Java> in a CGI script, do the following:
    ) ;
 
    Inline::Java::release_JVM() ;
-   my $c = new Pod_counter() ;
 
-   my $q = new CGI ;
+   my $c = new Pod_counter() ;
+   my $q = new CGI() ;
    print 
       $q->start_html() . 
       "This page has been accessed " . $c->{cnt} . " times." .
@@ -851,12 +853,12 @@ Here is an example of how to use C<Inline::Java> under mod_perl:
       SHARED_JVM => 1,
    ) ;
 
-   Inline::Java::reconnect_JVM() ;
+   Inline::Java::release_JVM() ;
+   my $c = new Pod_counter() ;
 
    sub handler {
       my $r = shift ;
 
-      my $c = new Pod_counter() ;
       my $q = new CGI ;
       print 
          $q->start_html() . 
@@ -866,9 +868,9 @@ Here is an example of how to use C<Inline::Java> under mod_perl:
       return Apache::Constants::OK() ;
    }
 
-The reconnect_JVM() function makes sure that our connection to the JVM 
-is new and that we are not using a connection that we received after
-a fork. 
+It has been noticed that sometimes Apache has problems shutting down 
+when Inline::Java is used. For now the solution is to shut down Apache 
+twice. Then it will restart properly again.
    Z<>
 
 

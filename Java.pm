@@ -380,7 +380,7 @@ sub write_java {
 	my $build_dir = $o->get_api('build_dir') ;
 	my $modfname = $o->get_api('modfname') ;
 
-	Inline::Java::Portable::mkpath($o, $build_dir) ;
+	$o->mkpath($build_dir) ;
 
 	if (! $study_only){
 		my $p = File::Spec->catfile($build_dir, "$modfname.java") ;
@@ -419,7 +419,7 @@ sub compile {
 
 	my $install = File::Spec->catdir($install_lib, "auto", $modpname) ;
 
-	Inline::Java::Portable::mkpath($o, $install) ;
+	$o->mkpath($install) ;
 	$o->set_classpath($install) ;
 
 	my $javac = File::Spec->catfile($o->{ILSM}->{BIN}, 
@@ -484,7 +484,7 @@ sub compile {
 	}
 
 	if ($o->get_api('cleanup')){
-		Inline::Java::Portable::rmpath($o, '', $build_dir) ;
+		$o->rmpath('', $build_dir) ;
 	}
 
 	Inline::Java::debug("compile done.") ;
@@ -636,7 +636,32 @@ sub set_classpath {
 	}
 
 	my $sep = portable("ENV_VAR_PATH_SEP_CP") ;
-	my @cp = split(/$sep/, join($sep, @list)) ;
+	my $cpall = join($sep, @list) ;
+	
+
+	$cpall =~ s/\s*\[PERL_INLINE_JAVA\s*=\s*(.*?)\s*\]\s*/{
+		my $modules = $1 ;
+		Inline::Java::debug("   found special CLASSPATH entry: $modules") ;
+	
+		my @modules = split(m#\s*,\s*#, $modules) ;
+		my $dir = File::Spec->catdir($o->get_config('DIRECTORY'), "lib", "auto") ;
+
+		my %paths = () ;
+		foreach my $m (@modules){
+			$m = File::Spec->catdir(split(m#::#, $m)) ;
+
+			# Here we must make sure that the directory exists, or
+			# else it is removed from the CLASSPATH by Java
+			my $path = File::Spec->catdir($dir, $m) ;
+			$o->mkpath($path) ;
+
+			$paths{$path} = 1 ;
+		}
+
+		join($sep, keys %paths) ;
+	}/ge ;
+
+	my @cp = split(/$sep+/, $cpall) ;
 
 	# Add dot to CLASSPATH, required when building
 	push @cp, '.' ;
@@ -644,27 +669,6 @@ sub set_classpath {
 	foreach my $p (@cp){
 		$p =~ s/^\s+// ;
 		$p =~ s/\s+$// ;
-		if ($p =~ /\[PERL_INLINE_JAVA\s*=\s*(.*?)\s*\]/){
-			my $modules = $1 ;
-			Inline::Java::debug("   found special CLASSPATH entry: $modules") ;
-		
-			my @modules = split(m#\s*,\s*#, $modules) ;
-			my $dir = File::Spec->catdir($o->get_config('DIRECTORY'), "lib", "auto") ;
-
-			my %paths = () ;
-			foreach my $m (@modules){
-				$m = File::Spec->catdir(split(/::/, $m)) ;
-
-				# Here we must make sure that the directory exists, or
-				# else it is removed from the CLASSPATH by Java
-				my $path = File::Spec->catdir($dir, $m) ;
-				Inline::Java::Portable::mkpath($o, $path) ;
-
-				$paths{$path} = 1 ;
-			}
-
-			$p = join($sep, keys %paths) ;
-		}
 	}
 
 	$ENV{CLASSPATH} = join($sep, @cp) ;
