@@ -37,7 +37,7 @@ sub __get_object {
 
 	my $ref = $OBJECTS->{$knot} ;
 	if (! defined($ref)){
-		croak "Unknown Java array reference" ;
+		croak "Unknown Java array reference $knot" ;
 	}
 	
 	return $ref ;
@@ -300,7 +300,7 @@ sub new {
 	$this->AnalyzeArrayClass() ;
 
 	if ($ref){
-		$this->InitFromArray() ;
+		$this->InitFromArray($this->{array}) ;
 	}
 
 	return $this ;
@@ -309,42 +309,15 @@ sub new {
 
 sub InitFromArray {
 	my $this = shift ;
+	my $array = shift ;
 	my $level = shift ;
 
 	my $ref = $this->{ref} ;
 
-	$this->ValidateArray($ref, 1) ;
-
-	# Now that we now that this array is valid, we need to carry
-	# over the stuff in $ref into ourselves.
-	# sub arrays into array_objects
-	$this->ImportFromArray($level) ;
+	$this->ValidateArray($ref, $array) ;
 
 	if (! $level){
-		# Inline::Java::debug_obj($this) ;
-	}
-}
-
-
-sub ImportFromArray {
-	my $this = shift ;
-	my $level = shift ;
-
-	my $ref = $this->{ref} ;
-
-	for (my $i = 0 ; $i < scalar(@{$ref}) ; $i++){
-		my $elem = $ref->[$i] ;
-
-		if (UNIVERSAL::isa($elem, "ARRAY")){
-			my $java_class = $this->{java_class} ;
-
-			# We need to drop the array by 1 dimension
-			$java_class =~ s/^\[// ;
-			my $obj = new Inline::Java::Array::Normalizer($java_class, $elem) ;
-			$elem = $obj->{array} ;
-		}
-		my $nb = scalar(@{$this->{array}}) ;
-		$this->{array}->[$nb] = $elem ;
+		Inline::Java::debug_obj($this) ;
 	}
 }
 
@@ -438,28 +411,28 @@ sub AnalyzeArrayClass {
 sub ValidateArray {
 	my $this = shift ;
 	my $ref = shift ;
-	my $fill = shift ;
+	my $array = shift ;
 	my $level = shift || 0 ;
-
 
 	if (! UNIVERSAL::isa($ref, "ARRAY")){
 		# We must start with an array of some kind...
 		croak "$ref is not an array reference" ;
 	}
 
-	$this->ValidateElements($ref, $level) ;
+	$this->ValidateElements($ref, $array, $level) ;
 
+	my $map = $this->{map} ;
 	foreach my $elem (@{$ref}){
 		if (UNIVERSAL::isa($elem, "ARRAY")){
-			$this->ValidateArray($elem, $fill, $level + 1) ;
+			# All the elements at this level are sub-arrays.
+			my $sarray = [] ;
+			$this->ValidateArray($elem, $sarray, $level + 1) ;
+			push @{$array}, $sarray ;
 		}
 	}
 
-	if ($fill){
-		$this->FillArray($ref, $level) ;
-	}
+	$this->FillArray($array, $level) ;
 
-	my $map = $this->{map} ;
 	if (! $level){
 		my @levels = (sort {$a <=> $b} keys %{$map}) ;
 		my $nbl = scalar(@levels) ;
@@ -483,7 +456,7 @@ sub ValidateArray {
 				"$this->{nb_dim} dimensions" ;
 		}
 		
-		# Inline::Java::debug_obj($this) ;
+		Inline::Java::debug_obj($this) ;
 	}
 }
 
@@ -492,6 +465,7 @@ sub ValidateArray {
 sub ValidateElements {
 	my $this = shift ;
 	my $ref = shift ;
+	my $array = shift ;
 	my $level = shift ;
 
 	my $map = $this->{map} ;
@@ -503,27 +477,24 @@ sub ValidateElements {
 		$map->{$level}->{max} = $cnt ;
 	}
 
-	foreach my $elem (@{$ref}){
+	for (my $i = 0 ; $i < $cnt ; $i++){
+		my $elem = $ref->[$i] ;
 		if (defined($elem)){
-			if (ref($elem)){
-				if (UNIVERSAL::isa($elem, "ARRAY")){
-					$this->CheckMap("ARRAY", $level) ;
-				}
-				elsif (UNIVERSAL::isa($elem, "Inline::Java::Object")){
-					$this->CheckMap("Inline::Java::Object", $level) ;
-					$this->CastArrayArgument($elem) ;
-					push @{$map->{$level}->{list}}, $elem ;
-				}
-				else{
-					croak "A Java array can only contain scalars, Java objects or array references" ;
-				}
+			if (UNIVERSAL::isa($elem, "ARRAY")){
+				$this->CheckMap("SUB_ARRAY", $level) ;
+			}
+			elsif (
+				(UNIVERSAL::isa($elem, "Inline::Java::Object"))||
+				(! ref($elem))){
+				$this->CheckMap("BASE_ELEMENT", $level) ;
+				$elem = $this->CastArrayArgument($elem) ;
+				$array->[$i] = $elem ;
 			}
 			else{
-				$this->CheckMap("SCALAR", $level) ;
-				$this->CastArrayArgument($elem) ;
-				push @{$map->{$level}->{list}}, $elem ;
+				croak "A Java array can only contain scalars, Java objects or array references" ;
 			}
 		}
+		$map->{$level}->{count}++ ;
 	}
 }
 
@@ -541,35 +512,37 @@ sub CheckMap {
 	elsif ($map->{$level}->{type} ne $type){
 		croak "Java array contains mixed types in dimension $level ($type != $map->{$level}->{type})" ;
 	}
-	$map->{$level}->{count}++ ;
 }
 
 
 sub CastArrayArgument {
 	my $this = shift ;
-	my $ref = shift ;
+	my $arg = shift ;
 
 	my $element_class = $this->{req_element_class} ;
 
-	Inline::Java::Class::CastArgument($ref, $element_class) ;
+	my ($new_arg, $score) = Inline::Java::Class::CastArgument($arg, $element_class) ;
+
+	return $new_arg ;
 }
 
 
 # Makes sure that all the dimensions of the array have the same number of elements
 sub FillArray {
 	my $this = shift ;
-	my $ref = shift ;
+	my $array = shift ;
 	my $level = shift ;
 
 	my $map = $this->{map} ;
 
 	my $max = $map->{$level}->{max} ;
-	my $nb = scalar(@{$ref}) ;
+	my $nb = scalar(@{$array}) ;
 
-	foreach my $elem (@{$ref}){
-		if ($map->{$level}->{type} eq "ARRAY"){
+	if ($map->{$level}->{type} eq "SUB_ARRAY"){
+		foreach my $elem (@{$array}){
 			if (! defined($elem)){
 				$elem = [] ;
+				$this->FillArray($elem, $level + 1) ;
 			}
 		}
 	}
@@ -577,14 +550,13 @@ sub FillArray {
 	if ($nb < $max){
 		# We must stuff...
 		for (my $i = $nb ; $i < $max ; $i++){
-			if ($map->{$level}->{type} eq "ARRAY"){
+			if ($map->{$level}->{type} eq "SUB_ARRAY"){
 				my $elem = [] ;
-				push @{$ref}, $elem ;
-				push @{$map->{$level}->{list}}, $elem ;
+				$this->FillArray($elem, $level + 1) ;
+				push @{$array}, $elem ;
 			}
 			else{
-				push @{$ref}, undef ;
-				push @{$map->{$level}->{list}}, undef ;
+				push @{$array}, undef ;
 			}			
 		}
 	}
@@ -595,16 +567,15 @@ sub FlattenArray {
 	my $this = shift ;
 	my $level = shift ;
 
+	my $list = $this->MakeElementList($this->{array}) ;
+
 	my $dim = $this->{dim} ;
-	my $last = scalar(@{$dim} - 1) ;
-	my $list = $this->{map}->{$last}->{list} ;
-	my $nb_elem = scalar(@{$list}) ;
-		
 	my $req_nb_elem = 1 ;
 	foreach my $d (@{$dim}){
 		$req_nb_elem *= $d ;
 	}
 
+	my $nb_elem = scalar(@{$list}) ;
 	if ($req_nb_elem != $nb_elem){
 		my $ds = "[" . join("][", @{$dim}) . "]" ;
 		croak "Corrupted array: $ds should contain $req_nb_elem elements, has $nb_elem" ;
@@ -612,9 +583,30 @@ sub FlattenArray {
 
 	my $ret = [$dim, $list] ;
 
-	# Inline::Java::debug_obj($ret) ;
+	Inline::Java::debug_obj($ret) ;
 
 	return $ret ;
+}
+
+
+sub MakeElementList {
+	my $this = shift ;
+	my $array = shift ;
+
+	my @ret = () ;
+	foreach my $elem (@{$array}){
+		if (UNIVERSAL::isa($elem, "ARRAY")){
+			my $sret = $this->MakeElementList($elem) ;
+			push @ret, @{$sret} ;			
+		}
+		else{
+			# All elements here are base level elements.
+			push @ret, @{$array} ;
+			last ;
+		}
+	}
+
+	return \@ret ;
 }
 
 
