@@ -134,11 +134,12 @@ sub setup_socket {
 	my $one_shot = shift ;
 
 	my $socket = undef ;
+
 	my $last_words = "timeout\n" ;
+	my $got_alarm = Inline::Java::portable("GOT_ALARM") ;
+
 	eval {
 		local $SIG{ALRM} = sub { die($last_words) ; } ;
-
-		my $got_alarm = Inline::Java::portable("GOT_ALARM") ;
 
 		if ($got_alarm){
 			alarm($timeout) ;
@@ -169,9 +170,13 @@ sub setup_socket {
 			croak "JVM taking more than $timeout seconds to start, or died before Perl could connect. Increase config STARTUP_DELAY if necessary." ;
 		}
 		else{
+			if ($got_alarm){
+				alarm(0) ;
+			}
 			croak $@ ;
 		}
 	}
+
 	if (! $socket){
 		croak "Can't connect to JVM: $!" ;
 	}
