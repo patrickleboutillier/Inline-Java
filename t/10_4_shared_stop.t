@@ -5,7 +5,12 @@ use Test ;
 
 
 BEGIN {
+	require Inline::Java::Portable ;
 	if ($ENV{PERL_INLINE_JAVA_JNI}){
+		plan(tests => 0) ;
+		exit ;
+	}
+	elsif (! Inline::Java::Portable::portable("DETACH_OK")){
 		plan(tests => 0) ;
 		exit ;
 	}
