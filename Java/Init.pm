@@ -1,9 +1,13 @@
 package Inline::Java::Init ;
 
-$Inline::Java::Init::VERSION = '0.01' ;
+
+use strict ;
+
+$Inline::Java::Init::VERSION = '0.10' ;
 
 my $DATA = join('', <DATA>) ;
 my $OBJECT_DATA = join('', <Inline::Java::Object::DATA>) ;
+my $ARRAY_DATA = join('', <Inline::Java::Array::DATA>) ;
 my $CLASS_DATA = join('', <Inline::Java::Class::DATA>) ;
 my $PROTO_DATA = join('', <Inline::Java::Protocol::DATA>) ;
 
@@ -23,10 +27,12 @@ sub DumpServerJavaCode {
 
 	my $java = $DATA ;
 	my $java_obj = $OBJECT_DATA ;
+	my $java_array = $ARRAY_DATA ;
 	my $java_class = $CLASS_DATA ;
 	my $java_proto = $PROTO_DATA ;
 
 	$java =~ s/<INLINE_JAVA_OBJECT>/$java_obj/g ;
+	$java =~ s/<INLINE_JAVA_ARRAY>/$java_array/g ;
 	$java =~ s/<INLINE_JAVA_CLASS>/$java_class/g ;
 	$java =~ s/<INLINE_JAVA_PROTOCOL>/$java_proto/g ;
 
@@ -77,7 +83,7 @@ public class InlineJavaServer {
 			try {
 				ss = new ServerSocket(port) ;
 				Socket client = ss.accept() ;
-					
+
 				BufferedReader br = new BufferedReader(
 					new InputStreamReader(client.getInputStream())) ;
 				BufferedWriter bw = new BufferedWriter(
@@ -186,7 +192,7 @@ public class InlineJavaServer {
 						Class decl = x.getDeclaringClass() ;
 						Class type = x.getType() ;
 						pw.append("field" + stat + decl.getName() + " " + x.getName() + " " + type.getName() + "\n") ;
-					}					
+					}
 				}
 			}
 		}
@@ -203,10 +209,15 @@ public class InlineJavaServer {
 		Creates a string representing a method signature
 	*/
 	String CreateSignature(Class param[]){
+		return CreateSignature(param, ", ") ;
+	}
+
+
+	String CreateSignature(Class param[], String del){
 		StringBuffer ret = new StringBuffer() ;
 		for (int i = 0 ; i < param.length ; i++){
 			if (i > 0){
-				ret.append(", ") ;
+				ret.append(del) ;
 			}
 			ret.append(param[i].getName()) ;
 		}
@@ -237,6 +248,8 @@ public class InlineJavaServer {
 
 
 	<INLINE_JAVA_OBJECT>
+
+	<INLINE_JAVA_ARRAY>
 
 	<INLINE_JAVA_CLASS>
 

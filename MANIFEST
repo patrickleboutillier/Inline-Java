@@ -12,5 +12,6 @@ Java/Class.pm
 t/1_init.t
 t/2_primitives.t
 t/3_objects.t
-t/4_arrays.t
+t/4_members.t
+t/5_arrays.t
 

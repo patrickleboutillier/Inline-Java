@@ -3,10 +3,9 @@ package Inline::Java::Class ;
 
 use strict ;
 
-$Inline::Java::Class::VERSION = '0.01' ;
+$Inline::Java::Class::VERSION = '0.10' ;
 
 use Carp ;
-
 
 
 my $INT_RE = '^[+-]?\d+$' ;
@@ -81,6 +80,7 @@ sub ValidateClassSplit {
 sub CastArguments {
 	my $args = shift ;
 	my $proto = shift ;
+	my $module = shift ;
 
 	Inline::Java::debug_obj($args) ;
 	Inline::Java::debug_obj($proto) ;
@@ -90,25 +90,55 @@ sub CastArguments {
 	}
 
 	my $ret = [] ;
+	my $score = 0 ;
 	for (my $i = 0 ; $i < scalar(@{$args}) ; $i++){
-		$ret->[$i] = CastArgument($args->[$i], $proto->[$i]) ;
+		my @r = CastArgument($args->[$i], $proto->[$i], $module) ;
+		$ret->[$i] = $r[0] ;
+		$score += $r[1] ;
 	}
 
-	return $ret ;
+	return ($ret, $score) ;
 }
 
 
 sub CastArgument {
 	my $arg = shift ;
 	my $proto = shift ;
+	my $module = shift ;
 
 	ValidateClass($proto) ;
 
 	if ((ClassIsReference($proto))&&(! UNIVERSAL::isa($arg, "Inline::Java::Object"))){
 		# Here we allow scalars to be passed in place of java.lang.Object
 		# They will wrapped on the Java side.
-		if ($proto ne "java.lang.Object"){
-			croak "Can't convert $arg to object $proto" ;
+		if (UNIVERSAL::isa($arg, "ARRAY")){
+			if (! UNIVERSAL::isa($arg, "Inline::Java::Array")){
+				my $an = new Inline::Java::Array::Normalizer($proto, $arg) ;
+				my $flat = $an->FlattenArray() ; 
+				my $inline = $Inline::Java::INLINE->{$module} ;
+				my $obj = Inline::Java::Object->__new($proto, $inline, -1, $flat->[0], $flat->[1]) ;
+
+				# We need to create the array on the Java side, and then grab 
+				# the returned object.
+				$arg = new Inline::Java::Array($obj) ;
+			}
+			else{
+				Inline::Java::debug("argument is already an Inline::Java array") ;
+			}
+		}
+		else{
+			if (ref($arg)){
+				# We got some other type of ref...
+				croak "Can't convert $arg to object $proto" ;
+			}
+			else{
+				# Here we got a scalar
+				# Here we allow scalars to be passed in place of java.lang.Object
+				# They will wrapped on the Java side.
+				if ($proto ne "java.lang.Object"){
+					croak "Can't convert $arg to object $proto" ;
+				}
+			}
 		}
 	}
 	if ((ClassIsPrimitive($proto))&&(ref($arg))){
@@ -117,7 +147,7 @@ sub CastArgument {
 
 	if (ClassIsNumeric($proto)){
 		if (! defined($arg)){
-			return 0 ;
+			return (0, 0) ;
 		}
 		my $re = $RANGE->{$proto}->{REGEXP} ;
 		my $min = $RANGE->{$proto}->{MIN} ;
@@ -125,7 +155,7 @@ sub CastArgument {
 		Inline::Java::debug("min = $min, max = $max, val = $arg") ;
 		if ($arg =~ /$re/){
 			if (($arg >= $min)&&($arg <= $max)){
-				return $arg ;
+				return ($arg, 0) ;
 			}
 			croak "$arg out of range for type $proto" ;
 		}
@@ -133,29 +163,29 @@ sub CastArgument {
 	}
 	elsif (ClassIsChar($proto)){
 		if (! defined($arg)){
-			return "\0" ;
+			return ("\0", 0) ;
 		}
 		if (length($arg) == 1){
-			return $arg ;
+			return ($arg, 0) ;
 		}
 		croak "Can't convert $arg to $proto" ;
 	}
 	elsif (ClassIsBool($proto)){
 		if ($arg){
-			return 1 ;
+			return (1, 0) ;
 		}
 		else{
-			return 0 ;
+			return (0, 0) ;
 		}
 	}
 	elsif (ClassIsString($proto)){
 		if (! defined($arg)){
-			return "" ;
+			return ("", 0) ;
 		}
-		return $arg ;
+		return ($arg, 0) ;
 	}
 	else{
-		return $arg ;
+		return ($arg, 0) ;
 	}
 }
 
@@ -284,10 +314,20 @@ __DATA__
 class InlineJavaClass {
 	InlineJavaServer ijs ;
 	InlineJavaProtocol ijp ;
+	HashMap hm = new HashMap() ;
 
 	InlineJavaClass(InlineJavaServer _ijs, InlineJavaProtocol _ijp){
 		ijs = _ijs ;
 		ijp = _ijp ;
+
+		hm.put("B", "byte") ;
+		hm.put("S", "short") ;
+		hm.put("I", "int") ;
+		hm.put("J", "long") ;
+		hm.put("F", "float") ;
+		hm.put("D", "double") ;
+		hm.put("C", "char") ;
+		hm.put("Z", "boolean") ;
 	}
 
 
@@ -295,6 +335,11 @@ class InlineJavaClass {
 		Makes sure a class exists
 	*/
 	Class ValidateClass(String name) throws InlineJavaException {
+		String s = (String)hm.get(name) ;
+		if (s != null){
+			name = s ;
+		}
+
 		try {
 			Class c = Class.forName(name) ;
 			return c ;
@@ -633,4 +678,18 @@ class InlineJavaClass {
 
 		return true ;
 	}
+
+	boolean ClassIsArray (Class p){
+		String name = p.getName() ;
+
+		if ((ClassIsReference(p))&&(name.startsWith("["))){
+			return true ;
+		}
+
+		ijs.debug("  class " + name + " is array") ;
+
+		return false ;
+	}
+
 }
+
