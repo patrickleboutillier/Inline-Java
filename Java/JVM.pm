@@ -3,7 +3,7 @@ package Inline::Java::JVM ;
 
 use strict ;
 
-$Inline::Java::JVM::VERSION = '0.20' ;
+$Inline::Java::JVM::VERSION = '0.22' ;
 
 use Carp ;
 use IPC::Open3 ;
