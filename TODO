@@ -1,3 +1,6 @@
 CODE:
 - Arrays
 
+TEST:
+- Add test script for configuration options (other than BIN)
+

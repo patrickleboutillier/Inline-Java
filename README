@@ -20,10 +20,15 @@ When run, this complete program prints:
 
     Just Another Inline Hacker
 
+
 -------------------------------------------------------------------------------
 INSTALLATION:
 
-This module requires Inline.pm version 0.31 or higher to be installed.
+- This module requires Inline version 0.31 or higher to be installed.
+- It also requires a version of the Java SDK 1.2 or higher to be 
+  installed. You can get the latest Java SDK from Sun Microsystems
+  at http://java.sun.com. Follow the provided instructions in order
+  to install the Java SDK properly.
 
 To install Inline::Java do this:
 
@@ -53,11 +58,6 @@ Inline::Java version 0.01 includes:
 + All objects (except arrays) and primitive Java types are supported as
   method parameters.
 
--------------------------------------------------------------------------------
-INSTALLATION:
-
-This module requires the Inline module. 
-It also requires a version of Sun's Java2 SDK.
 
 -------------------------------------------------------------------------------
 INFORMATION:
