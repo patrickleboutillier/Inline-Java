@@ -73,8 +73,6 @@ sub done {
 	
 	Inline::Java::debug("exiting with $ec") ;
 
-	# In Windows, it is possible that the process will hang here if
-	# the children are not all dead. But they should be. Really.
 	exit($ec) ;
 }
 
@@ -84,10 +82,6 @@ END {
 		done() ;
 	}
 }
-
-
-# Signal stuff, not really needed with JNI
-use sigtrap 'handler', \&done, 'normal-signals' ;
 
 
 # To export the cast function and others.
@@ -1152,6 +1146,11 @@ sub get_DEBUG {
 
 sub get_DONE {
 	return $DONE ;
+}
+
+
+sub set_DONE {
+	$DONE = 1 ;
 }
 
 
