@@ -337,7 +337,7 @@ are not known to C<Inline::Java>. This is also true for return types:
 
    my $obj = new Pod_4() ;
    my $h = $obj->get_hash() ;
-   print($obj->do_stuff_to_hash($h) ."\n") ; # prints value
+   print($obj->do_stuff_to_hash($h) . "\n") ; # prints value
 
 =for comment
 
@@ -442,7 +442,7 @@ the arguments that are passed:
    END
 
    my $obj = new Pod_7() ;
-   print($obj->f('5') . "\n") # prints int ;
+   print($obj->f('5') . "\n") ; # prints int
 
 =for comment
 
@@ -525,7 +525,7 @@ type of the exception. Here is a example of a typical use:
       class Pod_9 {
          public Pod_9(boolean t) throws Exception {
 			if (t){
-	            throw new Exception("ouch!") ;
+               throw new Exception("ouch!") ;
 			}
          }
       }
@@ -591,7 +591,7 @@ use:
                }
             }
             catch (PerlException pe){
-              // $@ is in pe.GetObject()
+               // $@ is in pe.GetObject()
             }
 
             return false ;
@@ -832,7 +832,8 @@ the first CGI to execute will start the JVM, but by releasing it the JVM
 will never be shutdown. Subsequent CGI, since they have the SHARED_JVM
 option enabled, will try to connect to an already existing JVM before
 trying to start a new one. Therefore if the JVM happens to crash or is
-killed, the next CGI that runs will start a new one.
+killed, the next CGI that runs will start a new one. The JVM will be
+killed when Apache is shut down.
    Z<>
 
 
@@ -868,9 +869,8 @@ Here is an example of how to use C<Inline::Java> under mod_perl:
       return Apache::Constants::OK() ;
    }
 
-It has been noticed that sometimes Apache has problems shutting down 
-when Inline::Java is used. For now the solution is to shut down Apache 
-twice. Then it will restart properly again.
+See USING Inline::Java UNDER MOD_PERL for more details about
+the release_JVM() function.
    Z<>
 
 
@@ -880,9 +880,13 @@ This is an ALPHA release of C<Inline::Java>. Further testing and
 expanded support for other operating systems and platforms will be a
 focus for future releases. It has been tested on: 
 
-   - Solaris 2.8            + Perl 5.6 + Java SDK 1.3.1
+   - Solaris 2.8            + Perl 5.6.1 + Java SDK 1.2.2
+   - Solaris 2.8            + Perl 5.6.1 + Java SDK 1.3.1
+   - Linux Redhat 7.1 Intel + Perl 5.6 + Java SDK 1.2.2
    - Linux Redhat 7.1 Intel + Perl 5.6 + Java SDK 1.3.1
+   - Windows 2000           + Perl 5.6 + Java SDK 1.2.2
    - Windows 2000           + Perl 5.6 + Java SDK 1.3.0
+   - Windows 95             + Perl 5.6 + Java SDK 1.3.1
    - Windows 95             + Perl 5.6 + Java SDK 1.2.2 
 
 It likely will work with many other configurations.
@@ -971,7 +975,7 @@ Brian Ingerson <INGY@cpan.org> is the author of Inline.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001, Patrick LeBoutillier.
+Copyright (c) 2001-2002, Patrick LeBoutillier.
 
 All Rights Reserved. This module is free software. It may be used,
 redistributed and/or modified under the terms of the Perl Artistic
