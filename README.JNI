@@ -33,7 +33,7 @@ OVERVIEW
               +----------+----------+
               | JDK1.2.2 | JDK1.3.1 |
 +-------------+----------+----------+
-| Win32		  |    ok    |    ok    | 
+| Win32       |    ok    |    ok    | 
 +-------------+----------+----------+
 | Linux RH7.1 |  not ok* |    ok*   |
 +-------------+----------+----------+
@@ -91,7 +91,6 @@ but they seemed to come from make and not from the test suite per se.
 Running the test suite like this:
     % for i in `ls t/*.t` ; do perl -Mblib $i; done
 was fine.
-
 
 Note: These results where achieved with Perl 5.6.1 complied with gcc 
 and using the native malloc.
