@@ -641,6 +641,9 @@ sub bind_jdat {
 		$class_name =~ s/^(.*)::// ;
 
 		my $java_class = $d->{classes}->{$class}->{java_class} ;
+		if (Inline::Java::known_to_perl($o->get_api('pkg'), $java_class)){
+			next ;
+		}
 
 		my $colon = ":" ;
 		my $dash = "-" ;
@@ -993,13 +996,41 @@ sub cast {
 sub study_classes {
 	my $classes = shift ;
 
-	Inline::Java::debug(2, "selecting random module to house studied classes...") ;
+	# Here we will look to find an Inline object that is in the same 
+	# package as the caller. That way the classes can be used directly
+	# without having to use symbolic references.
+	my ($cur_pkg) = caller() ;
+	my $o = undef ;
+	foreach (@INLINES){
+		my $i = $_ ;
+		my $pkg = $i->get_api('pkg') ;
+		if ($pkg eq $cur_pkg){
+			$o = $i ;
+			last ;
+		}
+	}
 
-	# Select a random Inline object to be responsible for these classes
-	srand() ;
-	my $o = @INLINES[int(rand(@INLINES))] ;
+	my $no_pkg = 1 ;
+	if (! defined($o)){
+		srand() ;
+		$o = @INLINES[int(rand(@INLINES))] ;
+		$no_pkg = 0 ;
+	}
 
-	return $o->_study($classes, 0) ;
+	$o->_study($classes, 0) ;
+
+	my $pkg = undef ;
+	if ($no_pkg){
+		return $pkg ;
+	}
+	else{
+		my $pkg = $o->get_api('pkg') ;
+		if (! $pkg){
+			$pkg = "main" ;
+		}
+	}
+
+	return $pkg ;
 }
 
 

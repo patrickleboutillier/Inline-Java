@@ -611,8 +611,8 @@ class InlineJavaProtocol {
 		StringBuffer sb = new StringBuffer() ;
 		while (st.hasMoreTokens()){
 			String ss = st.nextToken() ; 
-			byte b[] = {(byte)Integer.parseInt(ss)} ;
-			sb.append(new String(b)) ;
+			char c = (char)Integer.parseInt(ss) ;
+			sb.append(new String(new char [] {c})) ;
 		}
 	
 		return sb.toString() ;
@@ -620,13 +620,14 @@ class InlineJavaProtocol {
 
 
 	String Encode(String s){
-		byte b[] = s.getBytes() ;
+		char c[] = new char[s.length()] ;
+		s.getChars(0, c.length, c, 0) ;
 		StringBuffer sb = new StringBuffer() ;
-		for (int i = 0 ; i < b.length ; i++){
+		for (int i = 0 ; i < c.length ; i++){
 			if (i > 0){
 				sb.append(".") ;
 			}
-			sb.append(String.valueOf(b[i])) ;
+			sb.append((int)c[i]) ;
 		}
 
 		return sb.toString() ;

@@ -10,6 +10,7 @@ use Inline Config =>
 use Inline(
 	Java => 'DATA',
 ) ;
+
 # There once was a bug with importing code twice.
 use Inline(
 	Java => 'STUDY',
@@ -23,17 +24,35 @@ use Inline(
 	STUDY => ['t.types'],
 	CLASSPATH => '.',
 ) ;
+
+
+package toto ;
+
+use Inline(
+	Java => 'STUDY',
+	AUTOSTUDY => 1,
+	STUDY => ['t.types'],
+	CLASSPATH => '.',
+) ;
+
+
+package study ;
+
 use Inline::Java qw(study_classes) ;
 
 
 
 BEGIN {
-	plan(tests => 9) ;
+	plan(tests => 10) ;
 }
 
-study_classes([
+my $pkg = study_classes([
 	't.no_const'
 ]) ;
+
+# There is a 'use Inline Java' somewhere in the current 
+# package, so we can call the classes directly.
+ok(! defined($pkg)) ;
 
 my $t = new study::t::types() ;
 

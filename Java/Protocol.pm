@@ -410,14 +410,14 @@ sub DeserializeObject {
 sub encode {
 	my $s = shift ;
 
-	return join(".", unpack("C*", $s)) ;
+	return join(".", unpack("U*", $s)) ;
 }
 
 
 sub decode {
 	my $s = shift ;
 
-	return pack("C*", split(/\./, $s)) ;
+	return pack("U*", split(/\./, $s)) ;
 }
 
 
