@@ -21,8 +21,10 @@ my $java_lib = 			undef ;
 my $java_so = 			undef ;
 
 
-my $jvm_lib = ($^O eq "MSWin32" ? "jvm.lib" : "libjvm.so") ;
-my $jvm_so =  ($^O eq "MSWin32" ? "jvm.dll" : "libjvm.so") ;
+my $jvm_lib = 
+	((($^O eq "MSWin32")||($^O eq "cygwin")) ? "jvm.lib" : "libjvm.so") ;
+my $jvm_so = 
+	((($^O eq "MSWin32")||($^O eq "cygwin")) ? "jvm.dll" : "libjvm.so") ;
 
 
 if ($JNI_BUILD){
