@@ -9,7 +9,7 @@ use Config ;
 use File::Find ;
 use File::Spec ;
 
-$Inline::Java::Portable::VERSION = '0.50' ;
+$Inline::Java::Portable::VERSION = '0.49_90' ;
 
 # Here is some code to figure out if we are running on command.com
 # shell under Windows.
@@ -160,6 +160,7 @@ sub portable {
 		PRE_WHOLE_ARCHIVE	=>  '-Wl,--whole-archive',
 		POST_WHOLE_ARCHIVE	=>  '-Wl,--no-whole-archive',
 		PERL_PARSE_DUP_ENV	=>  '-DPERL_PARSE_DUP_ENV',
+		BUILD_JNI_BY_DFLT	=>  1,
 	} ;
 
 	my $map = {
@@ -207,6 +208,7 @@ sub portable {
 			},
 			JVM_LIB				=>	'jvm.lib',
 			JVM_SO				=>	'jvm.dll',
+			BUILD_JNI_BY_DFLT	=>  0,
 		},
 		hpux => {
 			GOT_NEXT_FREE_PORT  =>  0,

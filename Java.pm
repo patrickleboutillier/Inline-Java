@@ -8,7 +8,7 @@ package Inline::Java ;
 use strict ;
 require 5.006 ;
 
-$Inline::Java::VERSION = '0.50' ;
+$Inline::Java::VERSION = '0.49_90' ;
 
 
 # DEBUG is set via the DEBUG config
@@ -633,7 +633,8 @@ sub load_jdat {
 	my $data_idx = scalar(@{$o->{ILSM}->{data}}) ;
 	push @{$o->{ILSM}->{data}}, $d ;
 	
-	my $re = '[\w.\$\[;]+' ;
+	# my $re = '[\w.\$\[;]+' ;
+	my $re = '.+' ;
 
 	my $idx = 0 ;
 	my $current_class = undef ;
