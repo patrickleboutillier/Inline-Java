@@ -117,7 +117,7 @@ exceptions (as well as others) may be thrown from within the native methods
 
 =head1 SEE ALSO
 
-L<Inline::Java>, L<Inline::Java::PerlInterpreter>.
+L<Inline::Java>, L<Inline::Java::Callback>, L<Inline::Java::PerlInterpreter>.
    Z<>
 
 

@@ -867,7 +867,8 @@ rebuilt to match the Perl code.
 
 =head1 SEE ALSO
 
-L<Inline::Java::Callback>, L<Inline::Java::PerlInterpreter>.
+L<Inline::Java::Callback>, L<Inline::Java::PerlNatives>, 
+L<Inline::Java::PerlInterpreter>.
 
 For information about using C<Inline>, see L<Inline>.
 
