@@ -57,6 +57,18 @@ sub __new {
 # Checks to make sure all the arguments can be "cast" to prototype
 # types.
 sub __validate_prototype {
+	my $class = shift ;
+	my $method = shift ;
+	my $args = shift ;
+	my $proto = shift ;
+
+	my $new_args = undef ;
+	eval {
+		$new_args = Inline::Java::Class::CastArguments($class, $method, $args, $proto) ;
+	} ;
+	croak $@ if $@ ;
+
+	return @{$new_args} ;
 }
 
 
@@ -76,13 +88,18 @@ sub AUTOLOAD {
 }
 
 
-# Here an object in destroyed
+# Here an object in destroyed. this function seems to be called twice
+# for each object. I think it's because the $this reference is both blessed
+# and tied to the same package.
 sub DESTROY {
 	my $this = shift ;
 
 	if (! $this->{private}->{deleted}){
 		$this->{private}->{deleted} = 1 ;
 		$this->{private}->{proto}->DeleteJavaObject() ;
+	}
+	else{
+		Inline::Java::debug("Object destructor called more than once!") ;
 	}
 }
 
@@ -181,6 +198,9 @@ sub CLEAR {
 
 
 
-
-
 1 ;
+
+
+
+__DATA__
+

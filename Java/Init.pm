@@ -4,7 +4,9 @@ $Inline::Java::Init::VERSION = '0.01' ;
 
 my $DATA = join('', <DATA>) ;
 my $OBJECT_DATA = join('', <Inline::Java::Object::DATA>) ;
+my $CLASS_DATA = join('', <Inline::Java::Class::DATA>) ;
 my $PROTO_DATA = join('', <Inline::Java::Protocol::DATA>) ;
+
 
 sub DumpUserJavaCode {
 	my $fh = shift ;
@@ -21,9 +23,11 @@ sub DumpServerJavaCode {
 
 	my $java = $DATA ;
 	my $java_obj = $OBJECT_DATA ;
+	my $java_class = $CLASS_DATA ;
 	my $java_proto = $PROTO_DATA ;
 
 	$java =~ s/<INLINE_JAVA_OBJECT>/$java_obj/g ;
+	$java =~ s/<INLINE_JAVA_CLASS>/$java_class/g ;
 	$java =~ s/<INLINE_JAVA_PROTOCOL>/$java_proto/g ;
 
 	print $fh $java ;
@@ -112,7 +116,7 @@ public class InlineJavaServer {
 		Returns a report on the Java classes, listing all public methods
 		and members
 	*/
-	void Report(String [] class_list, int idx){
+	void Report(String [] class_list, int idx) {
 		String module = class_list[idx] ;
 		idx++ ;
 
@@ -198,14 +202,11 @@ public class InlineJavaServer {
 		}
 	}
 
-
-
 	<INLINE_JAVA_OBJECT>
 
-
+	<INLINE_JAVA_CLASS>
 
 	<INLINE_JAVA_PROTOCOL>
-
 
 	/*
 		Exception thrown by this code.

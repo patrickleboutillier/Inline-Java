@@ -8,34 +8,38 @@ $Inline::Java::Class::VERSION = '0.01' ;
 use Carp ;
 
 
+
+my $INT_RE = '^[+-]?\d+$' ;
+my $FLOAT_RE = '^([+-]?)(?=\d|\.\d)\d*(\.\d*)?([Ee]([+-]?\d+))?$' ;
+
 my $RANGE = {
 	'java.lang.Byte' => {
-		REGEXP => '^\d+$',
+		REGEXP => $INT_RE,
 		MAX => 127,
 		MIN => -128,
 	},
 	'java.lang.Short' => {
-		REGEXP => '^\d+$',
+		REGEXP => $INT_RE,
 		MAX => 32767,
 		MIN => -32768,
 	},
 	'java.lang.Integer' => {
-		REGEXP => '^\d+$',
+		REGEXP => $INT_RE,
 		MAX => 2147483647,
 		MIN => -2147483648,
 	},
 	'java.lang.Long' => {
-		REGEXP => '^\d+$',
+		REGEXP => $INT_RE,
 		MAX => 9223372036854775807,
 		MIN => -9223372036854775808,
 	},
 	'java.lang.Float' => {
-		REGEXP => '^\d+$',
+		REGEXP => $FLOAT_RE,
 		MAX => 3.4028235e38,
 		MIN => 1.4e-45,
 	},
 	'java.lang.Double' => {
-		REGEXP => '^\d+$',
+		REGEXP => $FLOAT_RE,
 		MAX => 1.7976931348623157e308,
 		MIN => 4.9e-324,
 	},
@@ -124,10 +128,10 @@ sub CastArgument {
 	}
 	elsif (ClassIsBool($proto)){
 		if ($arg){
-			return "true" ;
+			return 1 ;
 		}
 		else{
-			return "false" ;
+			return 0 ;
 		}
 	}
 	elsif (ClassIsString($proto)){
@@ -210,7 +214,7 @@ sub ClassIsBool {
 	my $class = shift ;
 
 	my @list = qw(
-		java.lang.Bolean
+		java.lang.Boolean
 		boolean
 	) ;
 
@@ -290,144 +294,159 @@ class InlineJavaClass {
 			Class p = params[i] ;
 			ijs.debug("    arg " + String.valueOf(i) + " of signature is " + p.getName()) ;
 
-			ArrayList tokens = new ArrayList() ;
-			StringTokenizer st = new StringTokenizer((String)args.get(i), ":") ;
-			for (int j = 0 ; st.hasMoreTokens() ; j++){
-				tokens.add(j, st.nextToken()) ;
-			}
-			if (tokens.size() == 1){
-				tokens.add(1, "") ;
-			}
-			String type = (String)tokens.get(0) ;
-			
-			// We need to separate the primitive types from the 
-			// reference types.
-			boolean num = ClassIsNumeric(p) ;
-			if ((num)||(ClassIsString(p))){
-				if (type.equals("undef")){
-					if (num){
-						ijs.debug("  args is undef -> forcing to " + p.getName() + " 0") ;
-						ret[i] = ijp.CreateObject(p, new Object [] {"0"}) ;
-					}
-					else{
-						ijs.debug("  args is undef -> forcing to " + p.getName() + " ''") ;
-						ret[i] = ijp.CreateObject(p, new Object [] {""}) ;
-					}
-					ijs.debug("    result is " + ret[i].toString()) ;
+			ret[i] = CastArgument(class_name, method_name, p, (String)args.get(i)) ;
+		}
+
+		return ret ;
+	}
+
+
+	/*
+		This is the monster method that determines how to cast arguments
+	*/
+	Object CastArgument (String class_name, String method_name, Class p, String argument) throws InlineJavaException {
+		Object ret = null ;
+	
+		// Used for exceptions
+		String msg = " in method " + method_name + " of class " + class_name ;
+
+		ArrayList tokens = new ArrayList() ;
+		StringTokenizer st = new StringTokenizer(argument, ":") ;
+		for (int j = 0 ; st.hasMoreTokens() ; j++){
+			tokens.add(j, st.nextToken()) ;
+		}
+		if (tokens.size() == 1){
+			tokens.add(1, "") ;
+		}
+		String type = (String)tokens.get(0) ;
+		
+		// We need to separate the primitive types from the 
+		// reference types.
+		boolean num = ClassIsNumeric(p) ;
+		if ((num)||(ClassIsString(p))){
+			if (type.equals("undef")){
+				if (num){
+					ijs.debug("  args is undef -> forcing to " + p.getName() + " 0") ;
+					ret = ijp.CreateObject(p, new Object [] {"0"}, new Class [] {String.class}) ;
 				}
-				else if (type.equals("scalar")){
+				else{
+					ijs.debug("  args is undef -> forcing to " + p.getName() + " ''") ;
+					ret = ijp.CreateObject(p, new Object [] {""}, new Class [] {String.class}) ;
+				}
+				ijs.debug("    result is " + ret.toString()) ;
+			}
+			else if (type.equals("scalar")){
+				String arg = ijp.pack((String)tokens.get(1)) ;
+				ijs.debug("  args is scalar -> forcing to " + p.getName()) ;
+				try	{							
+					ret = ijp.CreateObject(p, new Object [] {arg}, new Class [] {String.class}) ;
+					ijs.debug("    result is " + ret.toString()) ;
+				}
+				catch (NumberFormatException e){
+					throw new InlineJavaCastException("Can't convert " + arg + " to " + p.getName() + msg) ;
+				}
+			}
+			else{
+				throw new InlineJavaCastException("Can't convert reference to " + p.getName() + msg) ;
+			}
+		}
+		else if (ClassIsBool(p)){
+			if (type.equals("undef")){
+				ijs.debug("  args is undef -> forcing to bool false") ;
+				ret = new Boolean("false") ;
+				ijs.debug("    result is " + ret.toString()) ;
+			}
+			else if (type.equals("scalar")){
+				String arg = ijp.pack(((String)tokens.get(1)).toLowerCase()) ;
+				ijs.debug("  args is scalar -> forcing to bool") ;
+				if ((arg.equals(""))||(arg.equals("0"))){
+					arg = "false" ;
+				}
+				else{
+					arg = "true" ;
+				}
+				ret = new Boolean(arg) ;
+				ijs.debug("    result is " + ret.toString()) ;
+			}
+			else{
+				throw new InlineJavaCastException("Can't convert reference to " + p.getName() + msg) ;
+			}
+		}
+		else if (ClassIsChar(p)){
+			if (type.equals("undef")){
+				ijs.debug("  args is undef -> forcing to char '\0'") ;
+				ret = new Character('\0') ;
+				ijs.debug("    result is " + ret.toString()) ;
+			}
+			else if (type.equals("scalar")){
+				String arg = ijp.pack((String)tokens.get(1)) ;
+				ijs.debug("  args is scalar -> forcing to char") ;
+				char c = '\0' ;
+				if (arg.length() == 1){
+					c = arg.toCharArray()[0] ;
+				}
+				else if (arg.length() > 1){
+					throw new InlineJavaCastException("Can't convert " + arg + " to " + p.getName() + msg) ;
+				}
+				ret = new Character(c) ;
+				ijs.debug("    result is " + ret.toString()) ;
+			}
+			else{
+				throw new InlineJavaCastException("Can't convert reference to " + p.getName() + msg) ;
+			}
+		}
+		else {
+			ijs.debug("  class " + p.getName() + " is reference") ;
+			// We know that what we expect here is a real object
+			if (type.equals("undef")){
+				ijs.debug("  args is undef -> forcing to null") ;
+				ret = null ;
+			}
+			else if (type.equals("scalar")){
+				// Here if we need a java.lang.Object.class, it's probably
+				// because we can store anything, so we use a String object.
+				if (p == java.lang.Object.class){
 					String arg = ijp.pack((String)tokens.get(1)) ;
-					ijs.debug("  args is scalar -> forcing to " + p.getName()) ;
-					try	{							
-						ret[i] = ijp.CreateObject(p, new Object [] {arg}) ;
-						ijs.debug("    result is " + ret[i].toString()) ;
-					}
-					catch (NumberFormatException e){
-						throw new InlineJavaCastException("Can't convert " + arg + " to " + p.getName() + msg) ;
-					}
+					ret = arg ;
 				}
 				else{
-					throw new InlineJavaCastException("Can't convert reference to " + p.getName() + msg) ;
+					throw new InlineJavaCastException("Can't convert primitive type to " + p.getName() + msg) ;
 				}
 			}
-			else if (ClassIsBool(p)){
-				if (type.equals("undef")){
-					ijs.debug("  args is undef -> forcing to bool false") ;
-					ret[i] = new Boolean("false") ;
-					ijs.debug("    result is " + ret[i].toString()) ;
-				}
-				else if (type.equals("scalar")){
-					String arg = ijp.pack(((String)tokens.get(1)).toLowerCase()) ;
-					ijs.debug("  args is scalar -> forcing to bool") ;
-					if ((arg.equals(""))||(arg.equals("0"))){
-						arg = "false" ;
-					}
-					else{
-						arg = "true" ;
-					}
-					ret[i] = new Boolean(arg) ;
-					ijs.debug("    result is " + ret[i].toString()) ;
-				}
-				else{
-					throw new InlineJavaCastException("Can't convert reference to " + p.getName() + msg) ;
-				}
-			}
-			else if (ClassIsChar(p)){
-				if (type.equals("undef")){
-					ijs.debug("  args is undef -> forcing to char '\0'") ;
-					ret[i] = new Character('\0') ;
-					ijs.debug("    result is " + ret[i].toString()) ;
-				}
-				else if (type.equals("scalar")){
-					String arg = ijp.pack((String)tokens.get(1)) ;
-					ijs.debug("  args is scalar -> forcing to char") ;
-					char c = '\0' ;
-					if (arg.length() == 1){
-						c = arg.toCharArray()[0] ;
-					}
-					else if (arg.length() > 1){
-						throw new InlineJavaCastException("Can't convert " + arg + " to " + p.getName() + msg) ;
-					}
-					ret[i] = new Character(c) ;
-					ijs.debug("    result is " + ret[i].toString()) ;
-				}
-				else{
-					throw new InlineJavaCastException("Can't convert reference to " + p.getName() + msg) ;
-				}
-			}
-			else {
+			else{
+				// We need an object and we got an object...
 				ijs.debug("  class " + p.getName() + " is reference") ;
-				// We know that what we expect here is a real object
-				if (type.equals("undef")){
-					ijs.debug("  args is undef -> forcing to null") ;
-					ret[i] = null ;
+
+				String c_name = (String)tokens.get(1) ;
+				String objid = (String)tokens.get(2) ;
+
+				Class c = ValidateClass(c_name) ;
+				// We need to check if c extends p
+				Class parent = c ;
+				boolean got_it = false ;
+				while (parent != null){
+					ijs.debug("    parent is " + parent.getName()) ;
+					if (parent == p){
+						got_it = true ;
+						break ;
+					}
+					parent = parent.getSuperclass() ;
 				}
-				else if (type.equals("scalar")){
-					// Here if we need a java.lang.Object.class, it's probably
-					// because we can store anything, so we use a String object.
-					if (p == java.lang.Object.class){
-						String arg = ijp.pack((String)tokens.get(1)) ;
-						ret[i] = arg ;
+
+				if (got_it){
+					ijs.debug("    " + c.getName() + " is a kind of " + p.getName() + msg) ;
+					// get the object from the hash table
+					Integer oid = new Integer(objid) ;
+					Object o = ijs.objects.get(oid) ;
+					if (o == null){
+						throw new InlineJavaException("Object " + oid.toString() + " of type " + c_name + " is not in object table " + msg) ;
 					}
-					else{
-						throw new InlineJavaCastException("Can't convert primitive type to " + p.getName() + msg) ;
-					}
+					ret = o ;
 				}
 				else{
-					// We need an object and we got an object...
-					ijs.debug("  class " + p.getName() + " is reference") ;
-
-					String c_name = (String)tokens.get(1) ;
-					String objid = (String)tokens.get(2) ;
-
-					Class c = ValidateClass(c_name) ;
-					// We need to check if c extends p
-					Class parent = c ;
-					boolean got_it = false ;
-					while (parent != null){
-						ijs.debug("    parent is " + parent.getName()) ;
-						if (parent == p){
-							got_it = true ;
-							break ;
-						}
-						parent = parent.getSuperclass() ;
-					}
-
-					if (got_it){
-						ijs.debug("    " + c.getName() + " is a kind of " + p.getName() + msg) ;
-						// get the object from the hash table
-						Integer oid = new Integer(objid) ;
-						Object o = ijs.objects.get(oid) ;
-						if (o == null){
-							throw new InlineJavaException("Object " + oid.toString() + " of type " + c_name + " is not in object table " + msg) ;
-						}
-						ret[i] = o ;
-					}
-					else{
-						throw new InlineJavaCastException("Can't cast a " + c.getName() + " to a " + p.getName() + msg) ;
-					}
+					throw new InlineJavaCastException("Can't cast a " + c.getName() + " to a " + p.getName() + msg) ;
 				}
-			}			
+			}
 		}
 
 		return ret ;
@@ -504,7 +523,6 @@ class InlineJavaClass {
 		} ;
 
 		for (int i = 0 ; i < list.length ; i++){
-			ijs.debug("  comparing " + name + " with " + list[i].getName()) ;
 			if (p == list[i]){
 				ijs.debug("  class " + name + " is primitive numeric") ;
 				return true ;
@@ -527,7 +545,6 @@ class InlineJavaClass {
 		} ;
 
 		for (int i = 0 ; i < list.length ; i++){
-			ijs.debug("  comparing " + name + " with " + list[i].getName()) ;
 			if (p == list[i]){
 				ijs.debug("  class " + name + " is primitive string") ;
 				return true ;
@@ -550,7 +567,6 @@ class InlineJavaClass {
 		} ;
 
 		for (int i = 0 ; i < list.length ; i++){
-			ijs.debug("  comparing " + name + " with " + list[i].getName()) ;
 			if (p == list[i]){
 				ijs.debug("  class " + name + " is primitive char") ;
 				return true ;
@@ -573,7 +589,6 @@ class InlineJavaClass {
 		} ;
 
 		for (int i = 0 ; i < list.length ; i++){
-			ijs.debug("  comparing " + name + " with " + list[i].getName()) ;
 			if (p == list[i]){
 				ijs.debug("  class " + name + " is primitive bool") ;
 				return true ;

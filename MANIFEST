@@ -1,11 +1,14 @@
 CHANGES
+MANIFEST
+README
+TODO
+Makefile.PL
 Java.pm
 Java.pod
-MANIFEST
-Makefile.PL
-README
-t/
-Java/private/Init.pm
-Java/private/Object.pm
-Java/private/Protocol.pm
+Java/Init.pm
+Java/Object.pm
+Java/Protocol.pm
+t/1_init.t
+t/2_primitives.t
+t/3_objects.t
 
