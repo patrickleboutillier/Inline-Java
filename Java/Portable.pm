@@ -206,8 +206,8 @@ sub portable {
 			GOT_NEXT_FREE_PORT  =>  0,
 		},
 		aix => {
-			JVM_LIB				=>	"libjvm.$Config{lib_ext}",
-			JVM_SO				=>	"libjvm.$Config{lib_ext}",
+			JVM_LIB				=>	"libjvm$Config{lib_ext}",
+			JVM_SO				=>	"libjvm$Config{lib_ext}",
 		}
 	} ;
 
