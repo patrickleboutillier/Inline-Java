@@ -153,6 +153,9 @@ sub _validate {
 		if ($key eq 'BIN'){
 		    $o->{Java}->{$key} = $value ;
 		}
+		elsif ($key eq 'USE_JNI'){
+		    $o->{Java}->{$key} = $value ;
+		}
 		elsif ($key eq 'CLASSPATH'){
 		    $o->{Java}->{$key} = $value ;
 		}
@@ -179,10 +182,24 @@ sub _validate {
 		}
 	}
 
+	if ($o->{Java}->{USE_JNI}){
+		$o->boot_jni() ;
+	}
+
 	$o->set_classpath($install) ;
 	$o->set_java_bin() ;
 
 	debug("validate done.") ;
+}
+
+
+sub boot_jni {
+	my $o = shift ;
+
+	require DynaLoader ;
+	@Inline::Java::ISA = qw(DynaLoader) ;
+
+	Inline::Java->bootstrap($Inline::Java::VERSION) ;
 }
 
 
