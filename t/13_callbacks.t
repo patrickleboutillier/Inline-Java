@@ -14,7 +14,11 @@ use Inline::Java qw(caught) ;
 
 
 BEGIN {
-	plan(tests => 20) ;
+	my $cnt = 20 ;
+	if ($ENV{PERL_INLINE_JAVA_JNI}){
+		$cnt-- ;
+	}
+	plan(tests => $cnt) ;
 }
 
 my $t = new t15() ;
@@ -60,7 +64,10 @@ my $t = new t15() ;
 
 		ok($t->perlt()->add(5, 6), 11) ;
 
-		eval {$t->perldummy()} ; ok($@, qr/Can't propagate non-/) ;
+		if (! $ENV{PERL_INLINE_JAVA_JNI}){
+			# This a fatal error under JNI.
+			eval {$t->perldummy()} ; ok($@, qr/Can't propagate non-/) ;
+		}
 	} ;
 	if ($@){
 		if (caught("java.lang.Throwable")){

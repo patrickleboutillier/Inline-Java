@@ -8,6 +8,8 @@ $Inline::Java::JVM::VERSION = '0.31' ;
 use Carp ;
 use IPC::Open3 ;
 use IO::File ;
+use IO::Pipe ;
+use POSIX qw(setsid) ;
 
 my %SIGS = () ;
 
@@ -77,7 +79,12 @@ sub new {
 
 		my $pid = 0 ;
 		eval {
-			$pid = $this->launch($cmd) ;
+			if (Inline::Java::Portable::portable('GOT_FORK')){
+				$pid = $this->launch($cmd) ;
+			}	
+			else{
+				$pid = $this->launch($cmd) ;
+			}
 		} ;
 		croak "Can't exec JVM: $@" if $@ ;
 
@@ -98,10 +105,21 @@ sub launch {
 	my $this = shift ;
 	my $cmd = shift ;
 
-	my $in = new IO::File() ;
-	my $pid = open3($in, ">&STDOUT", ">&STDERR", $cmd) ;
-	# We won't be sending anything to the child in this fashion...
+	my $dn = File::Spec->devnull() ;
+	my $in = new IO::File("<$dn") ;
+	if (! defined($in)){
+		croak "Can't open $dn for reading" ;
+	}
+	my $out = new IO::File(">$dn") ;
+	if (! defined($out)){
+		croak "Can't open $dn for writing" ;
+	}
+	
+	local $SIG{__WARN__} = sub {} ;
+	my $pid = open3($in, $out, ">&STDERR", $cmd) ;
+
 	close($in) ;
+	close($out) ;
 
 	return $pid ;
 }
@@ -111,16 +129,48 @@ sub fork_launch {
 	my $this = shift ;
 	my $cmd = shift ;
 
-	my $pid = fork() ;
-	if (! $pid){
-		# Child 
-		$pid = $this->launch($cmd) ;
+	# Setup pipe with our child
+	my $c2p = new IO::Pipe() ;
+
+	my $gcpid = undef ;
+	my $cpid = fork() ;
+	if (! defined($cpid)){
+		croak("Can't fork to detach JVM: $!") ;
+	}
+	elsif(! $cpid){
+		# Child
+		$c2p->writer() ; autoflush $c2p 1 ;
+
+		# Now we need to get $gcpid back to our script...
+		eval {
+ 			$gcpid = $this->launch($cmd) ;
+		} ;
+		if ($@){
+			print $c2p "$@\n" ;
+		}
+		else{
+			print $c2p "pid: $gcpid\n" ;
+		}
+		close($c2p) ;
 		Inline::Java::set_DONE() ;
 		exit() ;
 	}
 	else{
-		waitpid($pid, 0) ;
+		# Parent
+		$c2p->reader() ;
+		my $line = <$c2p> ;
+		close($c2p) ;
+		chomp($line) ;
+		if ($line =~ /^pid: (.*)$/){
+			$gcpid = $1 ;
+		}
+		else{
+			croak $line ;
+		}
+		waitpid($cpid, 0) ;
 	}
+
+	return $gcpid ;
 }
 
 

@@ -124,7 +124,12 @@ public class InlineJavaServer {
 
 
 	private void init(){
-		instance = this ;		
+		instance = this ;
+	}
+
+	
+	public String GetType(){
+		return (shared_jvm ? "shared" : "private") ;
 	}
 
 

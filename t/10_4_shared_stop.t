@@ -1,3 +1,5 @@
+package t10 ;
+
 use strict ;
 use Test ;
 
@@ -8,7 +10,7 @@ BEGIN {
 		exit ;
 	}
 	else{
-		plan(tests => 3) ;
+		plan(tests => 4) ;
 	}
 }
 
@@ -17,30 +19,19 @@ use Inline Config =>
            DIRECTORY => './_Inline_test' ;
 
 use Inline (
-	Java => 'DATA',
+	Java => 't/shared.java',
 	SHARED_JVM => 1,
+	NAME => 't10',
 ) ;
 
 
-my $t = new t9() ;
-
+my $t = new t10::t10() ;
 {
-	ok($t->{i}, 5) ;
+	ok($t->{i}, 7) ;
+	ok(! Inline::Java::i_am_JVM_owner()) ;
+	Inline::Java::capture_JVM() ;
 	ok(Inline::Java::i_am_JVM_owner()) ;
 }
 
 ok($t->__get_private()->{proto}->ObjectCount(), 1) ;
-
-
-__END__
-
-__Java__
-
-class t9 {
-	static public int i = 5 ;
-
-	public t9(){
-	}
-}
-
 

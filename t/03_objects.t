@@ -10,7 +10,7 @@ use Inline(
 
 
 BEGIN {
-	plan(tests => 15) ;
+	plan(tests => 16) ;
 }
 
 
@@ -28,6 +28,10 @@ my $t = new types3() ;
 	ok($t->_obj1($obj11)->get_data(), "obj11") ;
 	eval {$t->_int($obj1)} ; ok($@, qr/Can't convert (.*) to primitive int/) ;
 	eval {$t->_obj11($obj1)} ; ok($@, qr/is not a kind of/) ;
+
+	# Inner class
+	my $in = new obj13::inner_obj13($obj1) ;
+	ok($in->{data}, "inner") ;
 	
 	# Receive an unbound object and send it back
 	my $unb = $t->get_unbound() ;
@@ -71,6 +75,13 @@ class obj13 {
 
 	public String get_data(){
 		return data ;
+	}
+
+	public class inner_obj13 {
+		public String data = "inner" ;
+
+		public inner_obj13(){
+		}
 	}
 }
 

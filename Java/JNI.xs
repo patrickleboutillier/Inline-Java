@@ -67,15 +67,23 @@ jstring JNICALL jni_callback(JNIEnv *env, jobject obj, jstring cmd){
 
 	SPAGAIN ;
 
+	/*
+		Here is is important to understand that we cannot croak,
+		because our caller is Java and not Perl. Croaking here
+		scrwes up the Java stack royally and causes crashes.
+	*/
+
 	/* Check the eval */
 	if (SvTRUE(ERRSV)){
 		STRLEN n_a ;
-		croak(SvPV(ERRSV, n_a)) ;
+		fprintf(stderr, "%s", SvPV(ERRSV, n_a)) ;
+		exit(-1) ;
 	}
 	else{
 		if (count != 2){
-			croak("Invalid return value from Inline::Java::Callback::InterceptCallback: %d",
+			fprintf(stderr, "%s", "Invalid return value from Inline::Java::Callback::InterceptCallback: %d",
 				count) ;
+			exit(-1) ;
 		}
 	}
 
@@ -115,7 +123,7 @@ new(CLASS, classpath, debug)
 
 	PREINIT:
 	JavaVMInitArgs vm_args ;
-	JavaVMOption options[2] ;
+	JavaVMOption options[8] ;
 	JNIEnv *env ;
 	JNINativeMethod nm ;
 	jint res ;
@@ -218,6 +226,7 @@ process_command(this, data)
 
 	CODE:
 	env = get_env(this) ;
+	printf(":%s:\n", data) ;
 	cmd = (*(env))->NewStringUTF(env, data) ;
 	check_exception(env, "Can't create java.lang.String") ;
 
@@ -234,4 +243,3 @@ process_command(this, data)
 
 	CLEANUP:
 	(*(env))->ReleaseStringUTFChars(env, resp, RETVAL) ;
-	(*(env))->DeleteLocalRef(env, resp) ;

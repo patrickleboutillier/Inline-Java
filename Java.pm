@@ -73,7 +73,7 @@ sub done {
 	
 	Inline::Java::debug("exiting with $ec") ;
 
-	exit($ec) ;
+	CORE::exit($ec) ;
 }
 
 
@@ -587,6 +587,14 @@ sub load {
 	if (! $JVM){
 		$o->set_classpath($install) ;
 		$JVM = new Inline::Java::JVM($o) ;
+
+		my $pc = new Inline::Java::Protocol(undef, $o) ;
+		my $st = $pc->ServerType() ;
+		if ((($st eq "shared")&&(! $o->get_java_config('SHARED_JVM')))||
+			(($st eq "private")&&($o->get_java_config('SHARED_JVM')))){
+			set_DONE() ;
+			croak "JVM type mismatch on port " . $o->get_java_config('PORT') ;
+		}
 	}
 
 	# Add our Inline object to the list.

@@ -1,3 +1,5 @@
+package t10 ;
+
 use strict ;
 use Test ;
 
@@ -14,8 +16,9 @@ use Inline Config =>
            DIRECTORY => './_Inline_test' ;
 
 use Inline (
-	Java => 'DATA',
+	Java => 't/shared.java',
 	SHARED_JVM => 1,
+	NAME => 't10',
 ) ;
 
 
@@ -30,7 +33,7 @@ my $nb = 10 ;
 plan(tests => $nb + 1) ;
 
 
-$t13::i = 0 ;
+$t10::t10::i = 0 ;
 
 my $sum = (($nb) * ($nb + 1)) / 2 ;
 for (my $i = 0 ; $i < $nb ; $i++){
@@ -46,7 +49,7 @@ for (my $i = 0 ; $i < $nb ; $i++){
 	ok(1) ;
 }
 
-ok($t13::i, $sum) ;
+ok($t10::t10::i, $sum) ;
 
 
 sub do_child {
@@ -54,26 +57,9 @@ sub do_child {
 
 	Inline::Java::reconnect_JVM() ;
 
-	my $t = new t13() ;
+	my $t = new t10::t10() ;
 	for (my $j = 0 ; $j <= $i ; $j++){
-		$t->incr_i() ;
+		$t->incr() ;
 	}
 	exit ;
-}
-
-
-__DATA__
-
-__Java__
-
-
-class t13 {
-	static public int i = 0 ;
-
-	public t13(){
-	}
-
-	public void incr_i(){
-		i++ ;
-	}
 }

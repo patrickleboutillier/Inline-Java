@@ -24,6 +24,17 @@ sub new {
 }
 
 
+sub ServerType {
+	my $this = shift ;
+
+	Inline::Java::debug("getting server type") ;
+
+	my $data = "server_type" ;
+
+	return $this->Send($data, 1) ;
+}
+
+
 sub Report {
 	my $this = shift ;
 	my $classes = shift ;
@@ -430,6 +441,9 @@ class InlineJavaProtocol {
 		else if (c.equals("get_member")){
 			GetJavaMember(st) ;
 		}		
+		else if (c.equals("server_type")){
+			ServerType(st) ;
+		}
 		else if (c.equals("report")){
 			Report(st) ;
 		}
@@ -518,6 +532,11 @@ class InlineJavaProtocol {
 		}
 
 		SetResponse(pw.toString()) ;
+	}
+
+
+	void ServerType(StringTokenizer st) throws InlineJavaException {
+		SetResponse(ijs.GetType()) ;
 	}
 
 
