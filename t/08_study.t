@@ -9,7 +9,18 @@ use Inline Config =>
 
 use Inline(
 	Java => 'DATA',
+) ;
+# There once was a bug with importing code twice.
+use Inline(
+	Java => 'STUDY',
 	AUTOSTUDY => 1,
+	STUDY => ['t.types'],
+	CLASSPATH => '.',
+) ;
+use Inline(
+	Java => 'STUDY',
+	AUTOSTUDY => 1,
+	STUDY => ['t.types'],
 	CLASSPATH => '.',
 ) ;
 use Inline::Java qw(study_classes) ;
@@ -21,7 +32,6 @@ BEGIN {
 }
 
 study_classes([
-	't.types', 
 	't.no_const'
 ]) ;
 
@@ -34,7 +44,7 @@ my $t = new study::t::types() ;
 	my $nc = new study::t::no_const() ;
 	ok($nc->{i}, 5) ;
 	
-	my $a = new study::a8() ;
+	my $a = new study::study::a8() ;
 	ok($a->{i}, 50) ;
 	ok($a->truth()) ;
 	ok($a->sa()->[1], 'titi') ;
@@ -49,9 +59,12 @@ __DATA__
 
 __Java__
 
+// Use a public class
+package study ;
+
 import java.util.* ;
 
-class a8 {
+public class a8 {
 	public int i = 50 ;
 	
 	public a8(){
