@@ -266,7 +266,7 @@ sub Send {
 	my $const = shift ;
 
 	my $inline = Inline::Java::get_INLINE($this->{module}) ;
-	my $resp = Inline::Java::get_JVM()->process_command($inline, $data) ;
+	my $resp = Inline::Java::__get_JVM()->process_command($inline, $data) ;
 
 	if ($resp =~ /^error scalar:([\d.]*)$/){
 		my $msg = pack("C*", split(/\./, $1)) ;
@@ -323,16 +323,23 @@ sub DeserializeObject {
 				$elem_class = $d[2] ;
 			}
 
-			my $perl_class = Inline::Java::java2perl($pkg, $elem_class) ;
-			if (Inline::Java::Class::ClassIsReference($elem_class)){
-				if (! Inline::Java::known_to_perl($pkg, $elem_class)){
-					if (($thrown)||($inline->get_java_config('AUTOSTUDY'))){
-						$inline->_study([$elem_class]) ;
-					}
-					else{
-						$perl_class = "Inline::Java::Object" ;
-					}
-			 	}
+
+			my $perl_class = "Inline::Java::Object" ;
+			if ($elem_class){
+				# We have a real class or an array of real classes
+				$perl_class = Inline::Java::java2perl($pkg, $elem_class) ;
+				if (Inline::Java::Class::ClassIsReference($elem_class)){
+					if (! Inline::Java::known_to_perl($pkg, $elem_class)){
+						if (($thrown)||($inline->get_java_config('AUTOSTUDY'))){
+							$inline->_study([$elem_class]) ;
+						}
+						else{	
+							# Object is not known to Perl, it lives as a 
+							# Inline::Java::Object
+							$perl_class = "Inline::Java::Object" ;
+						}
+				 	}
+				}
 			}
 			else{
 				# We should only get here if an array of primitives types
@@ -899,7 +906,6 @@ class InlineJavaProtocol {
 				if (type.equals(t)){
 					ijs.debug("  has matching type " + t) ;
 					fl.add(fl.size(), f) ;
-					break ;
 				}
 			}
 		}
@@ -911,10 +917,13 @@ class InlineJavaProtocol {
 				"Member " + name + " of type " + type + " for class " + c.getName() +
 					" not found") ;
 		}
-		else if (fl.size() == 1){
+		else {
 			// Now we need to force the arguments received to match
 			// the methods signature.
-			Field f = (Field)fl.get(0) ;
+
+			// If we have more that one, we use tha last one, which is the most
+			// specialized
+			Field f = (Field)fl.get(fl.size() - 1) ;
 			param = f.getType() ;
 
 			String msg = "For member " + name + " of class " + c.getName() + ": " ;

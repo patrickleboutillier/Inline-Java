@@ -3,7 +3,7 @@ package Inline::Java::Class ;
 
 use strict ;
 
-$Inline::Java::Class::VERSION = '0.30' ;
+$Inline::Java::Class::VERSION = '0.31' ;
 
 $Inline::Java::Class::MAX_SCORE = 10 ;
 
@@ -146,14 +146,14 @@ sub CastArgument {
 			# They will wrapped on the Java side.
 			if (UNIVERSAL::isa($arg, "ARRAY")){
 				if (! UNIVERSAL::isa($arg, "Inline::Java::Array")){
-					my $an = new Inline::Java::Array::Normalizer($array_type || $proto, $arg) ;
+					my $an = Inline::Java::Array::Normalizer->new($array_type || $proto, $arg) ;
 					$array_score = $an->{score} ;
 					my $flat = $an->FlattenArray() ; 
 					my $inline = Inline::Java::get_INLINE($module) ;
-					my $obj = Inline::Java::Object->__new($array_type || $proto, $inline, -1, $flat->[0], $flat->[1]) ;
 
 					# We need to create the array on the Java side, and then grab 
 					# the returned object.
+					my $obj = Inline::Java::Object->__new($array_type || $proto, $inline, -1, $flat->[0], $flat->[1]) ;
 					$arg = new Inline::Java::Array($obj) ;
 				}
 				else{

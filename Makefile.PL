@@ -1,32 +1,11 @@
-use ExtUtils::MakeMaker;
+use ExtUtils::MakeMaker ;
 
+use strict ;
 
-# So that the the sub dir Makefile.PL will see it...
-$main::JNI_BUILD = 0 ;
-$main::JNI_VM = "classic" ;
+require "Java/Portable.pm" ;
+Inline::Java::Portable::use_alone() ;
 
-
-# In case we had built differently a previous time
-rename("Java/JNI.xs_", "Java/JNI.xs") ;
-
-
-my $fix_makefile = 0 ;
-foreach my $arg (@ARGV){
-	my $a = $arg ;
-	$a =~ s/^\s+// ;
-	$a =~ s/\s+$// ;
-
-	if ($a =~ /^JNI(:(\w+))?$/i){
-		$JNI_BUILD = 1 ;
-		if ($2){
-			$main::JNI_VM = $2 ;			
-		}
-	}
-	elsif ($a =~ /^FIX$/i){
-		$fix_makefile = 1 ;
-	}
-}
-
+print "\nWelcome to the Inline::Java installation procedure.\n\n" ;
 
 WriteMakefile(
 	NAME => 'Inline::Java',
@@ -38,7 +17,7 @@ WriteMakefile(
 ) ;
 
 
-if ($fix_makefile){
+if (Inline::Java::Portable::portable('COMMAND_COM')){
 	print "\nFixing Makefile for Win32...\n" ;
 	open(MAKEFILE, "<Makefile") or die "Can't open Makefile for reading" ;
 	my @lines = <MAKEFILE> ;

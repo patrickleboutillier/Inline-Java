@@ -19,11 +19,12 @@ sub InterceptCallback {
 		$inline = $Inline::Java::JNI::INLINE_HOOK ;
 	}
 
-	if ($resp =~ s/^callback (.*?) (\w+)//){
+	if ($resp =~ s/^callback ([^ ]+) (\w+) ([^ ]+)//){
 		my $module = $1 ;
 		my $function = $2 ;
+		my $cast_return = $3 ;
 		my @args = split(' ', $resp) ;
-		return Inline::Java::Callback::ProcessCallback($inline, $module, $function, @args) ;
+		return Inline::Java::Callback::ProcessCallback($inline, $module, $function, $cast_return, @args) ;
 	}
 
 	croak "Malformed callback request from server: $resp" ;
@@ -34,13 +35,17 @@ sub ProcessCallback {
 	my $inline = shift ;
 	my $module = shift ;
 	my $function = shift ;
+	my $cast_return = shift ;
 	my @sargs = @_ ;
 
 	my $pc = new Inline::Java::Protocol(undef, $inline) ;
 	my $thrown = 'false' ;
 	my $ret = undef ;
 	eval {
-		my @args = map {$pc->DeserializeObject(0, $_)} @sargs ;
+		my @args = map {
+			my $a = $pc->DeserializeObject(0, $_) ;
+			$a ;
+		} @sargs ;
 
 		Inline::Java::debug(" processing callback $module" . "::" . "$function(" . 
 			join(", ", @args) . ")") ;
@@ -58,9 +63,20 @@ sub ProcessCallback {
 		}
 	}
 
-	($ret) = $pc->ValidateArgs([$ret]) ;
+	my $proto = 'java.lang.Object' ;
+	if ($cast_return ne "null"){
+		$ret = Inline::Java::cast($proto, $ret, $cast_return) ;
+	}
 
-	return "callback $thrown $ret" ;
+	($ret) = Inline::Java::Class::CastArgument($ret, $proto, $inline->get_api('modfname')) ;
+	
+	# Here we must keep a reference to $ret or else it gets deleted 
+	# before the id is returned to Java...
+	my $ref = $ret ;
+
+	($ret) = $pc->ValidateArgs([$ret], 1) ;
+
+	return ("callback $thrown $ret", $ref) ;
 }
 
 
@@ -101,6 +117,11 @@ public class InlineJavaPerlCaller {
 
 
 	public Object CallPerl(String pkg, String method, Object args[]) throws InlineJavaException, PerlException {
+		return CallPerl(pkg, method, args, null) ;
+	}
+
+
+	public Object CallPerl(String pkg, String method, Object args[], String cast) throws InlineJavaException, PerlException {
 		if (InlineJavaServer.instance == null){
 			System.err.println("Can't use InlineJavaPerlCaller outside of an Inline::Java context") ;
 			System.err.flush() ;
@@ -108,7 +129,7 @@ public class InlineJavaPerlCaller {
 		}
 
 		try {
-			return InlineJavaServer.instance.Callback(pkg, method, args) ;
+			return InlineJavaServer.instance.Callback(pkg, method, args, cast) ;
 		}
 		catch (InlineJavaServer.InlineJavaException e){
 			throw new InlineJavaException(e) ;

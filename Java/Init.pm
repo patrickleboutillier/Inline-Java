@@ -3,7 +3,7 @@ package Inline::Java::Init ;
 
 use strict ;
 
-$Inline::Java::Init::VERSION = '0.30' ;
+$Inline::Java::Init::VERSION = '0.31' ;
 
 my $DATA = join('', <DATA>) ;
 my $OBJECT_DATA = join('', <Inline::Java::Object::DATA>) ;
@@ -35,9 +35,6 @@ sub DumpServerJavaCode {
 	$java =~ s/<INLINE_JAVA_ARRAY>/$java_array/g ;
 	$java =~ s/<INLINE_JAVA_CLASS>/$java_class/g ;
 	$java =~ s/<INLINE_JAVA_PROTOCOL>/$java_proto/g ;
-
-	my $so = $Inline::Java::JNI::SO || '' ;
-	$java =~ s/<INLINE_JAVA_JNI_SO>/$so/g ;
 
 	print $fh $java ;
 }
@@ -254,13 +251,13 @@ public class InlineJavaServer {
 	}
 
 
-	public Object Callback(String pkg, String method, Object args[]) throws InlineJavaException, InlineJavaPerlException {
+	public Object Callback(String pkg, String method, Object args[], String cast) throws InlineJavaException, InlineJavaPerlException {
 		Object ret = null ;
 
 		try {
 			InlineJavaProtocol ijp = new InlineJavaProtocol(this, null) ;
 			InlineJavaClass ijc = new InlineJavaClass(this, ijp) ;
-			StringBuffer cmdb = new StringBuffer("callback " + pkg + " " + method) ;
+			StringBuffer cmdb = new StringBuffer("callback " + pkg + " " + method + " " + cast) ;
 			if (args != null){
 				for (int i = 0 ; i < args.length ; i++){
 					 cmdb.append(" " + ijp.SerializeObject(args[i])) ;
@@ -358,24 +355,6 @@ public class InlineJavaServer {
 
 
 	public static InlineJavaServer jni_main(boolean debug) {
-		String so = "<INLINE_JAVA_JNI_SO>" ;
-		if (! so.equals("")){
-			try {
-				System.load(so) ;
-			}
-			catch (UnsatisfiedLinkError e){
-				System.err.println("Can't load shared object '" + so + "' required for callbacks") ;
-				System.err.flush() ;
-				System.exit(1) ;
-			}
-		}
-		else{
-			System.err.println("JNI shared object not specified (required for callbacks)") ;
-			System.err.println("Perhaps your Java code was not initially built in JNI mode") ;
-			System.err.flush() ;
-			System.exit(1) ;
-		}
-
 		return new InlineJavaServer(debug) ;
 	}
 	

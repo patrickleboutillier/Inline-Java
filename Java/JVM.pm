@@ -3,7 +3,7 @@ package Inline::Java::JVM ;
 
 use strict ;
 
-$Inline::Java::JVM::VERSION = '0.30' ;
+$Inline::Java::JVM::VERSION = '0.31' ;
 
 use Carp ;
 use IPC::Open3 ;
@@ -19,6 +19,8 @@ sub new {
 	$this->{socket} = undef ;
 	$this->{JNI} = undef ;
 	$this->{owner} = 1 ;
+
+	$this->{destroyed} = 0 ;
 
 	Inline::Java::debug("Starting JVM...") ;
 
@@ -55,10 +57,10 @@ sub new {
 			}
 		}
 
-		my $java = $o->get_java_config('BIN') . "/java" . Inline::Java::portable("EXE_EXTENSION") ;
-		my $pjava = Inline::Java::portable("RE_FILE", $java) ;
+		my $java = File::Spec->catfile($o->get_java_config('BIN'), 
+			"java" . Inline::Java::portable("EXE_EXTENSION")) ;
 
-		my $cmd = "\"$pjava\" InlineJavaServer $debug $this->{port} $shared_jvm" ;
+		my $cmd = "\"$java\" InlineJavaServer $debug $this->{port} $shared_jvm" ;
 		Inline::Java::debug($cmd) ;
 
 		if ($o->get_config('UNTAINT')){
@@ -90,46 +92,59 @@ sub new {
 sub DESTROY {
 	my $this = shift ;
 
-	if ($this->{owner}){
-		Inline::Java::debug("JVM owner exiting...") ;
+	$this->shutdown() ;	
+}
 
-		if ($this->{socket}){
-			# This asks the Java server to stop and die.
-			my $sock = $this->{socket} ;
-			if ($sock->connected()){
-				Inline::Java::debug("Sending 'die' message to JVM...") ;
-				print $sock "die\n" ;
+
+sub shutdown {
+	my $this = shift ;
+
+	if (! $this->{destroyed}){
+		if ($this->am_owner()){
+			Inline::Java::debug("JVM owner exiting...") ;
+
+			if ($this->{socket}){
+				# This asks the Java server to stop and die.
+				my $sock = $this->{socket} ;
+				if ($sock->connected()){
+					Inline::Java::debug("Sending 'die' message to JVM...") ;
+					print $sock "die\n" ;
+				}
+				else{
+					carp "Lost connection with Java virtual machine" ;
+				}
+				close($sock) ;
+		
+				if ($this->{pid}){
+					# Here we go ahead and send the signals anyway to be very 
+					# sure it's dead...
+					# Always be polite first, and then insist.
+					Inline::Java::debug("Sending 15 signal to JVM...") ;
+					kill(15, $this->{pid}) ;
+					Inline::Java::debug("Sending 9 signal to JVM...") ;
+					kill(9, $this->{pid}) ;
+		
+					# Reap the child...
+					waitpid($this->{pid}, 0) ;
+				}
 			}
-			else{
-				carp "Lost connection with Java virtual machine" ;
-			}
-			close($sock) ;
-	
-			if ($this->{pid}){
-				# Here we go ahead and send the signals anyway to be very 
-				# sure it's dead...
-				# Always be polite first, and then insist.
-				Inline::Java::debug("Sending 15 signal to JVM...") ;
-				kill(15, $this->{pid}) ;
-				Inline::Java::debug("Sending 9 signal to JVM...") ;
-				kill(9, $this->{pid}) ;
-	
-				# Reap the child...
-				waitpid($this->{pid}, 0) ;
+			if ($this->{JNI}){
+				$this->{JNI}->shutdown() ;
 			}
 		}
-	}
-	else{
-		# We are not the JVM owner, so we simply politely disconnect
-		if ($this->{socket}){
-			Inline::Java::debug("JVM non-owner exiting...") ;
-			close($this->{socket}) ;
-			$this->{socket} = undef ;
-		}
-	}
+		else{
+			# We are not the JVM owner, so we simply politely disconnect
+			if ($this->{socket}){
+				Inline::Java::debug("JVM non-owner exiting...") ;
+				close($this->{socket}) ;
+				$this->{socket} = undef ;
+			}
 
-	# For JNI we need to do nothing because the garbage collector will call
-	# the JNI destructor
+			# This should never happen in JNI mode
+		}
+
+        $this->{destroyed} = 1 ;
+	}
 }
 
 
@@ -194,13 +209,6 @@ sub setup_socket {
 }
 
 
-sub release {
-	my $this = shift ;
-
-	$this->{owner} = 0 ;
-}
-
-
 sub reconnect {
 	my $this = shift ;
 
@@ -227,11 +235,41 @@ sub reconnect {
 }
 
 
+sub capture {
+	my $this = shift ;
+
+	if ($this->{JNI}){
+		return ;
+	}
+
+	$this->{owner} = 1 ;
+}
+
+
+sub am_owner {
+	my $this = shift ;
+
+	return $this->{owner} ;
+}
+
+
+sub release {
+	my $this = shift ;
+
+	if ($this->{JNI}){
+		return ;
+	}
+
+	$this->{owner} = 0 ;
+}
+
+
 sub process_command {
 	my $this = shift ;
 	my $inline = shift ;
 	my $data = shift ;
 
+	my $ref = undef ;
 	my $resp = undef ;
 	while (1){
 		Inline::Java::debug("  packet sent is $data") ;
@@ -255,7 +293,7 @@ sub process_command {
 
 		# We got an answer from the server. Is it a callback?
 		if ($resp =~ /^callback/){
-			$data = Inline::Java::Callback::InterceptCallback($inline, $resp) ;
+			($data, $ref) = Inline::Java::Callback::InterceptCallback($inline, $resp) ;
 			next ;
 		}
 		else{
