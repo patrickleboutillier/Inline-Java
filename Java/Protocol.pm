@@ -76,13 +76,13 @@ sub CallJavaMethod {
 
 	my $data = join(" ", 
 		"call_method", 
-		$id,		
+		$id,
 		Inline::Java::Class::ValidateClass($class),
 		$this->ValidateMethod($method),
 		$this->ValidateArgs(@args),
 	) ;
 
-	Inline::Java::debug("  packet sent is $data") ;		
+	Inline::Java::debug("  packet sent is $data") ;
 
 	return $this->Send($data) ;
 }
