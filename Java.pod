@@ -534,6 +534,70 @@ $@ is reset by the next eval.
    Z<>
 
 
+=head1 CALLBACKS
+
+You can now (as of 0.31), call Perl functions from Java. To do this you 
+need to create an InlinePerlJavaCaller object. You can then use the 
+CallPerl method to call your Perl function. You pass the paramters using 
+an array of java.lang.Object. The method will return the result in a 
+java.lang.Object, which you must then cast to as a java.lang.String 
+(if your Perl method returns a Perl scalar), or anything else if your Perl 
+function returns an "Inline::Java" object. Here is a example of a typical 
+use:
+
+=for comment
+
+   use Inline Java => <<'END';
+      import java.util.* ;
+
+      class regexp extends InlineJavaPerlCaller {
+         public regexp(){
+         }
+
+         public boolean match(String target, String pattern)
+            throws InlineJavaException {
+            try {
+               String m = (String)CallPerl("main", "regexp", 
+                  new Object [] {target, pattern}) ;
+
+               if (m.equals("1")){
+                  return true ;
+               }
+            }
+            catch (PerlException pe){
+              // $@ is in pe.GetObject()
+            }
+
+            return false ;
+         }
+      }
+   END
+
+   my $re = new regexp() ;
+   my $match = $re->match("Inline::Java", "^Inline") ;
+   print "match? -> $match\n" ;
+
+	
+   sub regexp { 
+      my $target = shift ;
+      my $pattern = shift ;
+
+      return ($target =~ /$pattern/) ;
+   }
+
+=for comment
+
+The CallPerl method can throw 2 types of exceptions, both of which are inner
+classes of InlineJavaPerlCaller: InlineJavaException and PerlException. The 
+former, which designates an internal C<Inline::Java> error, should never be 
+dealt with and should be thrown back all the way up to the function that was
+initially called by Perl. The latter indicates that the Perl callback threw
+an exception (die() or croak()). The value of $@ (this can be a scalar or 
+any valid "Inline::Java" object) can retreived using the GetObject method
+of the PerlException object.
+   Z<>
+
+
 =head1 STUDYING
 
 As of version 0.21, C<Inline::Java> can learn about other Java classes
@@ -697,6 +761,33 @@ static members in the Java code.
 If processes not forked off the parent are connecting to the shared JVM, the 
 parent's CLASSPATH must be set properly or else the parent will not see these
 classes. See USING MULTIPLE SECTIONS for more details.
+
+If you want to use C<Inline::Java> in a CGI script, do the following:
+
+=for comment
+
+   use Inline (
+      Java => <<'END',
+         class Foo11 {
+            public Foo11(){
+            }
+         }
+   END
+      SHARED_JVM => 1,
+   ) ;
+
+   Inline::Java::release_JVM() ;
+   my $f = new Foo11() ;
+
+=for comment
+
+The release_JVM() function simply tells the CGI script that it is no 
+longer responsible for shutting down the JVM. What this does is that
+the first CGI to execute will start the JVM, but by releasing it the JVM 
+will never be shutdown. Subsequent CGI, sine they have the SHARED_JVM
+option enabled, will try to connect to an already existing JVM before
+trying to start a new one. Therefore if the JVM haapens to crash or is
+killed, the next CGI that runs will start a new one.
 
 Please note that the SHARED_JVM feature does not work in JNI mode.
    Z<>

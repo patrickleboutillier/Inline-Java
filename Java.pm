@@ -1138,6 +1138,13 @@ sub reconnect_JVM {
 }
 
 
+sub release_JVM {
+	if ($JVM){
+		$JVM->release() ;
+	}
+}
+
+
 sub get_INLINE {
 	my $module = shift ;
 

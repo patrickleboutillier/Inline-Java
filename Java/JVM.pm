@@ -188,6 +188,13 @@ sub setup_socket {
 }
 
 
+sub release {
+	my $this = shift ;
+
+	$this->{owner} = 0 ;
+}
+
+
 sub reconnect {
 	my $this = shift ;
 
@@ -208,7 +215,9 @@ sub reconnect {
 		1
 	) ;
 	$this->{socket} = $socket ;
-	$this->{owner} = 0 ;
+
+	# Now that we have reconnected, we release the JVM
+	$this->release() ;
 }
 
 
