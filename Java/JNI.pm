@@ -4,7 +4,7 @@ package Inline::Java::JNI ;
 
 use strict ;
 
-$Inline::Java::JNI::VERSION = '0.49' ;
+$Inline::Java::JNI::VERSION = '0.50' ;
 
 use DynaLoader ;
 use Carp ;

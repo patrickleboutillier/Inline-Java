@@ -1,18 +1,12 @@
-BEGIN {
-	$main::CNOTE_HOME = "/bla/bla/bla"
-}
+#!/usr/bin/perl
 
-use Inline (Java  => 'DATA',
-    PORT => 4500,
-    EXTRA_JAVA_ARGS => "-Xmx196m -DCNOTE_HOME=$main::CNOTE_HOME"
-);
+use strict;
+use warnings;
+use lib "bug" ;
+use PKG1;
 
-print test->get_prop("CNOTE_HOME"), "\n" ;
+print PKG1->hello() ;
 
-__END__
-__Java__
-class test {
-	public static String get_prop(String p){
-		return System.getProperty(p) ;
-	}
-}
+# use PKG2 ;
+# PKG2::callpkg1() ;
+ 
