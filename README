@@ -72,6 +72,12 @@ WARNING: THIS IS ALPHA SOFTWARE. It is incomplete and possibly unreliable.
          It is also possible that some elements of the interface (API) will 
          change in future releases.
 
+Inline::Java version 0.33 is a minor upgrade that includes:
++ Improved and more flexible debug output
++ Auto loading of thread libraries under Solaris
++ Basic support for J2SDK 1.4
++ Other minor bug fixes
+
 Inline::Java version 0.32 is a minor upgrade that includes:
 + Restored compatibiity with Perl 5.005_03
 + Other minor bug fixes
