@@ -3,6 +3,15 @@ use File::Find ;
 
 use strict ;
 
+
+# Inherited from the parent Makefile.PL
+if (! defined($main::JNI_BUILD)){
+	$main::JNI_BUILD = 0 ;
+}
+
+my $JNI_BUILD = $main::JNI_BUILD ;
+
+
 # Define these variables with the correct values to bypass the
 # rest of the code that looks for them.
 my $java_include = 		undef ;
@@ -10,22 +19,20 @@ my $java_include_os = 	undef ;
 my $java_lib = 			undef ;
 my $java_so = 			undef ;
 
+
 my $jvm_lib = ($^O eq "MSWin32" ? "jvm.lib" : "libjvm.so") ;
 my $jvm_so =  ($^O eq "MSWin32" ? "jvm.dll" : "libjvm.so") ;
 
 
-my $q = "\nInline::Java has an optional JNI extension (see README for more " .
-	"information).\nDo you want to build the JNI extension" ;
-
-my $jni = AskYN($q) ;
-
-if ($jni){
+if ($JNI_BUILD){
 	if ((! defined($java_include))&&
 		(! defined($java_include_os))&&
 		(! defined($java_lib))&&
 		(! defined($java_so))){
+		print "\nBuilding JNI extension.\n" ;
+
 		# We need to find the files in order to be able to build
-		$q = "\nWhat is the path to your Java installation" ;
+		my $q = "\nEnter the path to your Java 2 SDK installation" ;
 		my $jh = Ask($q) ;
 		chomp($jh) ;
 		if (! -d $jh){
@@ -47,7 +54,7 @@ if ($jni){
 			die("Couldn't find $jvm_so.") ;
 		}
 	}
-	
+
 	if ($^O eq "MSWin32"){
 		my $l = join(" or ", @{$java_so}) ;
 		print "\nNote: You will need to add $l to your PATH environment " .
@@ -55,34 +62,25 @@ if ($jni){
 	}
 
 	print "\n" ;
-	
 }
 else{
-	# We need to rename the JNI.xs file so that the extension is not built
-	rename("JNI.xs", "JNI.xs_") ;	
+	rename("JNI.xs", "JNI.xs_") ;
 }
 
 
-my %h = (
+ExtUtils::MakeMaker::WriteMakefile(
 	NAME => 'Inline::Java::JNI',
 	VERSION_FROM => 'JNI.pm',
-) ;
-
-if ($jni){
-	$h{INC} = join(" ", 
+	INC => join(" ", 
 		"-I$java_include",
 		"-I$java_include_os"
-	) ;
-	$h{LIBS} = [
-		"-L$java_lib -ljvm"
-	] ;
-}
+	),
+	LIBS => (! $JNI_BUILD ? undef :
+		[
+			"-L$java_lib -ljvm"
+		]),
+) ;
 
-ExtUtils::MakeMaker::WriteMakefile(%h) ;
-
-
-# Restore the JNI.xs file
-rename("JNI.xs_", "JNI.xs") ;
 
 
 #################################################
