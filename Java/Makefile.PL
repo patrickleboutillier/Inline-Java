@@ -116,10 +116,9 @@ if (($build_jni || AskYN("Do you wish to build the JNI extension?", 'y'))){
 				"use the JNI configuration option or set the PERL_INLINE_JAVA_JNI environment\n" .
 				"variable to a true value. You will also need to add the following directories\n" .
 				"to your " . Inline::Java::Portable::portable('SO_LIB_PATH_VAR') . " environment variable:\n" ;
-			map {print "  $_\n"; } keys %so_dirs ;
+			@main::SO_DIRS = keys %so_dirs ;
+			map {print "  $_\n"; } @main::SO_DIRS ;
 			print "See README.JNI for more information.\n\n" ;
-
-			# Add these so_dirs to the default_j2sdk.pl file.
 
 			@main::I = (
 				Inline::Java::Portable::portable('SUB_FIX_MAKE_QUOTES', 

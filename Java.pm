@@ -91,6 +91,12 @@ sub import {
 				Inline::Java::get_default_j2sdk() . "'\n" ;
 			exit() ;
 		}
+		elsif ($a eq 'so_dirs'){
+			print portable('SO_LIB_PATH_VAR') . "=" . 
+				join(portable('ENV_VAR_PATH_SEP'), 
+				Inline::Java::get_default_j2sdk_so_dirs()) ;
+			exit() ;
+		}
 	}
     Inline::Java->export_to_level(1, @_) ;
 }

@@ -71,8 +71,9 @@ use strict ;
 sub Inline::Java::get_default_j2sdk {
 	return '$perl_jdk_dir' ;
 }
-
 1 ;
+
+
 J2SDK_PL
 close(J2SDK) ;
 
@@ -165,6 +166,28 @@ WriteMakefile(
 	},
 	clean => {FILES => "$def_jdk _Inline_test $natives_test $perlinterp_test $obj_dir $server_arch $user_arch"},
 ) ;
+
+
+# Add the so_dirs to the default_j2sdk.pl file.
+open(J2SDK, ">>$def_jdk") or
+	die("Can't open '$def_jdk' for appending: $!") ;
+print J2SDK <<J2SDK_PL;
+sub Inline::Java::get_default_j2sdk_so_dirs {
+	return (
+J2SDK_PL
+foreach my $d (@main::SO_DIRS){
+	$d =~ s/'/\'/g ;
+	print J2SDK "\t\t'$d',\n" ;
+}
+print J2SDK <<J2SDK_PL;
+	) ;
+}
+
+
+1 ;
+J2SDK_PL
+close(J2SDK) ;
+
 
 
 # Create the properties that will be included in the jar.
