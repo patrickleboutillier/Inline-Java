@@ -356,7 +356,7 @@ sub build {
 	}
 
 	my $code = $o->get_api('code') ;
-	my $study_only = ($code eq 'STUDY') ;
+	my $study_only = ($code =~ /(STUDY|SERVER)/) ;
 
 	$o->write_java($study_only, $code) ;
 	$o->compile($study_only) ;
@@ -592,9 +592,8 @@ sub load {
 		my $st = $pc->ServerType() ;
 		if ((($st eq "shared")&&(! $o->get_java_config('SHARED_JVM')))||
 			(($st eq "private")&&($o->get_java_config('SHARED_JVM')))){
-			set_DONE() ;
-			croak "JVM type mismatch on port " . $o->get_java_config('PORT') ;
-		}
+				croak "JVM type mismatch on port " . $o->get_java_config('PORT') ;
+			}
 	}
 
 	# Add our Inline object to the list.
