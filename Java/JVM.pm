@@ -36,34 +36,25 @@ sub new {
 	else{
 		Inline::Java::debug("  Client/Server mode") ;
 
-		my $pid = fork() ;
-		if (! defined($pid)){
-			croak "Can't fork to start JVM" ;
-		}
+		my $debug = (Inline::Java::get_DEBUG() ? "true" : "false") ;
 
 		my $port = $o->{Java}->{PORT} ;
-		if ($pid){
-			$this->{pid} = $pid ;
-			$this->{socket}	= $this->setup_socket($port, $o->{Java}->{STARTUP_DELAY}) ;
+		my $java = $o->{Java}->{BIN} . "/java" . Inline::Java::portable("EXE_EXTENSION") ;
+		my $pjava = Inline::Java::portable("RE_FILE", $java) ;
+
+		my $cmd = "\"$pjava\" InlineJavaServer $debug $port" ;
+		Inline::Java::debug($cmd) ;
+
+		if ($o->{config}->{UNTAINT}){
+			($cmd) = $cmd =~ /(.*)/ ;
 		}
-		else{
-			my $debug = (Inline::Java::get_DEBUG() ? "true" : "false") ;
 
-			my $java = $o->{Java}->{BIN} . "/java" . Inline::Java::portable("EXE_EXTENSION") ;
-			my $pjava = Inline::Java::portable("RE_FILE", $java) ;
+		open(JVM, "$cmd|") or croak "Can't exec JVM: $!" ;
+		
+		# Use JVM to shut up the 'possible typo' warning...
+		Inline::Java::debug(*JVM) ;
 
-			my @cmd = ($pjava, 'InlineJavaServer', $debug, $port) ;
-			Inline::Java::debug(join(" ", @cmd)) ;
-
-			if ($o->{config}->{UNTAINT}){
-				foreach my $cmd (@cmd){
-					($cmd) = $cmd =~ /(.*)/ ;
-				}
-			}
-
-			exec(@cmd)
-				or croak "Can't exec JVM" ;
-		}
+		$this->{socket}	= $this->setup_socket($port, $o->{Java}->{STARTUP_DELAY}) ;
 	}
 
 	return $this ;
@@ -154,13 +145,10 @@ sub DESTROY {
 		if ($sock->connected()){
 			print $sock "die\n" ;
 		}
-		close($sock) ;
-		
-		my $pid = $this->{pid} ;
-		if ($pid){
-			my $ok = kill 9, $this->{pid} ;
-			Inline::Java::debug("killing $pid...", ($ok ? "ok" : "failed")) ;
+		else{
+			carp "Lost connection with Java virtual machine." ;
 		}
+		close($sock) ;
 	}
 
 	# For JNI we need to do nothing because the garbage collector will call

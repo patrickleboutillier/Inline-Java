@@ -58,6 +58,7 @@ import java.lang.reflect.* ;
 */
 public class InlineJavaServer {
 	public ServerSocket ss ;
+	public Socket client ;
 	boolean debug = false ;
 
 	public HashMap objects = new HashMap() ;
@@ -77,7 +78,7 @@ public class InlineJavaServer {
 
 		try {
 			ss = new ServerSocket(port) ;
-			Socket client = ss.accept() ;
+			client = ss.accept() ;
 
 			BufferedReader br = new BufferedReader(
 				new InputStreamReader(client.getInputStream())) ;
@@ -117,6 +118,8 @@ public class InlineJavaServer {
 			}
 		}
 		else{
+			// Probably connection dropped...
+			debug("  Lost connection with client") ;
 			System.exit(1) ;
 		}
 
@@ -164,7 +167,7 @@ public class InlineJavaServer {
 	public static InlineJavaServer jni_main(boolean debug) {
 		return new InlineJavaServer(debug) ;
 	}
-
+	
 
 	<INLINE_JAVA_OBJECT>
 
