@@ -1,15 +1,9 @@
 package Inline::Java::Class ;
 
-
 use strict ;
-
-$Inline::Java::Class::VERSION = '0.40' ;
-
-$Inline::Java::Class::MAX_SCORE = 10 ;
-
-
 use Carp ;
 
+$Inline::Java::Class::MAX_SCORE = 10 ;
 
 my $INT_RE = '^[+-]?\d+$' ;
 my $FLOAT_RE = '^([+-]?)(?=\d|\.\d)\d*(\.\d*)?([Ee]([+-]?\d+))?$' ;
@@ -94,7 +88,7 @@ sub ValidateClassSplit {
 sub CastArguments {
 	my $args = shift ;
 	my $proto = shift ;
-	my $module = shift ;
+	my $inline = shift ;
 
 	Inline::Java::debug_obj($args) ;
 	Inline::Java::debug_obj($proto) ;
@@ -108,7 +102,7 @@ sub CastArguments {
 	for (my $i = 0 ; $i < scalar(@{$args}) ; $i++){
 		my $arg = $args->[$i] ;
 		my $pro = $proto->[$i] ;
-		my @r = CastArgument($arg, $pro, $module) ;
+		my @r = CastArgument($arg, $pro, $inline) ;
 		$ret->[$i] = $r[0] ;
 		
 		$score += $r[1] ;
@@ -121,7 +115,7 @@ sub CastArguments {
 sub CastArgument {
 	my $arg = shift ;
 	my $proto = shift ;
-	my $module = shift ;
+	my $inline = shift ;
 
 	ValidateClass($proto) ;
 
@@ -149,7 +143,6 @@ sub CastArgument {
 					my $an = Inline::Java::Array::Normalizer->new($array_type || $proto, $arg) ;
 					$array_score = $an->{score} ;
 					my $flat = $an->FlattenArray() ; 
-					my $inline = Inline::Java::get_INLINE($module) ;
 
 					# We need to create the array on the Java side, and then grab 
 					# the returned object.

@@ -43,7 +43,8 @@ To install Inline::Java do this:
 
 perl Makefile.PL
 make                     (see Note 1)
-make test                (see Note 2, 3, 4)
+make java
+make test                (see Note 2, 3)
 make install
 
 You have to 'make install' before you can run it successfully. 
@@ -51,16 +52,11 @@ You have to 'make install' before you can run it successfully.
 
 Note 1: Use nmake on Windows systems.
 
-Note 2: In order for 'make test' to run properly, you should put the 
-directory to your Java binaries in either your PATH environment variable 
-or in the PERL_INLINE_JAVA_BIN environment variable. 'make test' will remind 
-you if you don't do this.
-
-Note 3: If you have built the JNI extension and want the test suite to use 
+Note 2: If you have built the JNI extension and want the test suite to use 
 it, you will need to set the PERL_INLINE_JAVA_JNI environment variable to 1 
 BEFORE running 'make test'.
 
-Note 4: When testing Inline::Java, it's always a good idea to run 'make test'
+Note 3: When testing Inline::Java, it's always a good idea to run 'make test'
 twice. The first time you test the building and loading of a module, the 
 second time you test loading of an already built module.
 
@@ -68,10 +64,13 @@ second time you test loading of an already built module.
 -------------------------------------------------------------------------------
 FEATURES:
 
-Inline::Java version 0.34 is a minor upgrade that includes:
+WARNING: THIS IS ALPHA SOFTWARE. It is incomplete and possibly unreliable. 
+         It is also possible that some elements of the interface (API) will 
+         change in future releases.
+
+Inline::Java version 0.40 is a major upgrade that includes:
 + Patch by Doug MacEachern to allow running under servlet engines
 + Other minor bug fixes and documentation corrections
-+ Moved to Beta status
 
 Inline::Java version 0.33 is a minor upgrade that includes:
 + Improved and more flexible debug output

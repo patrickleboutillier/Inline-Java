@@ -22,7 +22,7 @@ typedef struct {
 
 
 void shutdown_JVM(InlineJavaJNIVM *this){
-	if (! this->destroyed){
+	if ((! this->embedded)&&(! this->destroyed)){
 		(*(this->jvm))->DestroyJavaVM(this->jvm) ;
 		this->destroyed = 1 ;
 	}
@@ -166,7 +166,6 @@ new(CLASS, classpath, embedded, debug)
 		}
 
 		env = get_env(RETVAL) ;
-		RETVAL->destroyed = 1 ; /* do not shutdown, we did not create it */
 	}
 	else {
 		/* Create the Java VM */

@@ -1,11 +1,7 @@
 package Inline::Java::Array ;
 @Inline::Java::Array::ISA = qw(Inline::Java::Array::Tie) ;
 
-
 use strict ;
-
-$Inline::Java::Array::VERSION = '0.40' ;
-
 use Carp ;
 
 
@@ -122,7 +118,7 @@ sub __set_element {
 
 	my $ret = undef ;
 	eval {
-		my ($new_args, $score) = Inline::Java::Class::CastArguments([$s], [$elem_class], $obj->__get_private()->{module}) ;
+		my ($new_args, $score) = Inline::Java::Class::CastArguments([$s], [$elem_class], $obj->__get_private()->{inline}) ;
 		$ret = $obj->__get_private()->{proto}->SetJavaMember($idx, [$elem_class], $new_args) ;
 	} ;
 	croak $@ if $@ ;

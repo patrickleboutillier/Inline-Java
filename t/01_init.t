@@ -13,8 +13,8 @@ use Inline (
 	Java => 'DATA'
 ) ;
 
-my $mod = (Inline::Java::get_INLINE_modules())[0] ;
-my $ij = Inline::Java::get_INLINE($mod) ;
+my $ij = $types1::INLINE ;
+$ij = $types1::INLINE ; # Stupid warning...
 my $jdk = $ij->get_java_config("J2SDK") ;
 my $ver = types1->version() ;
 print STDERR "\nInline version is $Inline::VERSION\n" ;

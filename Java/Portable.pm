@@ -3,19 +3,13 @@ package Inline::Java::Portable ;
 
 @EXPORT = qw(portable make_classpath get_server_jar get_user_jar) ;
 
-
 use strict ;
-
-$Inline::Java::Portable::VERSION = '0.40' ;
-
-
 use Exporter ;
 use Carp ;
 use Config ;
 use Cwd ;
 use File::Find ;
 use File::Spec ;
-
 
 # Here is some code to figure out if we are running on command.com
 # shell under Windows.
@@ -31,7 +25,6 @@ my $COMMAND_COM =
 			(`ver` =~ /win(dows )?((9[58])|(m[ei]))/i)
 		)
 	) || 0 ;
-
 
 
 sub debug {

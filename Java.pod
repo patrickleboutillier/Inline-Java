@@ -27,6 +27,14 @@ Inline::Java - Write Perl classes in Java.
 
 =for comment
 
+=head1 WARNING 
+
+THIS IS ALPHA SOFTWARE. It is incomplete and possibly unreliable. 
+It is also possible that some elements of the interface (API) will 
+change in future releases.
+   Z<>
+
+
 =head1 DESCRIPTION
 
 The C<Inline::Java> module allows you to put Java source code
@@ -74,13 +82,15 @@ reference (array contains lines of source code). This information
 is detailed in 'perldoc Inline'.
 
 In order for C<Inline::Java> to function properly, it needs to know 
-where to find the Java compiler (javac) and the Java Runtime (java)
-on your machine. This is done using one of the following techniques:
+where to find a Java 2 SDK on your machine. This is done using one 
+of the following techniques:
 
-   - set the BIN configuration option to the correct directory
-   - set the PERL_INLINE_JAVA_BIN environment variable to the correct 
-     directory
-   - put the correct directory in your PATH environment variable
+   - set the J2SDK configuration option to the correct directory
+   - set the PERL_INLINE_JAVA_J2SDK environment variable to the 
+     correct directory
+
+If none of these are specified, C<Inline::Java> will use the Java
+2 SDK that was specified a install time.
 
 
 =head1 CONFIGURATION OPTIONS
@@ -88,13 +98,12 @@ on your machine. This is done using one of the following techniques:
 There are a number of configuration options that dictate the 
 behavior of C<Inline::Java>:
 
-   BIN: 
-      Specifies the path to your Java binaries. 
-	  Ex: BIN => 'my/java/bin/path'
+   J2SDK: 
+      Specifies the path to your Java 2 SDK. 
+	  Ex: BIN => 'my/java/2/sdk/path'
       Note: This configuration option only has an effect on the first
       'use Inline Java' call inside a Perl script, since all other calls 
-      make use of the same JVM. However, you can use it if you want to 
-      change which 'javac' executable is used for subsequent calls.
+      make use of the same JVM.
 
    PORT:
       Specifies the starting port number for the server. If many 
@@ -186,25 +195,22 @@ behavior of C<Inline::Java>:
 
 =head1 ENVIRONMENT VARIABLES
 
-   PERL_INLINE_JAVA_BIN:
-      Same as the BIN option.
+Every configuration option listed above, with the exception of STUDY,
+can be specified using an environment variable named using the 
+following convention:
 
-   PERL_INLINE_JAVA_JNI:
-      Same as the JNI option.
+   PERL_INLINE_JAVA_<option name>
 
-   PERL_INLINE_JAVA_EMBEDDED_JNI:
-      Same as the EMBEDDED_JNI option.
+For example, your can specified the JNI option usng the 
+PERL_INLINE_JAVA_JNI environment variable. 
 
-   PERL_INLINE_SHARED_JVM:
-      Same as the SHARED_JVM option.
+Note that environment variables take precedence over options specified
+in the script itself.
 
-   PERL_INLINE_JAVA_DEBUG:
-      Same as the DEBUG option.
-
-   PERL_INLINE_JAVA_COMMAND_COM:
-      If set to a true value, tells Inline::Java that you are using 
-      the command.com shell. Inline::Java should normally be able
-      to determine this on its own.
+Under Win32, you can also use set the PERL_INLINE_JAVA_COMMAND_COM 
+environment variable to a true value to indicate that you are using 
+the command.com shell. However, C<Inline::Java> should normally be 
+able to determine this on its own.
 
 
 =head1 CLASSES AND OBJECTS
@@ -577,18 +583,18 @@ $@ is reset by the next eval.
 =head1 CALLBACKS
 
 You can now (as of 0.31), call Perl functions from Java. To do this you 
-need to create an InlinePerlJavaCaller object. You can then use the 
-CallPerl method to call your Perl function. You pass the parameters using 
-an array of java.lang.Object. The method will return the result in a 
-java.lang.Object, which you must then cast to as a java.lang.String 
-(if your Perl method returns a Perl scalar), or anything else if your Perl 
-function returns an "Inline::Java" object. Here is a example of a typical 
-use:
+need to create an org.perl.inline.java.InlinePerlJavaCaller object. You 
+can then use the CallPerl method to call your Perl function. You pass the
+parameters using an array of Objects. The method will return the result in 
+an Object, which you must then cast to as a String (if your Perl method 
+returns a Perl scalar), or anything else if your Perl function returns 
+an "Inline::Java" object. Here is a example of a typical use:
 
 =for comment
 
    use Inline Java => <<'END' ;
       import java.util.* ;
+      import org.perl.inline.java.* ;
 
       class Pod_regexp extends InlineJavaPerlCaller {
          public Pod_regexp(){
@@ -604,7 +610,7 @@ use:
                   return true ;
                }
             }
-            catch (PerlException pe){
+            catch (InlineJavaPerlException pe){
                // $@ is in pe.GetObject()
             }
 
@@ -627,15 +633,15 @@ use:
 
 =for comment
 
-The CallPerl method can throw 2 types of exceptions, both of which are inner
-classes of InlineJavaPerlCaller: InlineJavaException and PerlException. The 
-former, which designates an internal C<Inline::Java> error, should never be 
-dealt with and should be thrown back all the way up to the function that was
-initially called by Perl. The latter indicates that the Perl callback threw
-an exception (die() or croak()). The value of $@ (this can be a scalar or 
-any valid "Inline::Java" object) can be retreived using the GetObject method
-of the PerlException object (if you are sure that $@ was a Perl scalar, you
-can use the GetString method).
+The CallPerl method can throw 2 types of exceptions: InlineJavaException and 
+InlineJavaPerlException (both of these belong to the org.perl.inline.java
+package). The former, which designates an internal C<Inline::Java> error, 
+should never be dealt with and should be thrown back all the way up to the 
+function that was initially called by Perl. The latter indicates that the 
+Perl callback threw an exception (die() or croak()). The value of $@ (this can 
+be a scalar or any valid "Inline::Java" object) can be retreived using the 
+GetObject method of the InlineJavaPerlException object (if you are certain 
+that $@ was a Perl scalar, you can use the GetString method).
    Z<>
 
 
@@ -697,51 +703,6 @@ the java::lang::HashMap class is available to use through Perl.
    Z<>
 
 
-=head1 USING MULTIPLE SECTIONS
-
-If you wish to use more than one C<Inline::Java> section in your Perl script,
-you will need to use the Inline NAME option to name your modules. You can then
-use a special syntax in your CLASSPATH (either the environment variable or the
-configuration option) to tell what Inline::Java modules it will need to load
-at runtime:
-
-=for comment
-
-   package Pod_Foo ;
-   use Inline (
-      Java => <<'END_Pod_Foo',
-        class Pod_Foo {
-           public Pod_Foo(){
-           }
-        } 
-   END_Pod_Foo
-      NAME => "Pod_Foo",
-      CLASSPATH => "[PERL_INLINE_JAVA=Pod_Foo, Pod_Bar]",
-   ) ;
-
-   package Pod_Bar ;
-   use Inline (
-      Java => <<'END_Pod_Bar',
-        class Pod_Bar {
-           public Pod_Bar() {
-           }
-        } 
-   END_Pod_Bar
-      NAME => "Pod_Bar",
-   ) ; 
-
-   package main ;
-   my $f = new Pod_Foo::Pod_Foo() ;
-   my $b = new Pod_Bar::Pod_Bar() ;
-
-=for comment
-
-If you set the CLASSPATH via the configuration option, remember to do so in the
-first Inline::Java section. Also remember that you can't use Java packages with
-Inline::Java. Your classes must be in the unnamed package.
-   Z<>
-
-
 =head1 JNI vs CLIENT/SERVER MODES
 
 Starting in version 0.20, it is possible to use the JNI (Java Native 
@@ -766,11 +727,11 @@ See README.JNI for more information about the JNI extension.
 =head1 SHARED_JVM
 
 Starting with version 0.30, the C<Inline::Java> JVM can now be shared between
-multiple processes. The first process to start the JVM is considered the JVM 
-owner and will shutdown the JVM on exit. All other processes can connect as 
-needed to the JVM. If any of these other processes where created by forking 
-the parent process, the Inline::Java->reconnect_JVM() function must be called 
-in the child to get a fresh connection to the JVM. Ex:
+multiple processes. The first process to start creates the JVM but does not 
+shut it down on exit. All other processes can then connect as needed to the JVM. 
+If any of these other processes where created by forking the parent process, 
+the Inline::Java->reconnect_JVM() function must be called in the child to get 
+a fresh connection to the JVM. Ex:
 
 =for comment
 
@@ -805,11 +766,7 @@ Once this code was run, each of the 6 processes will have created a different
 instance of the 't' class. Data can be shared between the processes by using 
 static members in the Java code.
 
-If processes not forked off the parent are connecting to the shared JVM, the 
-parent's CLASSPATH must be set properly or else the parent will not see these
-classes. See USING MULTIPLE SECTIONS for more details.
-
-Note: The Java System.out stream is closed int SHARED_JVM mode.
+Note: The Java System.out stream is closed in SHARED_JVM mode.
    Z<>
 
 
@@ -833,8 +790,6 @@ If you want to use C<Inline::Java> in a CGI script, do the following:
       DIRECTORY => '/somewhere/your/web/server/can/write',
    ) ;
 
-   Inline::Java::release_JVM() ;
-
    my $c = new Pod_counter() ;
    my $q = new CGI() ;
    print 
@@ -844,11 +799,9 @@ If you want to use C<Inline::Java> in a CGI script, do the following:
 
 =for comment
 
-The release_JVM() function simply tells the CGI script that it is no 
-longer responsible for shutting down the JVM. What this does is that
-the first CGI to execute will start the JVM, but by releasing it the JVM 
-will never be shutdown. Subsequent CGI, since they have the SHARED_JVM
-option enabled, will try to connect to an already existing JVM before
+In this scenario, the first CGI to execute will start the JVM, but does
+not shut it down on exit. Subsequent CGI, since they have the SHARED_JVM
+option enabled, will try to connect to the already existing JVM before
 trying to start a new one. Therefore if the JVM happens to crash or is
 killed, the next CGI that runs will start a new one. The JVM will be
 killed when Apache is shut down.
@@ -873,7 +826,6 @@ Here is an example of how to use C<Inline::Java> under mod_perl:
       DIRECTORY => '/somewhere/your/web/server/can/write',
    ) ;
 
-   Inline::Java::release_JVM() ;
    my $c = new Pod_counter() ;
 
    sub handler {
@@ -888,28 +840,7 @@ Here is an example of how to use C<Inline::Java> under mod_perl:
       return Apache::Constants::OK() ;
    }
 
-See USING Inline::Java UNDER MOD_PERL for more details about
-the release_JVM() function.
-   Z<>
-
-
-=head1 SUPPORTED PLATFORMS
-
-This is an ALPHA release of C<Inline::Java>. Further testing and
-expanded support for other operating systems and platforms will be a
-focus for future releases. It has been tested on: 
-
-   - Solaris 2.8            + Perl 5.6.1 + Java SDK 1.2.2
-   - Solaris 2.8            + Perl 5.6.1 + Java SDK 1.3.1
-   - Linux Redhat 7.1 Intel + Perl 5.6 + Java SDK 1.2.2
-   - Linux Redhat 7.1 Intel + Perl 5.6 + Java SDK 1.3.1
-   - Linux Redhat 7.1 Intel + Perl 5.6 + Java SDK 1.4.0
-   - Windows 2000           + Perl 5.6 + Java SDK 1.2.2
-   - Windows 2000           + Perl 5.6 + Java SDK 1.3.0
-   - Windows 95             + Perl 5.6 + Java SDK 1.3.1
-   - Windows 95             + Perl 5.6 + Java SDK 1.2.2 
-
-It likely will work with many other configurations.
+See USING Inline::Java IN A CGI for more details.
    Z<>
 
 
@@ -959,24 +890,11 @@ Here are some things to watch out for:
 
 =item 1
 
-You can't use the "package" Java directive when using C<Inline::Java>. 
-
-=item 2
-
-You can't create public classes when using Inline::Java. This is due
-to the fact that Java requires that public classes be defined in a 
-.java file of the same name (C<Inline::Java> can't work this way).
-
-=item 3
-
-You shouldn't name any of your classes starting "InlineJavaServer" or
-"InlineJavaPerl". Those are reserved for C<Inline::Java>'s own Java 
-classes. Also do not name your classes 'B', 'S', 'I', 'J', 'F', 'D', 
+You shouldn't name any of your classes 'B', 'S', 'I', 'J', 'F', 'D', 
 'C', 'Z' or 'L'. These classes seem to be used internally by Java to 
 represent the primitive types.
 
-
-=item 4
+=item 2
 
 If you upgrade C<Inline::Java> from a previous version, be sure to delete
 your Inline directory so that C<Inline::Java>'s own Java classes get 

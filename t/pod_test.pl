@@ -29,9 +29,6 @@ my $del = "\n=for comment\n" ;
 
 my @code_blocks = ($pod =~ m/$del(.*?)$del/gs) ;
 
-my $ps = Inline::Java::portable("ENV_VAR_PATH_SEP_CP") ;
-$ENV{CLASSPATH} .= "$ps" . "[PERL_INLINE_JAVA=Pod_Foo,Pod_Bar]" ;
-
 my $skip_to = $opts{s} || 0 ;
 
 my $cnt = -1 ;

@@ -1,13 +1,7 @@
 package Inline::Java::Callback ;
 
-
 use strict ;
-
-$Inline::Java::Callback::VERSION = '0.40' ;
-
-
 use Carp ;
-
 
 $Inline::Java::Callback::OBJECT_HOOK = undef ;
 
@@ -71,7 +65,7 @@ sub ProcessCallback {
 		$ret = Inline::Java::cast($proto, $ret, $cast_return) ;
 	}
 
-	($ret) = Inline::Java::Class::CastArgument($ret, $proto, $inline->get_api('modfname')) ;
+	($ret) = Inline::Java::Class::CastArgument($ret, $proto, $inline) ;
 	
 	# Here we must keep a reference to $ret or else it gets deleted 
 	# before the id is returned to Java...

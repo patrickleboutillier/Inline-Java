@@ -2,9 +2,6 @@ package Inline::Java::JVM ;
 
 
 use strict ;
-
-$Inline::Java::JVM::VERSION = '0.31' ;
-
 use Carp ;
 use IPC::Open3 ;
 use IO::File ;
@@ -31,18 +28,23 @@ sub new {
 
 	$this->{socket} = undef ;
 	$this->{JNI} = undef ;
-
+	$this->{embedded} = $o->get_java_config('EMBEDDED_JNI') ;
+	$this->{owner} = 1 ;
 	$this->{destroyed} = 0 ;
 
-	Inline::Java::debug(1, "starting JVM...") ;
+	if ($this->{embedded}){
+		Inline::Java::debug(1, "using embedded JVM...") ;
+	}
+	else{
+		Inline::Java::debug(1, "starting JVM...") ;
+	}
 
-	$this->{owner} = 1 ;
 	if ($o->get_java_config('JNI')){
 		Inline::Java::debug(1, "JNI mode") ;
 
 		my $jni = new Inline::Java::JNI(
 			$ENV{CLASSPATH} || '',
-			$o->get_java_config('EMBEDDED_JNI'),
+			$this->{embedded},
 			Inline::Java::get_DEBUG(),
 		) ;
 		$jni->create_ijs() ;
@@ -68,7 +70,6 @@ sub new {
 				return $this ;
 			}
 		}
-		$this->capture(1) ;
 
 		my $java = File::Spec->catfile($o->get_java_config('J2SDK'), 'bin',
 			"java" . Inline::Java::portable("EXE_EXTENSION")) ;
@@ -85,6 +86,14 @@ sub new {
 			$pid = $this->launch($cmd) ;
 		} ;
 		croak "Can't exec JVM: $@" if $@ ;
+
+		if ($this->{shared}){
+			# As of 0.40, we release by default.
+			$this->release() ;
+		}
+		else{
+			$this->capture() ;
+		}
 
 		$this->{pid} = $pid ;
 		$this->{socket}	= $this->setup_socket(
@@ -137,6 +146,11 @@ sub DESTROY {
 
 sub shutdown {
 	my $this = shift ;
+
+	if ($this->{embedded}){
+		Inline::Java::debug(1, "embedded JVM, skipping shutdown.") ;
+		return ;
+	}
 
 	if (! $this->{destroyed}){
 		if ($this->am_owner()){

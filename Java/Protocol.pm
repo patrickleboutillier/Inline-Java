@@ -1,10 +1,6 @@
 package Inline::Java::Protocol ;
 
-
 use strict ;
-
-$Inline::Java::Protocol::VERSION = '0.40' ;
-
 use Inline::Java::Object ;
 use Inline::Java::Array ;
 use Carp ;
@@ -19,7 +15,7 @@ sub new {
 
 	my $this = {} ;
 	$this->{obj_priv} = $obj || {} ;
-	$this->{module} = $inline->get_api('modfname') ;
+	$this->{inline} = $inline ;
 
 	bless($this, $class) ;
 	return $this ;
@@ -300,9 +296,7 @@ sub Send {
 	my $data = shift ;
 	my $const = shift ;
 
-	my $inline = Inline::Java::get_INLINE($this->{module}) ;
-	my $resp = Inline::Java::__get_JVM()->process_command($inline, $data) ;
-
+	my $resp = Inline::Java::__get_JVM()->process_command($this->{inline}, $data) ;
 	if ($resp =~ /^error scalar:([\d.-]*)$/){
 		my $msg = decode($1) ;
 		Inline::Java::debug(3, "packet recv error: $msg") ;
@@ -346,8 +340,7 @@ sub DeserializeObject {
 			return undef ;
 		}
 		else{
-			my $inline = Inline::Java::get_INLINE($this->{module}) ;
-			my $pkg = $inline->get_api('pkg') ;
+			my $pkg = $this->{inline}->get_api('pkg') ;
 
 			my $obj = undef ;
 			my $elem_class = $class ;
@@ -365,8 +358,8 @@ sub DeserializeObject {
 				$perl_class = Inline::Java::java2perl($pkg, $elem_class) ;
 				if (Inline::Java::Class::ClassIsReference($elem_class)){
 					if (! Inline::Java::known_to_perl($pkg, $elem_class)){
-						if (($thrown)||($inline->get_java_config('AUTOSTUDY'))){
-							$inline->_study([$elem_class], 0) ;
+						if (($thrown)||($this->{inline}->get_java_config('AUTOSTUDY'))){
+							$this->{inline}->_study([$elem_class], 0) ;
 						}
 						else{	
 							# Object is not known to Perl, it lives as a 
@@ -384,12 +377,12 @@ sub DeserializeObject {
 
 			if (Inline::Java::Class::ClassIsArray($class)){
 				Inline::Java::debug(3, "creating array object...") ;
-				$obj = Inline::Java::Object->__new($class, $inline, $id) ;
+				$obj = Inline::Java::Object->__new($class, $this->{inline}, $id) ;
 				$obj = new Inline::Java::Array($obj) ;
 				Inline::Java::debug(3, "array object created...") ;
 			}
 			else{
-				$obj = $perl_class->__new($class, $inline, $id) ;
+				$obj = $perl_class->__new($class, $this->{inline}, $id) ;
 			}
 
 			if ($thrown){
@@ -435,44 +428,4 @@ sub DESTROY {
 }
 
 
-
 1 ;
-
-
-
-__END__
-
-
-RCS file: /cvsroot/inline-java/Inline-Java/Java/Protocol.pm,v
-retrieving revision 1.29
-diff -r1.29 Protocol.pm
-37a38,51
-> sub AddClassPath {
->       my $this = shift ;
->       my @paths = @_ ;
->
->       Inline::Java::debug(3, "adding to class path (" .
->               join(", ", map {"'" . $_ . "'"} @paths) . ")") ;
->
->       my $data = "add_classpath " . join(" ", map {encode($_)} @paths) ;
->
->       return $this->Send($data, 1) ;
-> }
->
->
->
-460a475,477
->               else if (c.equals("add_classpath")){
->                       AddClassPath(st) ;
->               }
-553a571,580
->       }
->
->
->       void AddClassPath(StringTokenizer st) throws InlineJavaException {
->               while (st.hasMoreTokens()){
->                       String path = decode(st.nextToken()) ;
->                       InlineJavaServer.instance.AddClassPath(path) ;
->               }
->
->               SetResponse(null) ;

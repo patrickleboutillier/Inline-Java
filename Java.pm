@@ -15,10 +15,8 @@ if (! defined($Inline::Java::DEBUG)){
 	$Inline::Java::DEBUG = 0 ;
 }
 
-
 # Set DEBUG stream
 *DEBUG_STREAM = *STDERR ;
-
 
 require Inline ;
 use Carp ;
@@ -43,13 +41,11 @@ require File::Spec->catfile('Java', 'DefaultJ2SDK.pl') ;
 # This is set when the script is over.
 my $DONE = 0 ;
 
-
 # This is set when at least one JVM is loaded.
 my $JVM = undef ;
 
-
-# This hash will store the $o objects...
-my $INLINES = {} ;
+# This list will store the $o objects...
+my @INLINES = () ;
 
 
 # This stuff is to control the termination of the Java Interpreter
@@ -57,7 +53,6 @@ sub done {
 	my $signal = shift ;
 
 	# To preserve the passed exit code...
-	# Thanks Maria
 	my $ec = $? ;
 
 	$DONE = 1 ;
@@ -113,12 +108,13 @@ sub validate {
 	Inline::Java::debug(1, "Starting validate.") ;
 	
 	my $jdk = Inline::Java::get_default_j2sdk() ;
+	my $dbg = $Inline::Java::DEBUG ;
 	my %opts = @_ ;
-	$o->set_option('DEBUG',					0,		'i', 1, \%opts) ;
+	$o->set_option('DEBUG',					$dbg,	'i', 1, \%opts) ;
 	$o->set_option('J2SDK',					$jdk,	's', 1, \%opts) ;
 	$o->set_option('CLASSPATH',				'',		's', 1, \%opts) ;
 
-	$o->set_option('PORT',					7890,	'i', 1, \%opts) ;
+	$o->set_option('PORT',					-1,		'i', 1, \%opts) ;
 	$o->set_option('STARTUP_DELAY',			15,		'i', 1, \%opts) ;
 	$o->set_option('SHARED_JVM',			0,		'b', 1, \%opts) ;
 	$o->set_option('JNI',					0,		'b', 1, \%opts) ;
@@ -139,6 +135,15 @@ sub validate {
 	# Embedded JNI turns on regular JNI
 	if ($o->get_java_config('EMBEDDED_JNI')){
 		$o->set_java_config('JNI', 1) ;
+	}
+
+	if ($o->get_java_config('PORT') == -1){
+		if ($o->get_java_config('SHARED_JVM')){
+			$o->set_java_config('PORT') = 7891 ;
+		}
+		else{
+			$o->set_java_config('PORT') = 7890 ;
+		}
 	}
 
 	if (($o->get_java_config('JNI'))&&($o->get_java_config('SHARED_JVM'))){
@@ -274,13 +279,21 @@ sub build {
 		"javac" . portable("EXE_EXTENSION")) ;
 		my $redir = portable("IO_REDIR") ;
 
+		# We need to add all the previous install dirs to the classpath because
+		# they can access each other.
+		my @prev_install_dirs = () ;
+		foreach my $in (@INLINES){
+			push @prev_install_dirs, File::Spec->catdir($in->get_api('install_lib'), 
+				'auto', $in->get_api('modpname')) ;
+		}
+
 		my $cp = $ENV{CLASSPATH} || '' ;
-		$ENV{CLASSPATH} = make_classpath($o->get_java_config('CLASSPATH'), get_server_jar()) ;
+		$ENV{CLASSPATH} = make_classpath($o->get_java_config('CLASSPATH'), get_server_jar(), @prev_install_dirs) ;
 		my $cmd = "\"$javac\" -d \"$install_dir\" $source > cmd.out $redir" ;
 		if ($o->get_config('UNTAINT')){
 			($cmd) = $cmd =~ /(.*)/ ;
 		}
-		Inline::Java::debug(2, "$cmd") ;
+		Inline::Java::debug(1, "$cmd") ;
 		my $res = system($cmd) ;
 		$res and do {
 			croak $o->compile_error_msg($cmd) ;
@@ -305,8 +318,6 @@ sub build {
 			}
 		}
 	}
-	my $modfname = $o->get_api('modfname') ;
-	my $suffix = $o->get_api('suffix') ;
 
 	# Touch the .jdat file.
 	my $jdat = File::Spec->catfile($install_dir, $o->get_api('modfname') . '.' . $o->get_api('suffix')) ;
@@ -367,7 +378,6 @@ sub load {
 
 	Inline::Java::debug(1, "Starting load.") ;
 
-	my $modfname = $o->get_api('modfname') ;
 	my $install_dir = File::Spec->catdir($o->get_api('install_lib'), 
 		'auto', $o->get_api('modpname')) ;
 
@@ -395,25 +405,14 @@ sub load {
 		$pc->AddClassPath($install_dir) ;
 	}
 
-	my $study_module_classes = 1 ;
-	my $prev_o = $INLINES->{$modfname} ;
-	if (defined($prev_o)){
-		Inline::Java::debug(2, "module '$modfname' was already loaded, importing binding into new instance") ;
-		if (! defined($o->{ILSM}->{data})){
-			$o->{ILSM}->{data} = [] ;
-		}
-		push @{$o->{ILSM}->{data}}, @{$prev_o->{ILSM}->{data}} ;		
-		$study_module_classes = 0 ;
-	}
-
 	# Add our Inline object to the list.
-	$INLINES->{$modfname} = $o ;
+	push @INLINES, $o ;
 
 	my $classes = [] ;
 	if ((defined($o->get_java_config('STUDY')))&&(scalar($o->get_java_config('STUDY')))){
 		$classes = $o->get_java_config('STUDY') ;
 	}
-	$o->_study($classes, $study_module_classes) ;
+	$o->_study($classes, 1) ;
 
 	$o->set_java_config('loaded', 1) ;
 	Inline::Java::debug(1, "load done.") ;
@@ -427,9 +426,35 @@ sub _study {
 	my $classes = shift ;
 	my $study_module = shift ;
 
+	my $install_dir = File::Spec->catdir($o->get_api('install_lib'), 
+		'auto', $o->get_api('modpname')) ;
+
+	if ($study_module){
+		# We need to add the classes that are in the directory or under...
+		my @cl = Inline::Java::Portable::find_classes_in_dir($install_dir) ;
+		foreach my $class (@cl){
+			if ($class =~ s/([\w\$]+)\.class$/$1/){
+				my $f = $1 ;
+				push @{$classes}, $f ;
+			}
+		}
+	}
+
+	my @new_classes = () ;
+	foreach my $class (@{$classes}){
+		$class = Inline::Java::Class::ValidateClass($class) ;
+		if (! Inline::Java::known_to_perl($o->get_api('pkg'), $class)){
+			push @new_classes, $class ;
+		}
+	}
+
+	if (! scalar(@new_classes)){
+		return ;
+	}
+	
 	# Then we ask it to give us the public symbols from the classes
 	# that we got.
-	my @lines = $o->report($classes, $study_module) ;
+	my @lines = $o->report(\@new_classes, $study_module) ;
 
 	# Now we read up the symbols and bind them to Perl.
 	$o->bind_jdat($o->load_jdat(@lines)) ;
@@ -466,32 +491,10 @@ sub report {
 		}
 	}
 
-	if ($study_module){
-		# We need to add the classes that are in the directory or under...
-		my @cl = Inline::Java::Portable::find_classes_in_dir($install_dir) ;
-		foreach my $class (@cl){
-			if ($class =~ s/([\w\$]+)\.class$/$1/){
-				my $f = $1 ;
-				push @{$classes}, $f ;
-			}
-		}
-	}
-
-	my @new_classes = () ;
-	foreach my $class (@{$classes}){
-		$class = Inline::Java::Class::ValidateClass($class) ;
-		if (! Inline::Java::known_to_perl($o->get_api('pkg'), $class)){
-			push @new_classes, $class ;
-		}
-	}
-	if (! scalar(@new_classes)){
-		return () ;
-	}
-	
 	# Ok, there are some classes in there that we don't know about.
 	# Ask for the info on the classes
 	my $pc = new Inline::Java::Protocol(undef, $o) ;
-	my $resp = $pc->Report(join(" ", @new_classes)) ;
+	my $resp = $pc->Report(join(" ", @{$classes})) ;
 
 	if (($study_module)&&($o->get_java_config('built'))){
 		# Update the cache.
@@ -601,11 +604,11 @@ sub bind_jdat {
 	my $d = shift ;
 	my $idx = shift ;
 
-	my $modfname = $o->get_api('modfname') ;
-
 	if (! defined($d->{classes})){
 		return ;
 	}
+
+	my $inline_idx = scalar(@INLINES) - 1 ;
 
 	my %classes = %{$d->{classes}} ;
 	foreach my $class (sort keys %classes) {
@@ -619,15 +622,14 @@ sub bind_jdat {
 		
 		my $code = <<CODE;
 package $class ;
-use vars qw(\@ISA \$EXISTS \$JAVA_CLASS \$DUMMY_OBJECT) ;
+use vars qw(\@ISA \$INLINE \$EXISTS \$JAVA_CLASS \$DUMMY_OBJECT) ;
 
 \@ISA = qw(Inline::Java::Object) ;
+\$INLINE = \$INLINES[$inline_idx] ;
 \$EXISTS = 1 ;
 \$JAVA_CLASS = '$java_class' ;
 \$DUMMY_OBJECT = $class$dash>__new(
-	\$JAVA_CLASS,
-	Inline::Java::get_INLINE('$modfname'),
-	0) ;
+	\$JAVA_CLASS, \$INLINE, 0) ;
 
 use Carp ;
 
@@ -658,7 +660,7 @@ sub new {
 	my \$class = shift ;
 	my \@args = \@_ ;
 
-	my \$o = Inline::Java::get_INLINE('$modfname') ;
+	my \$o = \$INLINE ;
 	my \$d = \$o->{ILSM}->{data}->[$idx] ;
 	my \$signatures = \$d->{classes}->{'$class'}->{constructors} ;
 	my (\$proto, \$new_args, \$static) = \$class->__validate_prototype('new', [\@args], \$signatures, \$o) ;
@@ -702,15 +704,15 @@ sub bind_method {
 	my $method = shift ;
 	my $static = shift ;
 
-	my $modfname = $o->get_api('modfname') ;
-	
+	my $inline_idx = scalar(@INLINES) - 1 ;
+
 	my $code = <<CODE;
 
 sub $method {
 	my \$this = shift ;
 	my \@args = \@_ ;
 
-	my \$o = Inline::Java::get_INLINE('$modfname') ;
+	my \$o = \$INLINE ;
 	my \$d = \$o->{ILSM}->{data}->[$idx] ;
 	my \$signatures = \$d->{classes}->{'$class'}->{methods}->{'$method'} ;
 	my (\$proto, \$new_args, \$static) = \$this->__validate_prototype('$method', [\@args], \$signatures, \$o) ;
@@ -850,7 +852,7 @@ sub capture_JVM {
 
 sub i_am_JVM_owner {
 	if ($JVM){
-		$JVM->am_owner() ;
+		return $JVM->am_owner() ;
 	}
 }
 
@@ -859,23 +861,6 @@ sub release_JVM {
 	if ($JVM){
 		$JVM->release() ;
 	}
-}
-
-
-sub get_INLINE {
-	my $module = shift ;
-
-	return $INLINES->{$module} ;
-}
-
-
-sub get_INLINE_nb {
-	return scalar(keys %{$INLINES}) ;
-}
-
-
-sub get_INLINE_modules {
-	return keys %{$INLINES} ;
 }
 
 
@@ -983,18 +968,11 @@ sub study_classes {
 
 	Inline::Java::debug(2, "selecting random module to house studied classes...") ;
 
-	# Select a random Inline object to be responsible for these
-	# classes
-	my @modules = keys %{$INLINES} ;
+	# Select a random Inline object to be responsible for these classes
 	srand() ;
-	my $idx = int rand @modules ;
-	my $module = $modules[$idx] ;
+	my $o = @INLINES[int(rand(@INLINES))] ;
 
-	Inline::Java::debug(2, "selected $module") ;
-
-	my $o = Inline::Java::get_INLINE($module) ;
-
-	return $o->_study($classes) ;
+	return $o->_study($classes, 0) ;
 }
 
 

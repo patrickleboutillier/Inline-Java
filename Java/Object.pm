@@ -2,12 +2,8 @@ package Inline::Java::Object ;
 @Inline::Java::Object::ISA = qw(Inline::Java::Object::Tie) ;
 
 use strict ;
-
-$Inline::Java::Object::VERSION = '0.31' ;
-
 use Inline::Java::Protocol ;
 use Carp ;
-
 
 # Here we store as keys the knots and as values our blessed private objects
 my $PRIVATES = {} ;
@@ -100,7 +96,7 @@ sub __validate_prototype {
 		Inline::Java::debug(3, "matching arguments to $method$sig") ;
 		
 		eval {
-			($new_args, $score) = Inline::Java::Class::CastArguments($args, $proto, $inline->get_api('modfname')) ;
+			($new_args, $score) = Inline::Java::Class::CastArguments($args, $proto, $inline) ;
 		} ;
 		if ($@){
 			if ($nb_proto == 1){
@@ -239,7 +235,7 @@ sub __get_member {
 
 	Inline::Java::debug(3, "fetching member variable '$key'") ;
 
-	my $inline = Inline::Java::get_INLINE($this->__get_private()->{module}) ;
+	my $inline = $this->__get_private()->{inline} ;
 	my $fields = $inline->get_fields($this->__get_private()->{class}) ;
 
 	my $types = $fields->{$key} ;
@@ -276,7 +272,7 @@ sub __set_member {
 		croak "Can't set member '$key' for an object that is not bound to Perl" ;
 	}
 
-	my $inline = Inline::Java::get_INLINE($this->__get_private()->{module}) ;
+	my $inline = $this->__get_private()->{inline} ;
 	my $fields = $inline->get_fields($this->__get_private()->{class}) ;
 
 	my $types = $fields->{$key} ;
@@ -294,7 +290,7 @@ sub __set_member {
 		my $new_args = undef ;
 		my $score = undef ;
 
-		($new_args, $score) = Inline::Java::Class::CastArguments([$value], [$proto], $this->__get_private()->{module}) ;
+		($new_args, $score) = Inline::Java::Class::CastArguments([$value], [$proto], $this->__get_private()->{inline}) ;
 		$this->__get_private()->{proto}->SetJavaMember($key, [$proto], $new_args) ;
 	}
 	else{
@@ -437,7 +433,7 @@ sub EXISTS {
  	my $this = shift ;
  	my $key = shift ;
 
-	my $inline = Inline::Java::get_INLINE($this->__get_private()->{module}) ;
+	my $inline = $this->__get_private()->{inline} ;
 	my $fields = $inline->get_fields($this->__get_private()->{class}) ;
 
 	if ($fields->{$key}){
@@ -531,7 +527,7 @@ sub new {
 	my $this = {} ;
 	$this->{class} = $obj_class ;
 	$this->{java_class} = $java_class ;
-	$this->{module} = $inline->get_api('modfname') ;
+	$this->{inline} = $inline ;
 	$this->{proto} = new Inline::Java::Protocol($this, $inline) ;
 
 	bless($this, $class) ;

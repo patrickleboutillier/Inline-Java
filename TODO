@@ -1,12 +1,16 @@
 CODE:
-- Implement AddClassPath
-- Change BIN to J2SDK
-- Fix makfile.PL to build at install time, create jar and config file
-- Fix environment variables
+- Parse source code for "public class \w+" and use this for file name.
+- Fix install and compilation of jars.
+- Fix installation script for JNI.
+- Write a test for a public class in a package.
+- Retest all the small test stuff under Linux.
+- Restore Alpha status
 
 TEST:
 - Alpha
 - Cygwin
 
 DOCUMENTATION:
+- Recheck all and complete.
+- Comment new code.
 
