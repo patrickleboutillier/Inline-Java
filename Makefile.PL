@@ -191,12 +191,12 @@ close(J2SDK) ;
 
 
 # Create the properties that will be included in the jar.
-my @natives_so_parts = ("auto", "Inline", "Java", "Natives", 
-	"Natives." . Inline::Java::Portable::portable('SO_EXT')) ;
-my $install_natives_so = File::Spec->catfile($INSTALLSITEARCH, @natives_so_parts) ;
-$install_natives_so =~ s/\\/\\\\/g ;
-my $test_natives_so = File::Spec->rel2abs(File::Spec->catfile($INST_ARCHLIB, @natives_so_parts)) ;
-$test_natives_so =~ s/\\/\\\\/g ;
+my @perlnatives_so_parts = ("auto", "Inline", "Java", "PerlNatives", 
+	"PerlNatives." . Inline::Java::Portable::portable('SO_EXT')) ;
+my $install_perlnatives_so = File::Spec->catfile($INSTALLSITEARCH, @perlnatives_so_parts) ;
+$install_perlnatives_so =~ s/\\/\\\\/g ;
+my $test_perlnatives_so = File::Spec->rel2abs(File::Spec->catfile($INST_ARCHLIB, @perlnatives_so_parts)) ;
+$test_perlnatives_so =~ s/\\/\\\\/g ;
 
 my @perlinterpreter_so_parts = ("auto", "Inline", "Java", "PerlInterpreter",
     "PerlInterpreter." . Inline::Java::Portable::portable('SO_EXT')) ;
@@ -217,8 +217,8 @@ open(PROP, ">$prop") or
 	die("Can't open '$prop' for writing: $!") ;
 print PROP <<PROP;
 # This file is created by the Makefile.PL for Inline::Java
-inline_java_natives_so_install = $install_natives_so
-inline_java_natives_so_test    = $test_natives_so
+inline_java_perlnatives_so_install = $install_perlnatives_so
+inline_java_perlnatives_so_test    = $test_perlnatives_so
 inline_java_perlinterpreter_so_install = $install_perlinterpreter_so
 inline_java_perlinterpreter_so_test    = $test_perlinterpreter_so
 inline_java_libperl_so	= $libperl_so
