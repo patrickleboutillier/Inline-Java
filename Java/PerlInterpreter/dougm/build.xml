@@ -1,0 +1,19 @@
+<project name="PerlInterpreter" default="dist" basedir=".">
+  <target name="init">
+    <mkdir dir="build/classes"/>
+  </target>
+  
+  <target name="compile" depends="init">
+    <javac srcdir="src" destdir="build/classes"/>
+  </target>
+  
+  <target name="dist" depends="compile">
+    <mkdir dir="dist/lib"/>
+    <jar jarfile="dist/lib/PerlInterpreter.jar" basedir="build/classes"/>
+  </target>
+  
+  <target name="clean">
+    <delete dir="build"/>
+    <delete dir="dist"/>
+  </target>
+</project>
