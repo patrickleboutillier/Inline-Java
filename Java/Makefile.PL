@@ -194,6 +194,12 @@ sub CleanSoDirs {
 		elsif ($d =~ /javaws/){
 				delete $so_dirs{$d} ;
 		}
+		elsif ($d =~ /headless/){
+				delete $so_dirs{$d} ;
+		}
+		elsif ($d =~ /xawt/){
+				delete $so_dirs{$d} ;
+		}
 		elsif ($d =~ /_threads/){
 			if ($d !~ /native_threads/){
 				delete $so_dirs{$d} ;

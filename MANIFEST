@@ -53,8 +53,8 @@ t/10_4_shared_stop.t
 t/10_5_shared_fork.t
 t/10_6_shared_sim.t
 t/11_exceptions.t
-t/12_callbacks.t
-t/12_1_perl_natives.t
+t/12_1_callbacks.t
+t/12_2_perl_natives.t
 t/13_end.t
 t/types.java
 t/types.class
