@@ -626,7 +626,8 @@ dealt with and should be thrown back all the way up to the function that was
 initially called by Perl. The latter indicates that the Perl callback threw
 an exception (die() or croak()). The value of $@ (this can be a scalar or 
 any valid "Inline::Java" object) can be retreived using the GetObject method
-of the PerlException object.
+of the PerlException object (if you are sure that $@ was a Perl scalar, you
+can use the GetString method).
    Z<>
 
 
@@ -799,6 +800,8 @@ static members in the Java code.
 If processes not forked off the parent are connecting to the shared JVM, the 
 parent's CLASSPATH must be set properly or else the parent will not see these
 classes. See USING MULTIPLE SECTIONS for more details.
+
+Note: The Java System.out stream is closed int SHARED_JVM mode.
    Z<>
 
 
@@ -976,7 +979,7 @@ rebuilt to match the Perl code.
 
 =head1 AUTHOR
 
-Patrick LeBoutillier <patl@cpan.org>.
+Patrick LeBoutillier <patl@cpan.org> is the author of Inline::Java.
 
 Brendan W. McAdams <bwmcadams@cpan.org> is a contributor.
 

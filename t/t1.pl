@@ -3,31 +3,43 @@ use strict ;
 use blib ;
 
 
-BEGIN {
-	mkdir('./_Inline_test', 0777) unless -e './_Inline_test';
+use Inline Java => <<'END_OF_JAVA_CODE' ;
+   class Pod_alu extends InlineJavaPerlCaller {
+      public Pod_alu(){
+      }
+
+      public int add(int i, int j) throws InlineJavaException {
+         try {
+            CallPerl("main", "tt", null) ;
+            CallPerl("main", "tt", new Object [] {"hello"}) ;
+            CallPerl("main", "tt", new Object [] {"die"}) ;
+         }
+         catch (PerlException pe){
+			System.out.println("perl died : " + (String)pe.GetObject()) ;
+         }
+		
+         return i + j ;
+      }
+
+      public int subtract(int i, int j){
+         return i - j ;
+      }
+   }   
+END_OF_JAVA_CODE
+
+
+sub tt {
+	my $arg = shift ;
+
+	print "$arg: it works!\n" ;
+	if ($arg eq "die"){
+		die("ouch!") ;
+	}
 }
 
-use Inline Config => 
-           DIRECTORY => './_Inline_test' ;
 
-use Inline (
-	Java => qq|
-		class t  {
-			public java.util.ArrayList al [] = new java.util.ArrayList[5] ;
-
-			public t(){
-				al[0] = new java.util.ArrayList() ;
-			}
-		}
-	|, 
-	# PRINT_INFO => 1,
-	STUDY => ['java.util.ArrayList'],
-) ;
-
-Inline::Java::release_JVM() ;
-
-my $t = new t() ;
-$t->{al}->[0]->add("allo") ;
-print $t->{al}->[0]->get(0) . "\n" ;
+my $alu = new Pod_alu() ;
+print($alu->add(9, 16) . "\n") ; # prints 25
+print($alu->subtract(9, 16) . "\n") ; # prints -7
 
 

@@ -49,7 +49,7 @@ print
 	"(JVM) to be dynamically linked with Perl instead of running as a separate\n" .
 	"process. The use of this extension is optional, and building it still\n" .
 	"allows Inline::Java to run the JVM in the default (separate process)\n" .
-	"fashion.\n\n" ;
+	"fashion. Note: You need a C compiler to build the extension.\n\n" ;
 
 if (($build_jni || AskYN("Do you wish to build the JNI extension?"))){
 	print "\nBuilding JNI extension.\n\n" ;

@@ -42,6 +42,7 @@ sub new {
 
 		my $jni = new Inline::Java::JNI(
 			$ENV{CLASSPATH} || "",
+			$o->get_java_config('EMBEDDED_JNI'),
 			Inline::Java::get_DEBUG(),
 		) ;
 		$jni->create_ijs() ;
@@ -322,10 +323,15 @@ sub process_command {
 	my $data = shift ;
 
 	my $resp = undef ;
+	# Patch by Simon Cozens for perl -wle 'use Our::Module; do_stuff()'
+	local $/ = "\n" ;
+	local $\ = "" ;
+	# End Patch
 	while (1){
 		Inline::Java::debug(3, "packet sent is $data") ;
 
 		if ($this->{socket}){
+
 			my $sock = $this->{socket} ;
 			print $sock $data . "\n" or
 				croak "Can't send packet to JVM: $!" ;

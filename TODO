@@ -1,40 +1,6 @@
 CODE:
 - Check INFO flag vs. PRINT_INFO (shortcuts not working?)
-- Fix for Java 1.4 (reflection inverting method/member order)
-- Improve documentation of issues:
-- Include patch by Doug MacEachern
-
-
-These tips should get you going:
-
- - Take note that in SHARED_JVM mode, System.out is closed(). This is
- necessary
-   in order for the process to detach itself properly on certain platforms.
- Anyway only the
-   processs that actually started the JVM could see the output. Maybe a log
- file would be a good
-   idea... I'll think about that.
-
- - Try running it without SHARED_JVM first. It's a lot easier to debug. First
- you get System.out, second
-   JVM restarts each time, so when you change your Java code you don't need
- to kill the JVM manually.
-   Anyways I don't think in your case your need SHARED_JVM. SHARED_JVM is
- really meant to be used
-   when your Perl script is a CGI/mod_perl module where you get many requests
- and you can't afford
-   the JVM startup delay every time. It's also useful if you need to share
- data betwen each of your script
-   invocations (if your use 'static' data in your Java class, all the script
- invocations can access the data and it's
-   persistent between accesses).
-
-
- I'm taking note of these details and I'll beef up the documentation of these
- issues.
-
-
-
+- MAkefile.PL: ExtUtils::MakeMaker::prompt
 
 TEST:
 - Alpha

@@ -15,9 +15,14 @@ use Inline (
 
 
 my $ver = types1->version() ;
-print STDERR "\nJ2SDK version is $ver\n" ;
+print STDERR "\nInline version is $Inline::VERSION\n" ;
+print STDERR "Inline::Java version is $Inline::Java::VERSION\n" ;
+print STDERR "J2SDK version is $ver\n" ;
 
-if ($ENV{PERL_INLINE_JAVA_JNI}){
+if ($ENV{PERL_INLINE_JAVA_EMBEDDED_JNI}){
+	print STDERR "Using JNI extension (embedded).\n" ;
+}
+elsif ($ENV{PERL_INLINE_JAVA_JNI}){
 	print STDERR "Using JNI extension.\n" ;
 }
 

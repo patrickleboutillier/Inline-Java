@@ -7,12 +7,12 @@ Inline::Java lets you write Perl classes in Java.
 Example:
 
     use Inline Java => <<'END';
-	    class JAxH {
-			public JAxH(String x){
-				System.out.println("Just Another " + x + " Hacker") ;
-			}
-	    }
-	END
+        class JAxH {
+            public JAxH(String x){
+                System.out.println("Just Another " + x + " Hacker") ;
+            }
+        }
+    END
     
     new JAxH('Inline') ;
 
@@ -131,13 +131,13 @@ INFORMATION:
 
 = For more information on Inline::Java, see 'perldoc Inline::Java'.
 = For information about Inline, see 'perldoc Inline'.
-= For information on using Java, visit http://java.sun.org
+= For information on using Java, visit http://java.sun.org.
 
 Inline::Java's mailing list is inline@perl.org. 
-To subscribe, send an email to inline-subscribe@perl.org
+To subscribe, send an email to inline-subscribe@perl.org.
 
-Inline::Java's home page is http://inline.perl.org/java/
+Inline::Java's home page is http://inline.perl.org/java/.
 
-Please send questions and comments to Patrick LeBoutillier <patl@cpan.org>
+Please send questions and comments to Patrick LeBoutillier <patl@cpan.org>.
 
 Copyright (c) 2001-2002, Patrick LeBoutillier. All Rights Reserved.  

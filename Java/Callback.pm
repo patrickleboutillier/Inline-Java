@@ -120,6 +120,10 @@ public class InlineJavaPerlCaller {
 		public Object GetObject(){
 			return obj ;
 		}
+
+		public String GetString(){
+			return (String)obj ;
+		}
 	}
 
 

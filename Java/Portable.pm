@@ -45,12 +45,6 @@ sub mkpath {
 	my $o = shift ;
 	my $path = shift ;
 
-	if ($Inline::VERSION <= 0.43){
-		my $sep = File::Spec->catdir('', '') ;
-		$sep = quotemeta($sep) ;
-		$path =~ s/$sep/\//g ;
-	}
-	
 	return $o->Inline::mkpath($path) ;
 } ;
 
@@ -62,12 +56,6 @@ sub rmpath {
 	my $o = shift ;
 	my $prefix = shift ;
 	my $path = shift ;
-	
-	if ($Inline::VERSION <= 0.43){
-		my $sep = File::Spec->catdir('', '') ;
-		$sep = quotemeta($sep) ;
-		$path =~ s/$sep/\//g ;
-	}
 	
 	return $o->Inline::rmpath($prefix, $path) ;
 } ;

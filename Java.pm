@@ -7,7 +7,7 @@ package Inline::Java ;
 
 use strict ;
 
-$Inline::Java::VERSION = '0.33' ;
+$Inline::Java::VERSION = '0.34' ;
 
 
 # DEBUG is set via the DEBUG config
@@ -135,6 +135,9 @@ sub _validate {
 	if (! exists($o->{ILSM}->{JNI})){
 		$o->{ILSM}->{JNI} = 0 ;
 	}
+	if (! exists($o->{ILSM}->{EMBEDDED_JNI})){
+		$o->{ILSM}->{EMBEDDED_JNI} = 0 ;
+	}
 	if (! exists($o->{ILSM}->{CLASSPATH})){
 		$o->{ILSM}->{CLASSPATH} = '' ;
 	}
@@ -200,6 +203,15 @@ sub _validate {
 
 	if (defined($ENV{PERL_INLINE_JAVA_JNI})){
 		$o->{ILSM}->{JNI} = $ENV{PERL_INLINE_JAVA_JNI} ;
+	}
+	
+	if (defined($ENV{PERL_INLINE_JAVA_EMBEDDED_JNI})){
+		$o->{ILSM}->{EMBEDDED_JNI} = $ENV{PERL_INLINE_JAVA_EMBEDDED_JNI} ;
+	}
+
+	# Embedded JNI turns on regular JNI
+	if ($o->{ILSM}->{EMBEDDED_JNI}){
+		$o->{ILSM}->{JNI} = $o->{ILSM}->{EMBEDDED_JNI} ;
 	}
 
 	if (defined($ENV{PERL_INLINE_JAVA_SHARED_JVM})){
