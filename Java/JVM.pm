@@ -128,55 +128,6 @@ sub launch {
 }
 
 
-sub fork_launch {
-	my $this = shift ;
-	my $cmd = shift ;
-
-	# Setup pipe with our child
-	my $c2p = new IO::Pipe() ;
-
-	my $gcpid = undef ;
-	my $cpid = fork() ;
-	if (! defined($cpid)){
-		croak("Can't fork to detach JVM: $!") ;
-	}
-	elsif(! $cpid){
-		# Child
-		$c2p->writer() ; autoflush $c2p 1 ;
-
-		# Now we need to get $gcpid back to our script...
-		eval {
- 			$gcpid = $this->launch($cmd) ;
-		} ;
-		if ($@){
-			print $c2p "$@\n" ;
-		}
-		else{
-			print $c2p "pid: $gcpid\n" ;
-		}
-		close($c2p) ;
-		Inline::Java::set_DONE() ;
-		CORE::exit() ;
-	}
-	else{
-		# Parent
-		$c2p->reader() ;
-		my $line = <$c2p> ;
-		close($c2p) ;
-		chomp($line) ;
-		if ($line =~ /^pid: (.*)$/){
-			$gcpid = $1 ;
-		}
-		else{
-			croak $line ;
-		}
-		waitpid($cpid, 0) ;
-	}
-
-	return $gcpid ;
-}
-
-
 sub DESTROY {
 	my $this = shift ;
 
@@ -392,6 +343,7 @@ sub process_command {
 			$Inline::Java::JNI::INLINE_HOOK = $inline ;
 			$resp = $this->{JNI}->process_command($data) ;
 		}
+		chomp($resp) ;
 
 		Inline::Java::debug(3, "packet recv is $resp") ;
 

@@ -250,7 +250,7 @@ sub ValidateArgs {
 			push @ret, "object:$class:$id" ;
 		}
 		else{
-			push @ret, "scalar:" . join(".", unpack("C*", $arg)) ;
+			push @ret, "scalar:" . encode($arg) ;
 		}
 	}
 
@@ -279,8 +279,8 @@ sub Send {
 	my $inline = Inline::Java::get_INLINE($this->{module}) ;
 	my $resp = Inline::Java::__get_JVM()->process_command($inline, $data) ;
 
-	if ($resp =~ /^error scalar:([\d.]*)$/){
-		my $msg = pack("C*", split(/\./, $1)) ;
+	if ($resp =~ /^error scalar:([\d.-]*)$/){
+		my $msg = decode($1) ;
 		Inline::Java::debug(3, "packet recv error: $msg") ;
 		croak $msg ;
 	}
@@ -297,8 +297,8 @@ sub DeserializeObject {
 	my $const = shift ;
 	my $resp = shift ;
 
-	if ($resp =~ /^scalar:([\d.]*)$/){
-		return pack("C*", split(/\./, $1)) ; 
+	if ($resp =~ /^scalar:([\d.-]*)$/){
+		return decode($1) ; 
 	}
 	elsif ($resp =~ /^undef:$/){
 		return undef ;
@@ -390,6 +390,20 @@ sub DeserializeObject {
 }
 
 
+sub encode {
+	my $s = shift ;
+
+	return join(".", unpack("C*", $s)) ;
+}
+
+
+sub decode {
+	my $s = shift ;
+
+	return pack("C*", split(/\./, $s)) ;
+}
+
+
 sub DESTROY {
 	my $this = shift ;
 
@@ -478,7 +492,7 @@ class InlineJavaProtocol {
 		StringTokenizer st2 = new StringTokenizer(st.nextToken(), ":") ;
 		st2.nextToken() ;
 
-		StringTokenizer st3 = new StringTokenizer(pack(st2.nextToken()), " ") ;
+		StringTokenizer st3 = new StringTokenizer(decode(st2.nextToken()), " ") ;
 
 		ArrayList class_list = new ArrayList() ;
 		while (st3.hasMoreTokens()){
@@ -523,7 +537,7 @@ class InlineJavaProtocol {
 			}
 
 			for (int j = 0 ; j < fields.length ; j++){
-				Field x = fields[j] ;
+				Field x = fields[(ijs.reverse_members() ? (fields.length - 1 - j) : j)] ;
 				String stat = (Modifier.isStatic(x.getModifiers()) ? " static " : " instance ") ;
 				Class decl = x.getDeclaringClass() ;
 				Class type = x.getType() ;
@@ -915,7 +929,7 @@ class InlineJavaProtocol {
 		ArrayList fl = new ArrayList(fa.length) ;
 		Class param = null ;
 		for (int i = 0 ; i < fa.length ; i++){
-			Field f = fa[i] ;
+			Field f = fa[(ijs.reverse_members() ? (fa.length - 1 - i) : i)] ;
 
 			if (f.getName().equals(name)){
 				ijs.debug(3, "found a " + name + " member") ;
@@ -929,7 +943,7 @@ class InlineJavaProtocol {
 			}
 		}
 
-		// Now we got a list of matching methods. 
+		// Now we got a list of matching members. 
 		// We have to figure out which one we will call.
 		if (fl.size() == 0){
 			throw new InlineJavaException(
@@ -940,7 +954,7 @@ class InlineJavaProtocol {
 			// Now we need to force the arguments received to match
 			// the methods signature.
 
-			// If we have more that one, we use tha last one, which is the most
+			// If we have more that one, we use the last one, which is the most
 			// specialized
 			Field f = (Field)fl.get(fl.size() - 1) ;
 			param = f.getType() ;
@@ -977,11 +991,11 @@ class InlineJavaProtocol {
 			return "undef:" ;
 		}
 		else if ((ijc.ClassIsNumeric(o.getClass()))||(ijc.ClassIsChar(o.getClass()))||(ijc.ClassIsString(o.getClass()))){
-			return "scalar:" + unpack(o.toString()) ;
+			return "scalar:" + encode(o.toString()) ;
 		}
 		else if (ijc.ClassIsBool(o.getClass())){
 			String b = o.toString() ;
-			return "scalar:" + unpack((b.equals("true") ? "1" : "0")) ;
+			return "scalar:" + encode((b.equals("true") ? "1" : "0")) ;
 		}
 		else {
 			// Here we need to register the object in order to send
@@ -1000,8 +1014,7 @@ class InlineJavaProtocol {
 
 
 
-	/* Equivalent to Perl pack */
-	public String pack(String s){
+	public String decode(String s){
 		StringTokenizer st = new StringTokenizer(s, ".") ;
 		StringBuffer sb = new StringBuffer() ;
 		while (st.hasMoreTokens()){
@@ -1014,8 +1027,7 @@ class InlineJavaProtocol {
 	}
 
 
-	/* Equivalent to Perl unpack */
-	public String unpack(String s){
+	public String encode(String s){
 		byte b[] = s.getBytes() ;
 		StringBuffer sb = new StringBuffer() ;
 		for (int i = 0 ; i < b.length ; i++){

@@ -578,7 +578,7 @@ class InlineJavaClass {
 				}
 			}
 			else if (type.equals("scalar")){
-				String arg = ijp.pack((String)tokens.get(1)) ;
+				String arg = ijp.decode((String)tokens.get(1)) ;
 				ijs.debug(4, "args is scalar -> forcing to " + ap.getName()) ;
 				try	{
 					ret = ijp.CreateObject(ap, new Object [] {arg}, new Class [] {String.class}) ;
@@ -599,7 +599,7 @@ class InlineJavaClass {
 				ijs.debug(4, " result is " + ret.toString()) ;
 			}
 			else if (type.equals("scalar")){
-				String arg = ijp.pack(((String)tokens.get(1)).toLowerCase()) ;
+				String arg = ijp.decode(((String)tokens.get(1)).toLowerCase()) ;
 				ijs.debug(4, "args is scalar -> forcing to bool") ;
 				if ((arg.equals(""))||(arg.equals("0"))){
 					arg = "false" ;
@@ -621,7 +621,7 @@ class InlineJavaClass {
 				ijs.debug(4, " result is " + ret.toString()) ;
 			}
 			else if (type.equals("scalar")){
-				String arg = ijp.pack((String)tokens.get(1)) ;
+				String arg = ijp.decode((String)tokens.get(1)) ;
 				ijs.debug(4, "args is scalar -> forcing to char") ;
 				char c = '\0' ;
 				if (arg.length() == 1){
@@ -648,7 +648,7 @@ class InlineJavaClass {
 				// Here if we need a java.lang.Object.class, it's probably
 				// because we can store anything, so we use a String object.
 				if (p == java.lang.Object.class){
-					String arg = ijp.pack((String)tokens.get(1)) ;
+					String arg = ijp.decode((String)tokens.get(1)) ;
 					ret = arg ;
 				}
 				else{

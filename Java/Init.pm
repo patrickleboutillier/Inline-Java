@@ -155,7 +155,7 @@ public class InlineJavaServer {
 				resp = ijp.response ;
 			}
 			catch (InlineJavaException e){
-				String err = "error scalar:" + ijp.unpack(e.getMessage()) ;
+				String err = "error scalar:" + ijp.encode(e.getMessage()) ;
 				debug(3, "packet sent is " + err) ;
 				resp = err ;
 			}
@@ -339,11 +339,19 @@ public class InlineJavaServer {
 		if ((debug > 0)&&(debug >= level)){
 			StringBuffer sb = new StringBuffer() ;
 			for (int i = 0 ; i < level ; i++){
-				sb.append(" ") ;				
+				sb.append(" ") ;
 			}
 			System.err.println("[java][" + level + "]" + sb.toString() + s) ;
 			System.err.flush() ;
 		}
+	}
+
+
+	boolean reverse_members() {
+		String v = System.getProperty("java.version") ;
+		boolean no_rev = ((v.startsWith("1.2"))||(v.startsWith("1.3"))) ;
+
+		return (! no_rev) ;
 	}
 
 
