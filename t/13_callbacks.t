@@ -14,7 +14,7 @@ use Inline::Java qw(caught) ;
 
 
 BEGIN {
-	plan(tests => 14) ;
+	plan(tests => 17) ;
 }
 
 my $t = new t10() ;
@@ -37,20 +37,24 @@ my $t = new t10() ;
 
 		ok($t->cat_via_perl("Inline", "Java"), "InlineJava") ;
 
-		eval {$t->death_via_perl()} ; ok($@, qr/death/) ;
+		ok(twister(20, 0, 0), "return perl twister") ;
+		ok($t->twister(20, 0, 0), "return java twister") ;
 
+		eval {twister(20, 0, 1)} ; ok($@, qr/^throw perl twister/) ;
+				
 		my $msg = '' ;
-		eval {$t->except()} ; 
+		eval {$t->twister(20, 0, 1)} ;
 		if ($@) {
-			if (caught('InlineJavaPerlCaller$InlineJavaPerlCallerException')){
+			if (caught('t10$OwnException')){
 				$msg = $@->getMessage() ;
 			}
 			else{
 				die $@ ;
 			}
 		}
-		ok($msg, "test") ;
-	
+		ok($msg, "throw java twister") ;
+
+		eval {$t->bug()} ; ok($@, qr/^bug/) ;
 	} ;
 	if ($@){
 		if (caught("java.lang.Throwable")){
@@ -107,8 +111,22 @@ sub add_via_java_t {
 }
 
 
-sub death {
-	die("death") ;
+sub twister {
+	my $max = shift ;
+	my $cnt = shift ;
+	my $explode = shift ;
+
+	if ($cnt == $max){
+		if ($explode){
+			die("throw perl twister") ;
+		}
+		else{
+			return "return perl twister" ;
+		}
+	}
+	else{
+		return $t->twister($max, $cnt+1, $explode) ;
+	}
 }
 
 
@@ -120,6 +138,13 @@ __Java__
 import java.io.* ;
 
 class t10 extends InlineJavaPerlCaller {
+	class OwnException extends Exception {
+		OwnException(String msg){
+			super(msg) ;
+		}
+	}
+
+
 	public t10() {
 	}
 
@@ -139,7 +164,7 @@ class t10 extends InlineJavaPerlCaller {
 		return a * b ;
 	}
 
-	public int silly_mul_via_perl(int a, int b) throws InlineJavaPerlCallerException {
+	public int silly_mul_via_perl(int a, int b) throws InlineJavaException, PerlException {
 		int ret = 0 ;
 		for (int i = 0 ; i < b ; i++){
 			ret = add_via_perl(ret, a) ;
@@ -148,44 +173,37 @@ class t10 extends InlineJavaPerlCaller {
 	}
 
 
-	public int add_via_perl(int a, int b) throws InlineJavaPerlCallerException {
+	public int add_via_perl(int a, int b) throws InlineJavaException, PerlException {
 		String val = (String)CallPerl("main", "add", 
 			new Object [] {new Integer(a), new Integer(b)}) ;
 
 		return new Integer(val).intValue() ;
 	}
 
-	public void death_via_perl() throws InlineJavaPerlCallerException {		
+	public void death_via_perl() throws InlineJavaException, PerlException {
 		InlineJavaPerlCaller c = new InlineJavaPerlCaller() ;
 		c.CallPerl("main", "death", null) ;
 	}
 
-	public void except() throws InlineJavaPerlCallerException {		
-		throw new InlineJavaPerlCaller.InlineJavaPerlCallerException("test") ;
+	public void except() throws InlineJavaException, PerlException {		
+		throw new PerlException("test") ;
 	}
 
-	public int mul_via_perl(int a, int b) throws InlineJavaPerlCallerException {
+	public int mul_via_perl(int a, int b) throws InlineJavaException, PerlException {
 		String val = (String)CallPerl("main", "mul", 
 			new Object [] {new Integer(a), new Integer(b)}) ;
 
 		return new Integer(val).intValue() ;
 	}
 
-	public String cat_via_perl(String a, String b) throws InlineJavaPerlCallerException {
-		String val = (String)CallPerl("main", "cat", 
-			new Object [] {a, b}) ;
-
-		return val ;
-	}
-
-	public int add_via_perl_via_java(int a, int b) throws InlineJavaPerlCallerException {
+	public int add_via_perl_via_java(int a, int b) throws InlineJavaException, PerlException {
 		String val = (String)CallPerl("main", "add_via_java", 
 			new Object [] {new Integer(a), new Integer(b)}) ;
 
 		return new Integer(val).intValue() ;
 	}
 
-	static public int add_via_perl_via_java_t(t10 t, int a, int b) throws InlineJavaPerlCallerException {
+	static public int add_via_perl_via_java_t(t10 t, int a, int b) throws InlineJavaException, PerlException {
 		InlineJavaPerlCaller c = new InlineJavaPerlCaller() ;
 		String val = (String)c.CallPerl("main", "add_via_java_t", 
 			new Object [] {t, new Integer(a), new Integer(b)}) ;
@@ -193,7 +211,8 @@ class t10 extends InlineJavaPerlCaller {
 		return new Integer(val).intValue() ;
 	}
 
-	public int silly_mul_via_perl_via_java(int a, int b) throws InlineJavaPerlCallerException {
+
+	public int silly_mul_via_perl_via_java(int a, int b) throws InlineJavaException, PerlException {
 		int ret = 0 ;
 		for (int i = 0 ; i < b ; i++){
 			String val = (String)CallPerl("main", "add_via_java", 
@@ -201,6 +220,35 @@ class t10 extends InlineJavaPerlCaller {
 			ret = new Integer(val).intValue() ;
 		}
 		return ret ;
+	}
+
+
+	public String cat_via_perl(String a, String b) throws InlineJavaException, PerlException {
+		String val = (String)CallPerl("main", "cat", 
+			new Object [] {a, b}) ;
+
+		return val ;
+	}
+
+	public String twister(int max, int cnt, int explode) throws InlineJavaException, PerlException, OwnException {
+		if (cnt == max){
+			if (explode > 0){
+				throw new OwnException("throw java twister") ;
+			}
+			else{
+				return "return java twister" ;
+			}
+		}
+		else{
+			return (String)CallPerl("main", "twister", 
+				new Object [] {new Integer(max), new Integer(cnt+1), new Integer(explode)}) ;
+		}
+	}
+
+
+	public void bug() throws InlineJavaException {
+		throw new InlineJavaException(
+			InlineJavaServer.instance. new InlineJavaException("bug")) ;
 	}
 }
 

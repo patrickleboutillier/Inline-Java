@@ -117,19 +117,15 @@ sub wanted {
 		$java_include_os = $File::Find::dir ;
 	}
 	if ($file eq $jvm_lib){
-		if ($File::Find::dir =~ /$JNI_VM/){
-			print "Found $jvm_lib in $File::Find::dir...\n" ;
-			$java_lib = $File::Find::dir ;
-		}
+		print "Found $jvm_lib in $File::Find::dir...\n" ;
+		$java_lib = $File::Find::dir ;
 	}
 	if ($file eq $jvm_so){
-		if ($File::Find::dir =~ /$JNI_VM/){
-			print "Found $jvm_so in $File::Find::dir...\n" ;
-			if (! defined($java_so)){
-				$java_so = [] ;
-			}
-			push @{$java_so}, $File::Find::dir ;
+		print "Found $jvm_so in $File::Find::dir...\n" ;
+		if (! defined($java_so)){
+			$java_so = [] ;
 		}
+		push @{$java_so}, $File::Find::dir ;
 	}
 }
 

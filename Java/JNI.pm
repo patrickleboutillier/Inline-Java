@@ -39,7 +39,8 @@ sub dl_load_flags {
 	my $f = basename($so) ;
 	my $sep = Inline::Java::portable("PATH_SEP") ;
 
-	$Inline::Java::JNI::SO = Cwd::abs_path($dir) . $sep . $f ;
+	$Inline::Java::JNI::SO = Inline::Java::portable("RE_FILE", Cwd::abs_path($dir) . $sep . $f) ;
+	$Inline::Java::JNI::SO = Inline::Java::portable("RE_FILE_JAVA", $Inline::Java::JNI::SO) ;
 
 	return DynaLoader::dl_load_flags() ;
 }

@@ -1238,6 +1238,7 @@ sub portable {
 		PATH_SEP			=>	'/',
 		PATH_SEP_RE			=>	'/',
 		RE_FILE				=>  [],
+		RE_FILE_JAVA		=>  [],
 		IO_REDIR			=>  '2>&1',
 		GOT_ALARM			=>  1,
 		COMMAND_COM			=>  0,
@@ -1252,6 +1253,7 @@ sub portable {
 			PATH_SEP			=>	'\\',
 			PATH_SEP_RE			=>	'\\\\',
 			RE_FILE				=>  ['/', '\\'],
+			RE_FILE_JAVA		=>  ['\\\\', '\\\\'],
 			# 2>&1 doesn't work under command.com
 			IO_REDIR			=>  ($COMMAND_COM ? '' : undef),
 			GOT_ALARM			=>  0,

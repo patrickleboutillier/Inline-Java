@@ -254,7 +254,7 @@ public class InlineJavaServer {
 	}
 
 
-	public Object Callback(String pkg, String method, Object args[]) throws InlineJavaException {
+	public Object Callback(String pkg, String method, Object args[]) throws InlineJavaException, InlineJavaPerlException {
 		Object ret = null ;
 
 		try {
@@ -290,8 +290,14 @@ public class InlineJavaServer {
 				StringTokenizer st = new StringTokenizer(resp, " ") ;
 				String c = st.nextToken() ;
 				if (c.equals("callback")){
+					boolean thrown = new Boolean(st.nextToken()).booleanValue() ;
 					String arg = st.nextToken() ;
 					ret = ijc.CastArgument(java.lang.Object.class, arg) ;
+
+					if (thrown){
+						throw new InlineJavaPerlException(ret) ;
+					}
+
 					break ;
 				}	
 				else{
@@ -392,6 +398,23 @@ public class InlineJavaServer {
 
 
 	/*
+		Exception thrown by Perl callbacks.
+	*/
+	class InlineJavaPerlException extends Exception {
+		private Object obj = null ;
+
+
+		InlineJavaPerlException(Object o) {
+			obj = o ;
+		}
+
+		public Object GetObject(){
+			return obj ;
+		}
+	}
+
+
+	/*
 		Exception thrown by this code while trying to cast arguments
 	*/
 	class InlineJavaCastException extends InlineJavaException {
@@ -399,6 +422,7 @@ public class InlineJavaServer {
 			super(m) ;
 		}
 	}
+
 
 
 	class InlineJavaInvocationTargetException extends InlineJavaException {
@@ -409,7 +433,7 @@ public class InlineJavaServer {
 			t = _t ;
 		}
 
-		public Throwable getThrowable(){
+		public Throwable GetThrowable(){
 			return t ;
 		}
 	}
@@ -471,7 +495,7 @@ class InlineJavaServerThrown {
 		t = _t ;
 	}
 
-	public Throwable getThrowable(){
+	public Throwable GetThrowable(){
 		return t ;
 	}
 }

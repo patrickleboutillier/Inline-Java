@@ -1,6 +1,12 @@
 CODE:
-- Callbacks
+- Add comments to place that may not be thread safe (in Perl)
+- Do more research on JNI and threads to make JNI mode
+  more robust
+
 
 TEST:
-- Add test script for configuration options (other than BIN)
+
+
+DOCUMENTATION:
+- Callbacks
 

@@ -14,8 +14,8 @@ sub InterceptCallback {
 	my $resp = shift ;
 
 	# With JNI we need to store the object somewhere since we
-	# can't drag it along all the wat through Java land...
-	if (! defined($inline)){ 
+	# can't drag it along all the way through Java land...
+	if (! defined($inline)){
 		$inline = $Inline::Java::JNI::INLINE_HOOK ;
 	}
 
@@ -37,18 +37,30 @@ sub ProcessCallback {
 	my @sargs = @_ ;
 
 	my $pc = new Inline::Java::Protocol(undef, $inline) ;
-	my @args = map {$pc->DeserializeObject(0, $_)} @sargs ;
+	my $thrown = 'false' ;
+	my $ret = undef ;
+	eval {
+		my @args = map {$pc->DeserializeObject(0, $_)} @sargs ;
 
-	Inline::Java::debug(" processing callback $module" . "::" . "$function(" . 
-		join(", ", @args) . ")") ;
+		Inline::Java::debug(" processing callback $module" . "::" . "$function(" . 
+			join(", ", @args) . ")") ;
 
-	no strict 'refs' ;
-	my $sub = "$module" . "::" . $function ;
-	my $ret = $sub->(@args) ;
+		no strict 'refs' ;
+		my $sub = "$module" . "::" . $function ;
+		$ret = $sub->(@args) ;
+	} ;
+	if ($@){
+		$ret = $@ ;
+		$thrown = 'true' ;
+
+		if ((ref($ret))&&(! UNIVERSAL::isa($ret, "Inline::Java::Object"))){
+			croak "Can't propagate non-Inline::Java reference exception ($ret) to Java" ;
+		}
+	}
 
 	($ret) = $pc->ValidateArgs([$ret]) ;
 
-	return "callback $ret" ;
+	return "callback $thrown $ret" ;
 }
 
 
@@ -59,26 +71,50 @@ __DATA__
 */
 public class InlineJavaPerlCaller {
 	public InlineJavaPerlCaller(){
+	}
+
+
+	class InlineJavaException extends Exception {
+		private InlineJavaServer.InlineJavaException ije = null ;
+		
+		InlineJavaException(InlineJavaServer.InlineJavaException e) {
+			ije = e ;
+		}
+
+		public InlineJavaServer.InlineJavaException GetException(){
+			return ije ;
+		}
+	}
+
+
+	class PerlException extends Exception {
+		private Object obj = null ;
+
+		PerlException(Object o) {
+			obj = o ;
+		}
+
+		public Object GetObject(){
+			return obj ;
+		}
+	}
+
+
+	public Object CallPerl(String pkg, String method, Object args[]) throws InlineJavaException, PerlException {
 		if (InlineJavaServer.instance == null){
 			System.err.println("Can't use InlineJavaPerlCaller outside of an Inline::Java context") ;
 			System.err.flush() ;
+			System.exit(1) ;
 		}
-	}
 
-
-	class InlineJavaPerlCallerException extends Exception {
-		InlineJavaPerlCallerException(String s) {
-			super(s) ;
-		}
-	}
-
-
-	public Object CallPerl(String pkg, String method, Object args[]) throws InlineJavaPerlCallerException {
 		try {
 			return InlineJavaServer.instance.Callback(pkg, method, args) ;
 		}
 		catch (InlineJavaServer.InlineJavaException e){
-			throw new InlineJavaPerlCallerException(e.getMessage()) ;
+			throw new InlineJavaException(e) ;
+		}
+		catch (InlineJavaServer.InlineJavaPerlException e){
+			throw new PerlException(e.GetObject()) ;
 		}
 	}
 }

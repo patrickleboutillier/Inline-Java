@@ -3,7 +3,7 @@ package Inline::Java::Protocol ;
 
 use strict ;
 
-$Inline::Java::Protocol::VERSION = '0.30' ;
+$Inline::Java::Protocol::VERSION = '0.31' ;
 
 use Inline::Java::Object ;
 use Inline::Java::Array ;
@@ -352,7 +352,13 @@ sub DeserializeObject {
 
 			if ($thrown){
 				Inline::Java::debug("throwing stub...") ;
-				die $obj ;
+				my ($msg, $score) = $obj->__isa('InlineJavaPerlCaller$PerlException') ;
+				if ($msg){
+					die $obj ;
+				}
+				else{
+					die $obj->GetObject() ;
+				}
 			}
 			else{
 				Inline::Java::debug("returning stub...") ;
@@ -541,7 +547,13 @@ class InlineJavaProtocol {
 				SetResponse(o) ;
 			}
 			catch (InlineJavaInvocationTargetException ite){
-				SetResponse(new InlineJavaServerThrown(ite.getThrowable())) ;
+				Throwable t = ite.GetThrowable() ;
+				if (t instanceof InlineJavaPerlCaller.InlineJavaException){
+					throw ((InlineJavaPerlCaller.InlineJavaException)t).GetException() ;
+				}
+				else{
+					SetResponse(new InlineJavaServerThrown(t)) ;
+				}
 			}
 		}
 		else{
@@ -610,7 +622,12 @@ class InlineJavaProtocol {
 				String type = t.getClass().getName() ;
 				String msg = t.getMessage() ;
 				ijs.debug("Method " + name + " in class " + class_name + " threw exception " + type + ": " + msg) ;
-				SetResponse(new InlineJavaServerThrown(t)) ;
+				if (t instanceof InlineJavaPerlCaller.InlineJavaException){
+					throw ((InlineJavaPerlCaller.InlineJavaException)t).GetException() ;
+				}
+				else{
+					SetResponse(new InlineJavaServerThrown(t)) ;
+				}
 			}
 		}
 	}
@@ -944,7 +961,7 @@ class InlineJavaProtocol {
 			boolean thrown = false ;
 			if (o instanceof InlineJavaServerThrown){ 
 				thrown = true ;
-				o = ((InlineJavaServerThrown)o).getThrowable() ;
+				o = ((InlineJavaServerThrown)o).GetThrowable() ;
 			}			
 			int id = ijs.objid ;
 			ijs.PutObject(id, o) ;
