@@ -75,7 +75,7 @@ on your machine. This is done using one of the following techniques:
    - set the JAVA_BIN environment variable to the correct directory
    - put the correct directory in your PATH environment variable
 
-=head2 Classes and Objects
+=head1 CLASSES AND OBJECTS
 
 Because Java is object oriented, any interface between Perl and Java
 needs to support Java classes adequately.
@@ -141,7 +141,6 @@ to an outer class object as the first parameter of the constructor:
          }
 
          public class Bar {
-
             public Bar() {
             }
          }
@@ -151,15 +150,7 @@ to an outer class object as the first parameter of the constructor:
    my $obj = new Foo() ;
    my $obj2 = new Bar($obj) ;
 
-Also of importance is that you can't use C<Data::Dumper> on objects
-returned by Java methods. This is because these objects are C<tie>d
-sp that you can set and get the values for member variables. This is not
-implemented yet though. If you want to look at an objects guts, you can 
-use :
-
-   print Dumper($obj->private()) ;
-
-=head2 Methods
+=head1 METHODS
 
 In the previous example we have seen how to call a method. You can also
 call static methods in the following manner:
@@ -214,15 +205,17 @@ are not know to C<Inline::Java>. This is also true for return types:
 Objects of types unknown to Perl can exist in the Perl space, you just 
 can't call any of their methods.
 
-=head2 Member variables
+=head1 MEMBER_VARIABLES
 
 Currently public member variables are not visible from the Perl space. 
-This will be implemented in a future version
+This will be implemented in a future version. But you can certainly create 
+get/set methods to access them.
 
-=head2 Arrays
+=head1 ARRAYS
 
 Currently array are not supported in C<Inline::Java>. 
-This will be implemented in a future version
+This will be implemented in a future version. But remember that you can
+always ask Java to return an array, or modify it. See Methods section.
 
 =head1 SUPPORTED PLATFORMS
 
@@ -257,23 +250,27 @@ Here are some things to watch out for:
 
 =item 1
 
+You can't use the "package" Java directive when using C<Inline::Java>. 
 
 =item 2
+
+You can't create public classes when using Inline::Java. This is due
+to the fact that Java requires that public classes be defined in a 
+.java file of the same name (C<Inline::Java> can't work this way).
+
 
 
 =back
 
 =head1 AUTHOR
 
-Patrick LeBoutillier <patrick_leboutillier@hotmail.com>
+Patrick LeBoutillier <patl@cpan.org>
 
-Brian Ingerson <INGY@cpan.org> is the author of Inline, Inline::C and
-Inline::CPR. He was responsible for much encouragement and many
-suggestions throughout the development of Inline::Java.
+Brian Ingerson <INGY@cpan.org> is the author of Inline.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2000, Neil Watkiss.
+Copyright (c) 2001, Patrick LeBoutillier.
 
 All Rights Reserved. This module is free software. It may be used,
 redistributed and/or modified under the terms of the Perl Artistic
