@@ -7,6 +7,7 @@ use Inline Java => "DATA";
 my $cnt = 0 ;
 my $greeter = MyButton->new();
 $greeter->StartCallbackLoop() ;
+print "loop done\n" ;
 
 
 ###########################################
@@ -53,7 +54,7 @@ public class MyButton extends    InlineJavaPerlCaller
   {
     try
     {
-      CallPerl("main", "button_pressed", new Object [] {});
+      CallPerlSub("main::button_pressed", new Object [] {});
     }
     catch (InlineJavaPerlException pe)  { }
     catch (InlineJavaException pe) { pe.printStackTrace() ;}
