@@ -61,9 +61,11 @@ sub done {
 	$DONE = 1 ;
 
 	# Close the sockets
-	foreach my $o (values %{$Inline::Java::INLINE}){
-		close($o->{Java}->{socket}) ;
-	}
+	# I tried to be polite, but it seems to be causing more harm
+	# than gain....
+	# foreach my $o (values %{$Inline::Java::INLINE}){
+	# 	close($o->{Java}->{socket}) ;
+	# }
 
 	my $ec = 0 ;
 	if (! $signal){
