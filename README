@@ -66,10 +66,6 @@ second time you test loading of an already built module.
 -------------------------------------------------------------------------------
 FEATURES:
 
-WARNING: THIS IS ALPHA SOFTWARE. It is incomplete and possibly unreliable. 
-         It is also possible that some elements of the interface (API) will 
-         change in future releases.
-
 Inline::Java version 0.44 is a major upgrade that includes:
 + Callbacks from multiple threads are now supported
 + Refactored (again...) studying/.jdat/cache stuff

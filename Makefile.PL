@@ -96,7 +96,6 @@ my $src = File::Spec->catfile($src_dir, '*.java') ;
 my $obj_dir = File::Spec->catdir('Java', 'classes') ;
 my $server_arch = File::Spec->catfile('Java', 'InlineJavaServer.jar') ;
 my $user_arch = File::Spec->catfile('Java', 'InlineJavaUser.jar') ;
-my $src_arch = File::Spec->catfile('Java', 'InlineJavaSource.jar') ;
 
 
 sub MY::top_targets {

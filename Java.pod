@@ -27,13 +27,6 @@ Inline::Java - Write Perl classes in Java.
 
 =for comment
 
-=head1 WARNING 
-
-THIS IS ALPHA SOFTWARE. It is incomplete and possibly unreliable. 
-It is also possible that some elements of the interface (API) will 
-change in future releases.
-   Z<>
-
 
 =head1 DESCRIPTION
 

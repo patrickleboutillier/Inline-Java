@@ -15,6 +15,8 @@ public class InlineJavaServer {
 	private boolean shared_jvm = false ;
 	private boolean priv = false ;
 
+	private boolean finished = false ;
+	private ServerSocket server_socket = null ;
 	private InlineJavaUserClassLoader ijucl = null ;
 	private HashMap thread_objects = new HashMap() ;
 	private int objid = 1 ;
@@ -41,19 +43,18 @@ public class InlineJavaServer {
 		shared_jvm = new Boolean(argv[2]).booleanValue() ;
 		priv = new Boolean(argv[3]).booleanValue() ;
 
-		ServerSocket ss = null ;
 		try {
-			ss = new ServerSocket(port) ;	
+			server_socket = new ServerSocket(port) ;	
 		}
 		catch (IOException e){
 			InlineJavaUtils.Fatal("Can't open server socket on port " + String.valueOf(port) +
 				": " + e.getMessage()) ;
 		}
 
-		while (true){
+		while (! finished){
 			try {
 				String name = "IJST-#" + thread_count++ ;
-				InlineJavaServerThread ijt = new InlineJavaServerThread(name, this, ss.accept(),
+				InlineJavaServerThread ijt = new InlineJavaServerThread(name, this, server_socket.accept(),
 					(priv ? new InlineJavaUserClassLoader() : ijucl)) ;
 				ijt.start() ;
 				if (! shared_jvm){
@@ -66,12 +67,14 @@ public class InlineJavaServer {
 				}
 			}
 			catch (IOException e){
-				System.err.println("IO error: " + e.getMessage()) ;
-				System.err.flush() ;
+				if (! finished){
+					System.err.println("Main Loop IO Error: " + e.getMessage()) ;
+					System.err.flush() ;
+				}
 			}
 		}
 
-		System.exit(1) ;
+		System.exit(0) ;
 	}
 
 
@@ -241,6 +244,21 @@ public class InlineJavaServer {
 		}
 
 		return i ;
+	}
+
+
+	synchronized void Shutdown(){
+		if (! jni){
+			try {
+				finished = true ;
+				server_socket.close() ;
+			}
+			catch (IOException e){
+				System.err.println("Shutdown IO Error: " + e.getMessage()) ;
+				System.err.flush() ;
+			}
+		}
+		System.exit(0) ;
 	}
 
 
