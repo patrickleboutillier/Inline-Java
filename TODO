@@ -1,12 +1,8 @@
 CODE:
-- Add comments to place that may not be thread safe (in Perl)
-- Do more research on JNI and threads to make JNI mode
-  more robust
 
 
 TEST:
 
 
 DOCUMENTATION:
-- Callbacks
 
