@@ -1,5 +1,6 @@
 use strict ;
 use Test ;
+use ExtUtils::MakeMaker ;
 
 
 use Inline Config =>
@@ -12,25 +13,37 @@ use Inline (
 	Java => 'DATA',
 ) ;
 
-BEGIN {
-	print STDERR 
-		"\nNote: PerlNatives is still experimental and errors here can safely\n" .
-		"be ignored if you don't plan on using this feature. However, the\n" .
-		"author would appreciate if errors encountered here were reported\n" .
-		"to the mailing list (inline\@perl.org) along with your hardware/OS\n". 
-		"detail. Thank you.\n" ;
-} ;
 
 eval {
 	t121->init() ;
 } ;
 if ($@){
 	if ($@ =~ /Can\'t initialize PerlNatives/){
+		# Some problem initializing he feature, so we bail out...
 		plan(tests => 0) ;
 		exit ;
 	}
 	else{
 		die($@) ;
+	}
+}
+else{
+	print STDERR <<TXT;
+
+Note: PerlNatives is still experimental and may not function properly on
+all platforms yet. Keep in mind that errors here can safely be ignored if 
+you don't plan on using this feature. However, the author would appreciate 
+if errors encountered here were reported to the mailing list (inline\@perl.org)
+along with your hardware/OS detail. Thank you.
+
+TXT
+
+	my $oldfh = select STDERR ;
+	my $ans = prompt("Would you like to run the PerlNative tests?", 'n') ;
+	select $oldfh ;
+	if ($ans !~ /^y/i){
+		plan(tests => 0) ;
+		exit ;
 	}
 }
 
@@ -70,7 +83,6 @@ sub types {
 	my $sum = 0 ;
 	map {$sum += $_} @_ ;
 	return $sum ;
-
 }
 
 
@@ -91,7 +103,7 @@ sub callback {
 
 
 package main ;
-__END__
+__DATA__
 
 __Java__
 
