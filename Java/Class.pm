@@ -3,7 +3,7 @@ package Inline::Java::Class ;
 use strict ;
 use Carp ;
 
-$Inline::Java::Class::VERSION = '0.49_90' ;
+$Inline::Java::Class::VERSION = '0.49_91' ;
 
 $Inline::Java::Class::MAX_SCORE = 10 ;
 
@@ -42,8 +42,8 @@ my $RANGE = {
 	},
 	'java.lang.Double' => {
 		REGEXP => $FLOAT_RE,
-		MAX => 1.7976931348623157e308,
-		MIN => -1.7976931348623157e308,
+		# MAX => 1.79e308,
+		# MIN => -1.79e308,
 		POS_MIN => 4.9e-324,
 		NEG_MAX => -4.9e-324,
 	},
@@ -184,9 +184,13 @@ sub CastArgument {
 			my $re = $RANGE->{$proto}->{REGEXP} ;
 			my $min = $RANGE->{$proto}->{MIN} ;
 			my $max = $RANGE->{$proto}->{MAX} ;
-			Inline::Java::debug(4, "min = $min, max = $max, val = $arg") ;
+			Inline::Java::debug(4, 
+				"min = " . ($min || '') . ", " . 
+				"max = " . ($max || '') . ", " .
+				"val = $arg") ;
 			if ($arg =~ /$re/){
-				if (($arg >= $min)&&($arg <= $max)){
+				if (((! defined($min))||($arg >= $min))&&
+					((! defined($max))||($arg <= $max))){
 					# number is a pretty precise match, but it's still
 					# guessing amongst the numeric types
 					return ($arg, 5.5) ;

@@ -103,8 +103,8 @@ my $t = new types2() ;
 	eval {$t->_Float($max + $max)} ; ok($@, qr/out of range/) ;
 	eval {$t->_Float($min + $min)} ; ok($@, qr/out of range/) ;
 
-	$max = 1.7976931348623157e308 ;
-	$min = -1.7976931348623157e308 ;
+	$max = 1.79e308 ;
+	$min = -1.79e308 ;
 	ok($t->_double(undef) == 1) ;
 	ok($t->_double(0) == 1) ;
 	ok($t->_double($max / 2)) ;
@@ -126,8 +126,8 @@ my $t = new types2() ;
 	# eval {$t->_Double($min + $min)} ; ok($@, qr/out of range/) ;
 	
 	# Number is forced to Double
-	$max = 1.7976931348623157e308 ;
-	$min = -1.7976931348623157e308 ;
+	$max = 1.79e308 ;
+	$min = -1.79e308 ;
 	ok($t->_Number(undef) == 0) ;
 	ok($t->_Number(0) == 0) ;
 	ok($t->_Number($max / 2)) ;
