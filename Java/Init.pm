@@ -127,6 +127,15 @@ public class InlineJavaServer {
 
 	private void init(){
 		instance = this ;
+
+		try {
+			System.out.close() ;
+			System.in.close() ;
+		}
+		catch (IOException e){
+			System.err.println("IO error: " + e.getMessage()) ;
+			System.err.flush() ;
+		}
 	}
 
 	
