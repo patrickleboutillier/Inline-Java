@@ -163,18 +163,18 @@ sub FETCH {
 }
 
 
-# sub FIRSTKEY { 
-# 	my $this = shift ;
+sub FIRSTKEY { 
+	my $this = shift ;
 
-# 	croak "Operation FIRSTKEY not supported on Java object" ;
-# }
+	return $this->SUPER::FIRSTKEY() ;
+}
 
 
-# sub NEXTKEY { 
-# 	my $this = shift ;
+sub NEXTKEY { 
+	my $this = shift ;
 
-# 	croak "Operation NEXTKEY not supported on Java object" ;
-# }
+	return $this->SUPER::NEXTKEY() ;
+}
 
 
 sub EXISTS { 
