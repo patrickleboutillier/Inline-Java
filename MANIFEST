@@ -27,7 +27,6 @@ t/06_static.t
 t/07_polymorph.t
 t/08_study.t
 t/09_usages.t
-t/10_shared_mult.t
 t/10_1_shared_alone.t
 t/10_2_shared_start.t
 t/10_3_shared_use.t
