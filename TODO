@@ -1,6 +1,7 @@
 CODE:
-- Fix formating in README.JNI
 - Fix info (members part)
+- Check INFO flag vs. PRINT_INFO (shortcuts not working?)
+- Check CVS binary files
 
 TEST:
 - Alpha
