@@ -99,15 +99,17 @@ sub AUTOLOAD {
 sub DESTROY {
 	my $this = shift ;
 
-	if (! $this->{private}->{deleted}){
-		$this->{private}->{deleted} = 1 ;
-		eval {
-			$this->{private}->{proto}->DeleteJavaObject() ;
-		} ;
-		croak "In method DESTROY of class $this->{private}->{class}: $@" if $@ ;
-	}
-	else{
-		Inline::Java::debug("Object destructor called more than once!") ;
+	if (! $Inline::Java::DONE){
+		if (! $this->{private}->{deleted}){
+			$this->{private}->{deleted} = 1 ;
+			eval {
+				$this->{private}->{proto}->DeleteJavaObject() ;
+			} ;
+			croak "In method DESTROY of class $this->{private}->{class}: $@" if $@ ;
+		}
+		else{
+			Inline::Java::debug("Object destructor called more than once!") ;
+		}
 	}
 }
 

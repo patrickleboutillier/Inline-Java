@@ -36,7 +36,7 @@ use Inline::Java::Init ;
 # Stores a list of the Java interpreters running
 my @CHILDREN = () ;
 my $CHILD_CNT = 0 ;
-my $DONE = 0 ;
+$Inline::Java::DONE = 0 ;
 
 # Here is some code to figure out if we are running on command.com
 # shell under Windows.
@@ -58,7 +58,7 @@ my $COMMAND_COM =
 sub done {
 	my $signal = shift ;
 
-	$DONE = 1 ;
+	$Inline::Java::DONE = 1 ;
 
 	my $ec = 0 ;
 	if (! $signal){
@@ -72,9 +72,11 @@ sub done {
 	# Ask the children to die and close the sockets
 	foreach my $o (values %{$Inline::Java::INLINE}){
 		my $sock = $o->{Java}->{socket} ;
-		# this asks the Java server to stop and die.
-		print $sock "die\n" ;
-		close($o->{Java}->{socket}) ;
+		# This asks the Java server to stop and die.
+		if ($sock->connected()){
+			print $sock "die\n" ;
+		}
+		close($sock) ;
 	}
 
 	foreach my $pid (@CHILDREN){
@@ -91,7 +93,7 @@ sub done {
 
 
 END {
-	if (! $DONE){
+	if (! $Inline::Java::DONE){
 		done() ;
 	}
 }

@@ -254,7 +254,7 @@ class InlineJavaProtocol {
 			DeleteJavaObject(st) ;
 		}
 		else if (c.equals("die")){
-			ijs.debug(" received a request to die...") ;
+			ijs.debug("  received a request to die...") ;
 			System.exit(0) ;
 		}		
 	}
