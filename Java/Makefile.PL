@@ -10,5 +10,4 @@ WriteMakefile(
 	LIBS => [
 		'-L/usr/java1.2/jre/lib/sparc -ljvm'
 	],
-	clean => {FILES => '_Inline_test/'},
 ) ;

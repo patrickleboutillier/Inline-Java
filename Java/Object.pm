@@ -37,7 +37,7 @@ sub __new {
 	my $knot = tie %this, $class ;
 	my $this = bless(\%this, $class) ;
 
-	my $priv = Inline::Java::Object::Private->new($java_class, $inline) ;
+	my $priv = Inline::Java::Object::Private->new($class, $java_class, $inline) ;
 	$PRIVATES->{$knot} = $priv ;
 
 	if ($objid <= 0){
@@ -84,6 +84,8 @@ sub __validate_prototype {
 	my $new_arguments = [] ;
 	my $scores = [] ;
 
+	my $nb_proto = scalar(@{$prototypes}) ;
+	my @errors = () ;
 	foreach my $proto (@{$prototypes}){
 		my $new_args = undef ;
 		my $score = undef ;
@@ -91,11 +93,15 @@ sub __validate_prototype {
 			($new_args, $score) = Inline::Java::Class::CastArguments($args, $proto, $inline->{modfname}) ;
 		} ;
 		if ($@){
-			# We croaked, so we assume that we were not able to cast 
-			# the arguments to the prototype
-			Inline::Java::debug("Rescued from death: $@") ;
+			if ($nb_proto == 1){
+				# Here we have only 1 prototype, so we return the error.
+				croak $@ ;
+			}
+			push @errors, $@ ;
+			Inline::Java::debug("Error trying to fit args to prototype: $@") ;
 			next ;
 		}
+
 		# We passed!
 		push @{$matched_protos}, $proto ;
 		push @{$new_arguments}, $new_args ;
@@ -106,10 +112,13 @@ sub __validate_prototype {
 		my $name = (ref($class) ? $class->__get_private()->{class} : $class) ;
 		my $sa = Inline::Java::Protocol->CreateSignature($args) ;
 		my $msg = "In method $method of class $name: Can't find any signature that matches " .
-			"the arguments passed $sa. Available signatures are:\n"  ;
+			"the arguments passed $sa.\nAvailable signatures are:\n"  ;
+		my $i = 0 ;
 		foreach my $proto (@{$prototypes}){
 			my $s = Inline::Java::Protocol->CreateSignature($proto) ;
 			$msg .= "\t$method$s\n" ;
+			$msg .= "\t\terror was: $errors[$i]" ;
+			$i++ ;
 		}
 		chomp $msg ;
 		croak $msg ;
@@ -123,13 +132,29 @@ sub __validate_prototype {
 }
 
 
+sub __isa {
+	my $this = shift ;
+	my $proto = shift ;
+
+	eval {
+		$this->__get_private()->{proto}->ISA($proto) ;
+	} ;
+
+	return $@ ;
+}
+
+
 sub __get_member {
 	my $this = shift ;
 	my $key = shift ;
 
+	if ($this->__get_private()->{class} eq "Inline::Java::Object"){
+		croak "Can't get member $key for an object that is not bound to Perl" ;
+	}
+
 	Inline::Java::debug("fetching member variable $key") ;
 
-	my $inline = $Inline::Java::INLINE->{$this->__get_private()->{module}} ;
+	my $inline = Inline::Java::get_INLINE($this->__get_private()->{module}) ;
 	my $fields = $inline->get_fields($this->__get_private()->{java_class}) ;
 
 	if ($fields->{$key}){
@@ -138,12 +163,13 @@ sub __get_member {
 		my $proto = $fields->{$key}->[0] ;
 
 		my $ret = $this->__get_private()->{proto}->GetJavaMember($key, [$proto], [undef]) ;
-		Inline::Java::debug("returning member ($ret)") ;
+		Inline::Java::debug("returning member (" . ($ret || '') . ")") ;
 	
 		return $ret ;
 	}
 	else{
-		croak "No public member variable $key defined for class $this->__get_private()->{class}" ;
+		my $name = $this->__get_private()->{class} ;
+		croak "No public member variable $key defined for class $name" ;
 	}
 }
 
@@ -153,7 +179,11 @@ sub __set_member {
 	my $key = shift ;
 	my $value = shift ;
 
-	my $inline = $Inline::Java::INLINE->{$this->__get_private()->{module}} ;
+	if ($this->__get_private()->{class} eq "Inline::Java::Object"){
+		croak "Can't set member $key for an object that is not bound to Perl" ;
+	}
+
+	my $inline = Inline::Java::get_INLINE($this->__get_private()->{module}) ;
 	my $fields = $inline->get_fields($this->__get_private()->{java_class}) ;
 
 	if ($fields->{$key}){
@@ -169,10 +199,10 @@ sub __set_member {
 				($new_args, $score) = Inline::Java::Class::CastArguments([$value], [$f], $this->__get_private()->{module}) ;
 			} ;
 			if ($@){
-				# We croaked, so we assume that we were not able to cast 
-				# the arguments to the prototype
+				Inline::Java::debug("Error trying to assign member: $@") ;
 				next ;
 			}
+
 			# We passed!
 			push @{$matched_protos}, [$f] ;
 			push @{$new_arguments}, $new_args ;
@@ -181,8 +211,8 @@ sub __set_member {
 
 		if (! scalar(@{$matched_protos})){
 			my $name = $this->__get_private()->{class} ;
-			my $msg = "For member $key of class $name: Can't assign passed value to variable " .
-				"this variable can accept:\n"  ;
+			my $msg = "For member $key of class $name: Can't assign passed value $value to variable $key. " .
+				"This variable can accept:\n"  ;
 			foreach my $f (@{$list}){
 				$msg .= "\t$f\n" ;
 			}
@@ -197,7 +227,8 @@ sub __set_member {
 		$this->__get_private()->{proto}->SetJavaMember($key, $matched_protos->[$nb - 1], $new_arguments->[$nb - 1]) ;
 	}
 	else{
-		croak "No public member variable $key defined for class $this->__get_private()->{class}" ;
+		my $name = $this->__get_private()->{class} ;
+		croak "No public member variable $key defined for class $name" ;
 	}
 }
 
@@ -214,30 +245,43 @@ sub AUTOLOAD {
 
 	Inline::Java::debug("$func_name") ;
 
-	croak "No public method $func_name defined for class $this->__get_private()->{class}" ;	
+	my $name = (ref($this) ? $this->__get_private()->{class} : $this) ;
+	if ($name eq "Inline::Java::Object"){
+		croak "Can't call method $func_name on an object that is not bound to Perl" ;
+	}
+
+	croak "No public method $func_name defined for class $name" ;
 }
 
 
-# Here an object in destroyed. this function seems to be called twice
-# for each object. I think it's because the $this reference is both blessed
-# and tied to the same package.
 sub DESTROY {
 	my $this = shift ;
 	
-	if (! $Inline::Java::DONE){
-		if (! $this->__get_private()->{deleted}){
-			$this->__get_private()->{deleted} = 1 ;
+	my $knot = tied %{$this} ;
+	if (! $knot){
+		Inline::Java::debug("Destroying Inline::Java::Object::Tie") ;
+		
+		if (! Inline::Java::get_DONE()){
 			eval {
 				$this->__get_private()->{proto}->DeleteJavaObject($this) ;
 			} ;
-			croak "In method DESTROY of class $this->__get_private()->{class}: $@" if $@ ;
+			my $name = $this->__get_private()->{class} ;
+			croak "In method DESTROY of class $name: $@" if $@ ;
 		}
-		else{
-			Inline::Java::debug("Object destructor called more than once!") ;
-		}
+		
+		# Here we have a circular reference so we need to break it
+		# so that the memory is collected.
+		my $priv = $this->__get_private() ;
+		my $proto = $priv->{proto} ;
+		$priv->{proto} = undef ;
+		$proto->{obj_priv} = undef ;
+		$PRIVATES->{$this} = undef ;
 	}
-
-	untie %{$this} ;
+	else{
+		# Here we can't untie because we still have a reference in $PRIVATES
+		# untie %{$this} ;
+		Inline::Java::debug("Destroying Inline::Java::Object") ;
+	}
 }
 
 
@@ -293,7 +337,7 @@ sub EXISTS {
  	my $this = shift ;
  	my $key = shift ;
 
-	my $inline = $Inline::Java::INLINE->{$this->__get_private()->{module}} ;
+	my $inline = Inline::Java::get_INLINE($this->__get_private()->{module}) ;
 	my $fields = $inline->get_fields($this->__get_private()->{java_class}) ;
 
 	if ($fields->{$key}){
@@ -321,8 +365,6 @@ sub CLEAR {
 
 sub DESTROY {
 	my $this = shift ;
-
-	$PRIVATES->{$this} = undef ;
 }
 
 
@@ -333,20 +375,29 @@ package Inline::Java::Object::Private ;
 
 sub new {
 	my $class = shift ;
+	my $obj_class = shift ;
 	my $java_class = shift ;
 	my $inline = shift ;
 	
 	my $this = {} ;
-	$this->{class} = $class ;
+	$this->{class} = $obj_class ;
 	$this->{java_class} = $java_class ;
 	$this->{module} = $inline->{modfname} ;
-	$this->{known_to_perl} = 1 ;
 	$this->{proto} = new Inline::Java::Protocol($this, $inline) ;
 
 	bless($this, $class) ;
 
 	return $this ;
 }
+
+
+sub DESTROY {
+	my $this = shift ;
+
+	Inline::Java::debug("Destroying Inline::Java::Object::Private") ;
+}
+
+
 
 
 package Inline::Java::Object ;

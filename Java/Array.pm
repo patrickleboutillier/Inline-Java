@@ -18,7 +18,7 @@ sub new {
 	my $object = shift ;
 
 	my @this = () ;
-	my $knot = tie @this, 'Inline::Java::Array::Tie' ;
+	my $knot = tie @this, $class ;
 	my $this = bless (\@this, $class) ;
 
 	$OBJECTS->{$knot} = $object ;
@@ -41,6 +41,19 @@ sub __get_object {
 	}
 	
 	return $ref ;
+}
+
+
+sub __isa {
+	my $this = shift ;
+	my $proto = shift ;
+
+	eval {
+		my $obj = $this->__get_object() ;
+		$obj->__get_private()->{proto}->ISA($proto) ;
+	} ;
+
+	return $@ ;
 }
 
 
@@ -134,7 +147,17 @@ sub AUTOLOAD {
 sub DESTROY {
 	my $this = shift ;
 
-	untie @{$this} ;
+	my $knot = tied @{$this} ;
+	if (! $knot){
+		Inline::Java::debug("Destroying Inline::Java::Array::Tie") ;
+
+		$OBJECTS->{$this} = undef ;
+	}
+	else{
+		# Here we can't untie because we still have a reference in $OBJECTS
+		# untie @{$this} ;
+		Inline::Java::debug("Destroying Inline::Java::Array") ;
+	}
 }
 
 
@@ -243,8 +266,6 @@ sub DELETE {
 
 sub DESTROY {
  	my $this = shift ;
-
-	$OBJECTS->{$this} = undef ;
 }
 
 
@@ -686,7 +707,12 @@ class InlineJavaArray {
 
 					Object o = ijc.CastArgument(elem, arg) ;
 					Array.set(array, i, o) ;
-					ijs.debug("      setting array element " + String.valueOf(i) + " to " + o.toString()) ;
+					if (o != null){
+						ijs.debug("      setting array element " + String.valueOf(i) + " to " + o.toString()) ;
+					}
+					else{
+						ijs.debug("      setting array element " + String.valueOf(i) + " to " + o) ;
+					}
 		 		}
 			}
 			catch (InlineJavaCastException e){

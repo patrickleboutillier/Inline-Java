@@ -12,10 +12,6 @@ if (! defined($Inline::Java::DEBUG)){
 	$Inline::Java::DEBUG = 0 ;
 }
 
-# This hash will store the $o objects...
-$Inline::Java::INLINE = {} ;
-$Inline::Java::BOUND_CLASSES = {} ;
-
 
 require Inline ;
 use Carp ;
@@ -33,12 +29,18 @@ use Inline::Java::Array ;
 use Inline::Java::Protocol ;
 # Must be last.
 use Inline::Java::Init ;
+use Inline::Java::JVM ;
 
 
-# Stores a list of the Java interpreters running
-my @CHILDREN = () ;
-my $CHILD_CNT = 0 ;
-$Inline::Java::DONE = 0 ;
+# This is set when the script is over.
+my $DONE = 0 ;
+
+
+# This is set when at least one JVM is loaded.
+my $JVM = undef ;
+
+# This hash will store the $o objects...
+my $INLINES = {} ;
 
 # Here is some code to figure out if we are running on command.com
 # shell under Windows.
@@ -60,7 +62,7 @@ my $COMMAND_COM =
 sub done {
 	my $signal = shift ;
 
-	$Inline::Java::DONE = 1 ;
+	$DONE = 1 ;
 
 	my $ec = 0 ;
 	if (! $signal){
@@ -71,23 +73,10 @@ sub done {
 		$ec = 1 ;
 	}
 
-	# Ask the children to die and close the sockets
-	foreach my $o (values %{$Inline::Java::INLINE}){
-		if (! $o->{Java}->{USE_JNI}){
-			my $sock = $o->{Java}->{socket} ;
-			# This asks the Java server to stop and die.
-			if ($sock->connected()){
-				print $sock "die\n" ;
-			}
-			close($sock) ;
-		}
+	if ($JVM){
+		undef $JVM ;
 	}
-
-	foreach my $pid (@CHILDREN){
-		my $ok = kill 9, $pid ;
-		Inline::Java::debug("killing $pid...", ($ok ? "ok" : "failed")) ;
-	}
-
+	
 	Inline::Java::debug("exiting with $ec") ;
 
 	# In Windows, it is possible that the process will hang here if
@@ -97,13 +86,23 @@ sub done {
 
 
 END {
-	if (! $Inline::Java::DONE){
+	if ($DONE < 1){
 		done() ;
 	}
 }
 
 
+# Signal stuff, not really needed with USE_JNI
 use sigtrap 'handler', \&done, 'normal-signals' ;
+
+$SIG{__DIE__} = sub {
+	# Setting this to -1 will prevent Inline::Java::Object::DESTROY
+	# from executing it's code for object destruction, since the state
+	# in possibly unstable.
+	$DONE = -1 ;
+	die @_ ;
+} ;
+
 
 
 
@@ -118,7 +117,7 @@ sub register {
 		aliases => ['JAVA', 'java'],
 		type => 'interpreted',
 		suffix => 'jdat',
-	};
+	} ;
 }
 
 
@@ -147,10 +146,6 @@ sub _validate {
 	if (! exists($o->{Java}->{CLASSPATH})){
 		$o->{Java}->{CLASSPATH} = '' ;
 	}
-
-	my $install_lib = $o->{install_lib} ;
-	my $modpname = $o->{modpname} ;
-	my $install = "$install_lib/auto/$modpname" ;
 
 	while (@_) {
 		my ($key, $value) = (shift, shift) ;
@@ -190,34 +185,19 @@ sub _validate {
 		$o->{Java}->{USE_JNI} = 1 ;
 	}
 
-	if ($o->{Java}->{USE_JNI}){
-		require Inline::Java::JNI ;
-	}
+	my $install_lib = $o->{install_lib} ;
+	my $modpname = $o->{modpname} ;
+	my $install = "$install_lib/auto/$modpname" ;
 
 	$o->set_classpath($install) ;
+
 	$o->set_java_bin() ;
 
 	Inline::Java::debug("validate done.") ;
 }
 
 
-sub get_jni {
-	my $o = shift ;
-
-	if (! defined($o->{Java}->{JNI})){
-		my $jni = new Inline::Java::JNI(
-			$ENV{CLASSPATH} || "", 
-			($Inline::Java::DEBUG ? 1 : 0),
-		) ;
-		$jni->create_ijs() ; 
-		$o->{Java}->{JNI} = $jni ;
-	}
-
-	Inline::Java::debug_obj($o->{Java}->{JNI}) ;
-	return $o->{Java}->{JNI} ;
-}
-
-
+# This function builds the CLASSPATH environment variable
 sub set_classpath {
 	my $o = shift ;
 	my $path = shift ;
@@ -234,9 +214,7 @@ sub set_classpath {
 	}
 
 	my $sep = portable("ENV_VAR_PATH_SEP") ;
-
 	my @cp = split(/$sep/, join($sep, @list)) ;
-
 	my %cp = map { ($_ !~ /^\s*$/ ? ($_, 1) : ()) } @cp ;
 
 	$ENV{CLASSPATH} = join($sep, keys %cp) ;
@@ -354,56 +332,6 @@ sub build {
 }
 
 
-# Return a small report about the Java code.
-sub info {
-	my $o = shift;
-
-	if (! $o->{Java}->{built}){
-		$o->build ;
-	}
-	if (! $o->{Java}->{loaded}){
-		$o->load ;
-	}
-
-	my $info = '' ;
-	my $d = $o->{Java}->{data} ;
-
-	my %classes = %{$d->{classes}} ;
-	$info .= "The following Java classes have been bound to Perl:\n" ;
-	foreach my $class (sort keys %classes) {
-		$info .= "\tclass $class:\n" ;
-
-		if (defined($d->{classes}->{$class}->{constructors})){
-			foreach my $const (@{$d->{classes}->{$class}->{constructors}}) {
-				my $sign = $const ;
-				my $name = $class ;
-				$name =~ s/^(.*)::// ;
-				$info .= "\t\tpublic $name(" . join(", ", @{$sign}) . ")\n" ;
-			}
-		}
-		foreach my $method (sort keys %{$d->{classes}->{$class}->{methods}->{static}}) {
-			my $sign = $d->{classes}->{$class}->{methods}->{static}->{$method} ;
-			if (defined($sign)){
-				foreach my $s (@{$sign}){
-					$info .= "\t\tpublic static $method(" . join(", ", @{$s}) . ")\n" ;
-				}
-			}
-		}
-		foreach my $method (sort keys %{$d->{classes}->{$class}->{methods}->{instance}}) {
-			my $sign = $d->{classes}->{$class}->{methods}->{instance}->{$method} ;
-			if (defined($sign)){
-				foreach my $s (@{$sign}){
-					$info .= "\t\tpublic $method(" . join(", ", @{$s}) . ")\n" ;
-				}
-			}
-		}
-    }
-
-
-    return $info ;
-}
-
-
 # Writes the java code.
 sub write_java {
 	my $o = shift ;
@@ -428,69 +356,6 @@ sub write_java {
 }
 
 
-sub report {
-	my $o = shift ;
-	my $pattern = shift ;
-	my $other_classes = shift || [] ;
-
-	if (! $o->{Java}->{loaded}){
-		my $modfname = $o->{modfname} ;
-		my $java = $o->{Java}->{BIN} . "/java" . portable("EXE_EXTENSION") ;
-		my $pjava = portable("RE_FILE", $java) ;
-		my $predir = portable("IO_REDIR") ;
-		my $debug = ($Inline::Java::DEBUG ? "true" : "false") ;
-
-		my @classes = ($pattern) ;
-		foreach my $class (@{$other_classes}){
-			if (! $Inline::Java::BOUND_CLASSES->{$class}){
-				$Inline::Java::BOUND_CLASSES->{$class} = 1 ;
-				$class .= ".class" ;
-				push @classes, $class ;	
-			}
-			else{
-				carp "Java class $class already bound to Perl!" ;
-			}
-		}
-
-		if (! $o->{Java}->{USE_JNI}){
-			my $class_str = join(" ", @classes) ;
-
-			my $cmd = "\"$pjava\" InlineJavaServer report $debug $modfname $class_str > cmd.out $predir" ;
-			if ($o->{config}->{UNTAINT}){
-				($cmd) = $cmd =~ /(.*)/ ;
-			}
-			return $cmd ;
-		}
-		else{
-			# Here we need to expand the pattern.
-			my $build_dir = $o->{build_dir} ;
-			my @cl = glob("$build_dir/$pattern") ;
-			foreach my $class (@cl){
-				$class =~ s/^$build_dir\/// ;
-			}
-	
-			shift @classes ;
-			unshift @classes, @cl ;
-
-			my $class_str = join(" ", @classes) ;
-			Inline::Java::debug($class_str) ;
-
-			my $jni = $o->get_jni() ;
-			$jni->report($modfname, $class_str, scalar(@classes)) ;
-
-			return "" ;
-		}
-	}
-	else{
-		# On-the-fly class reporting and binding...
-		if (! $o->{Java}->{USE_JNI}){
-		}
-		else{
-		}
-	}
-}
-
-
 # Run the build process.
 sub compile {
 	my $o = shift ;
@@ -504,12 +369,9 @@ sub compile {
 	$o->mkpath($install) ;
 
 	my $javac = $o->{Java}->{BIN} . "/javac" . portable("EXE_EXTENSION") ;
-	my $java = $o->{Java}->{BIN} . "/java" . portable("EXE_EXTENSION") ;
 
-	my $pinstall = portable("RE_FILE", $install) ;
 	my $predir = portable("IO_REDIR") ;
 	my $pjavac = portable("RE_FILE", $javac) ;
-	my $pjava = portable("RE_FILE", $java) ;
 
 	my $cwd = Cwd::cwd() ;
 	if ($o->{config}->{UNTAINT}){
@@ -525,12 +387,9 @@ sub compile {
 	# copy_pattern will take care of checking whether there are actually files
 	# to be copied, and if not will exit the script.
 	foreach my $cmd (
-		"\"$pjavac\" $modfname.java > cmd.out $predir",
-		{CMD => ["copy_pattern", $o, "*.class"]},
-		"\"$pjavac\" InlineJavaServer.java > cmd.out $predir",
-		{CMD => ["copy_pattern", $o, "*.class"]},
-		{CMD => ["report", $o, "*.class"], RET_IS_CMD => (! $o->{Java}->{USE_JNI})},
-		{CMD => ["copy_pattern", $o, "*.jdat"]},
+		"\"$pjavac\" InlineJavaServer.java $modfname.java > cmd.out $predir",
+		["copy_pattern", $o, "*.class"],
+		["touch_file", $o, "$install/$modfname.jdat"],
 		) {
 
 		if ($cmd){
@@ -538,35 +397,29 @@ sub compile {
 			chdir $build_dir ;
 			if (ref($cmd)){
 				Inline::Java::debug_obj($cmd) ;
-				my $func = shift @{$cmd->{CMD}} ;
-				my @args = @{$cmd->{CMD}} ;
+				my $func = shift @{$cmd} ;
+				my @args = @{$cmd} ;
 
 				Inline::Java::debug("$func" . "(" . join(", ", @args) . ")") ;
 
 				no strict 'refs' ;
 				my $ret = $func->(@args) ;
-				if (! $cmd->{RET_IS_CMD}){
-					if ($ret){
-						croak $ret ;
-					}
-					chdir $cwd ;
-					next ;
-				}
-				else{
-					$cmd = $ret ;
+				if ($ret){
+					croak $ret ;
 				}
 			}
+			else{
+				if ($o->{config}->{UNTAINT}){
+					($cmd) = $cmd =~ /(.*)/ ;
+				}
 
-			if ($o->{config}->{UNTAINT}){
-				($cmd) = $cmd =~ /(.*)/ ;
+				Inline::Java::debug("$cmd") ;
+				my $res = system($cmd) ;
+				$res and do {
+					$o->error_copy ;
+					croak $o->compile_error_msg($cmd, $cwd) ;
+				} ;
 			}
-
-			Inline::Java::debug("$cmd") ;
-			my $res = system($cmd) ;
-			$res and do {
-				$o->error_copy ;
-				croak $o->compile_error_msg($cmd, $cwd) ;
-			} ;
 
 			chdir $cwd ;
 		}
@@ -620,93 +473,69 @@ sub load {
 		return ;
 	}
 
-	if ($o->{mod_exists}){
-		# In this case, the options are not rechecked, and therefore
-		# the defaults not registered. We must force it
-		$o->_validate(1, %{$o->{config}}) ;
-	}
-
-	my $install_lib = $o->{install_lib} ;
-	my $modpname = $o->{modpname} ;
 	my $modfname = $o->{modfname} ;
 
-	my $install = "$install_lib/auto/$modpname" ;
-	my $class = $modfname ;
+	# Make sure the default options are set.
+	$o->_validate(1, %{$o->{config}}) ;
 
-	# Now we must open the jdat file and read it's contents.
-	if (! open(JDAT, "$install/$class.jdat")){
-		croak "Can't open $install/$class.jdat code information file" ;
+	# If the JVM is not running, we need to start it here.
+	if (! $JVM){
+		$JVM = new Inline::Java::JVM($o) ;
 	}
-	my @lines = <JDAT> ;
-	close(JDAT) ;
+	
+	# Now that the JVM is running, we make sure it knows where all 
+	# the classes are.
+	my $pc = new Inline::Java::Protocol(undef, $o) ;
+	$pc->SetClassPath($ENV{CLASSPATH}) ;
 
-	Inline::Java::debug(@lines) ;
-	my $contents = join("", @lines) ;
-	if ($contents =~ /^\s*$/){
-		croak "Corrupted code information file $install/$class.jdat" ;
-	}
+	# Then we ask it to give us the public symbols from the classes
+	# that we got.
+	my @lines = $o->report() ;
 
+	# Now we read up the symbols and bind them to Perl.
 	$o->load_jdat(@lines) ;
 	$o->bind_jdat() ;
 
-	my $java = $o->{Java}->{BIN} . "/java" . portable("EXE_EXTENSION") ;
-	my $pjava = portable("RE_FILE", $java) ;
-
-	Inline::Java::debug("  cwd is: " . Cwd::cwd()) ;
-
-	if (! $o->{Java}->{USE_JNI}){
-		Inline::Java::debug("  load is forking.") ;
-		my $pid = fork() ;
-		if (! defined($pid)){
-			croak "Can't fork to start Java interpreter" ;
-		}
-		$CHILD_CNT++ ;
-
-		my $port = $o->{Java}->{PORT} + ($CHILD_CNT - 1) ;
-
-		if ($pid){
-			# parent here
-			Inline::Java::debug("  parent here.") ;
-
-			push @CHILDREN, $pid ;
-
-			my $socket = $o->setup_socket($port) ;
-			$o->{Java}->{socket} = $socket ;
-			Inline::Java::debug("load done.") ;
-		}
-		else{
-			# child here
-			Inline::Java::debug("  child here.") ;
-
-			my $debug = ($Inline::Java::DEBUG ? "true" : "false") ;
-
-			my @cmd = ($pjava, 'InlineJavaServer', 'run', $debug, $port) ;
-			Inline::Java::debug(join(" ", @cmd)) ;
-
-			if ($o->{config}->{UNTAINT}){
-				foreach my $cmd (@cmd){
-					($cmd) = $cmd =~ /(.*)/ ;
-				}
-			}
-
-			exec(@cmd)
-				or croak "Can't exec Java interpreter" ;
-		}
-	}
-	else{
-		# This will create the JNI object if it is not already created.
-		$o->get_jni() ;
-	}
-
-	$Inline::Java::INLINE->{$modfname} = $o ;
 	$o->{Java}->{loaded} = 1 ;
+
+	$INLINES->{$modfname} = $o ;
 }
+
+
+# This function asks the JVM what are the public symbols for the specified
+# classes
+sub report {
+	my $o = shift ;
+	my $classes = shift ;
+
+	my $install_lib = $o->{install_lib} ;
+	my $modpname = $o->{modpname} ;
+	my $install = "$install_lib/auto/$modpname" ;
+	my $pinstall = portable("RE_FILE", $install) ;
+
+	if (! defined($classes)){
+		# We need to take the classes that are in the directory...
+		my @cl = glob("$pinstall/*.class") ;
+		foreach my $class (@cl){
+			$class =~ s/^\Q$pinstall\E\/(.*)\.class$/$1/ ;
+		}
+		$classes = \@cl ;
+	}
+
+	my $pc = new Inline::Java::Protocol(undef, $o) ;
+	my $resp = $pc->Report(join(" ", @{$classes})) ;
+
+	return split("\n", $resp) ;
+}
+
 
 
 # Load the jdat code information file.
 sub load_jdat {
 	my $o = shift ;
 	my @lines = @_ ;
+
+	Inline::Java::debug(@lines) ;
 
 	$o->{Java}->{data} = {} ;
 	my $d = $o->{Java}->{data} ;
@@ -761,25 +590,7 @@ sub load_jdat {
 		}
 	}
 
-	# Inline::Java::debug_obj($d) ;
-}
-
-
-sub get_fields {
-	my $o = shift ;
-	my $class = shift ;
-
-	my $fields = {} ;
-	my $d = $o->{Java}->{data} ;
-
-	while (my ($field, $value) = each %{$d->{classes}->{$class}->{fields}->{static}}){
-		$fields->{$field} = $value ;
-	}
-	while (my ($field, $value) = each %{$d->{classes}->{$class}->{fields}->{instance}}){
-		$fields->{$field} = $value ;
-	}
-
-	return $fields ;
+	Inline::Java::debug_obj($d) ;
 }
 
 
@@ -815,7 +626,7 @@ sub new {
 	my \$class = shift ;
 	my \@args = \@_ ;
 
-	my \$o = \$Inline::Java::INLINE->{'$modfname'} ;
+	my \$o = Inline::Java::get_INLINE('$modfname') ;
 	my \$d = \$o->{Java}->{data} ;
 	my \$signatures = \$d->{classes}->{'$class'}->{constructors} ;
 	my (\$proto, \$new_args) = \$class->__validate_prototype('new', [\@args], \$signatures, \$o) ;
@@ -851,7 +662,7 @@ sub $method {
 	my \$class = shift ;
 	my \@args = \@_ ;
 
-	my \$o = \$Inline::Java::INLINE->{'$modfname'} ;
+	my \$o = Inline::Java::get_INLINE('$modfname') ;
 	my \$d = \$o->{Java}->{data} ;
 	my \$signatures = \$d->{classes}->{'$class'}->{methods}->{static}->{'$method'} ;
 	my (\$proto, \$new_args) = \$class->__validate_prototype('$method', [\@args], \$signatures, \$o) ;
@@ -883,7 +694,7 @@ sub $method {
 	my \$this = shift ;
 	my \@args = \@_ ;
 
-	my \$o = \$Inline::Java::INLINE->{'$modfname'} ;
+	my \$o = Inline::Java::get_INLINE('$modfname') ;
 	my \$d = \$o->{Java}->{data} ;
 	my \$signatures = \$d->{classes}->{'$class'}->{methods}->{instance}->{'$method'} ;
 	my (\$proto, \$new_args) = \$this->__validate_prototype('$method', [\@args], \$signatures, \$o) ;
@@ -909,54 +720,75 @@ CODE
 }
 
 
-# Sets up the communication socket to the Java program
-sub setup_socket {
+sub get_fields {
 	my $o = shift ;
-	my $port = shift ;
+	my $class = shift ;
 
-	my $timeout = $o->{Java}->{STARTUP_DELAY} ;
+	my $fields = {} ;
+	my $d = $o->{Java}->{data} ;
 
-	my $modfname = $o->{modfname} ;
-	my $socket = undef ;
+	while (my ($field, $value) = each %{$d->{classes}->{$class}->{fields}->{static}}){
+		$fields->{$field} = $value ;
+	}
+	while (my ($field, $value) = each %{$d->{classes}->{$class}->{fields}->{instance}}){
+		$fields->{$field} = $value ;
+	}
 
-	my $last_words = "timeout\n" ;
-	eval {
-		local $SIG{ALRM} = sub { die($last_words) ; } ;
+	return $fields ;
+}
 
-		my $got_alarm = portable("GOT_ALARM") ;
 
-		if ($got_alarm){
-			alarm($timeout) ;
-		}
+# Return a small report about the Java code.
+sub info {
+	my $o = shift;
 
-		while (1){
-			$socket = new IO::Socket::INET(
-				PeerAddr => 'localhost',
-				PeerPort => $port,
-				Proto => 'tcp') ;
-			if ($socket){
-				last ;
+	# Make sure the default options are set.
+	$o->_validate(1, %{$o->{config}}) ;
+
+	if ((! $o->{mod_exists})&&(! $o->{Java}->{built})){
+		$o->build ;
+	}
+
+	if (! $o->{Java}->{loaded}){
+		$o->load ;
+	}
+
+	my $info = '' ;
+	my $d = $o->{Java}->{data} ;
+
+	my %classes = %{$d->{classes}} ;
+	$info .= "The following Java classes have been bound to Perl:\n" ;
+	foreach my $class (sort keys %classes) {
+		$info .= "\tclass $class:\n" ;
+
+		if (defined($d->{classes}->{$class}->{constructors})){
+			foreach my $const (@{$d->{classes}->{$class}->{constructors}}) {
+				my $sign = $const ;
+				my $name = $class ;
+				$name =~ s/^(.*)::// ;
+				$info .= "\t\tpublic $name(" . join(", ", @{$sign}) . ")\n" ;
 			}
 		}
+		foreach my $method (sort keys %{$d->{classes}->{$class}->{methods}->{static}}) {
+			my $sign = $d->{classes}->{$class}->{methods}->{static}->{$method} ;
+			if (defined($sign)){
+				foreach my $s (@{$sign}){
+					$info .= "\t\tpublic static $method(" . join(", ", @{$s}) . ")\n" ;
+				}
+			}
+		}
+		foreach my $method (sort keys %{$d->{classes}->{$class}->{methods}->{instance}}) {
+			my $sign = $d->{classes}->{$class}->{methods}->{instance}->{$method} ;
+			if (defined($sign)){
+				foreach my $s (@{$sign}){
+					$info .= "\t\tpublic $method(" . join(", ", @{$s}) . ")\n" ;
+				}
+			}
+		}
+    }
 
-		if ($got_alarm){
-			alarm(0) ;
-		}
-	} ;
-	if ($@){
-		if ($@ eq $last_words){
-			croak "Java program taking more than $timeout seconds to start, or died before Perl could connect. Increase config STARTUP_DELAY if necessary." ;
-		}
-		else{
-			croak $@ ;
-		}
-	}
-	if (! $socket){
-		croak "Can't connect to Java program: $!" ;
-	}
 
-	$socket->autoflush(1) ;
-	return $socket ;
+    return $info ;
 }
 
 
@@ -972,8 +804,6 @@ sub copy_pattern {
 
 	my $src_dir = $build_dir ;
 	my $dest_dir = $pinstall ;
-
-	chdir($src_dir) ;
 
 	my @flist = glob($pattern) ;
 
@@ -1002,7 +832,76 @@ sub copy_pattern {
 }
 
 
+sub touch_file {
+	my $o = shift ;
+	my $file = shift ;
+
+	my $pfile = portable("RE_FILE", $file) ;
+
+	if (! open(TOUCH, ">$pfile")){
+		croak "Can't create file $pfile for writing" ;
+	}
+	close(TOUCH) ;
+
+	return '' ;
+}
+
+
+
 ######################## General Functions ########################
+
+
+sub get_JVM {
+	return $JVM ;
+}
+
+
+sub get_INLINE {
+	my $module = shift ;
+
+	return $INLINES->{$module} ;
+}
+
+
+sub get_DEBUG {
+	return $Inline::Java::DEBUG ;
+}
+
+
+sub get_DONE {
+	return $DONE ;
+}
+
+
+sub java2perl {
+	my $jclass = shift ;
+
+	$jclass =~ s/[.\$]/::/g ;
+
+	return $jclass ;
+}
+
+
+sub known_to_perl {
+	my $pkg = shift ;
+	my $jclass = shift ;
+
+	$jclass =~ s/[.\$]/::/g ;
+
+	my $perl_class = java2perl($jclass) ;
+	$perl_class = $pkg . "::" . $perl_class ;
+
+	no strict 'refs' ;
+	if (defined(${$perl_class . "::" . "EXISTS"})){
+		Inline::Java::debug("  returned class exists!") ;
+		return $perl_class ;
+	}
+	else{
+		Inline::Java::debug("  returned class doesn't exist!") ;
+	}
+
+	return undef ;
+}
 
 
 sub debug {
@@ -1016,10 +915,22 @@ sub debug {
 
 sub debug_obj {
 	my $obj = shift ;
+	my $pre = shift || "perl: " ;
 
 	if ($Inline::Java::DEBUG){
-		print STDERR "perl: " . Dumper($obj) ;
+		print STDERR $pre . Dumper($obj) ;
+		if (UNIVERSAL::isa($obj, "Inline::Java::Object")){
+			# Print the guts as well...
+			print STDERR $pre . Dumper($obj->__get_private()) ;
+		}
 	}
+}
+
+
+sub dump_obj {
+	my $obj = shift ;
+
+	return debug_obj($obj, "Java Object Dump:\n") ;
 }
 
 

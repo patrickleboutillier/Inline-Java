@@ -24,6 +24,55 @@ sub new {
 }
 
 
+sub SetClassPath {
+	my $this = shift ;
+	my $classpath = shift ;
+
+	Inline::Java::debug("setting classpath") ;
+
+	my $data = join(" ", 
+		"set_classpath", 
+		$this->ValidateArgs([$classpath]),
+	) ;
+
+	return $this->Send($data, 1) ;
+}
+
+
+sub Report {
+	my $this = shift ;
+	my $classes = shift ;
+
+	Inline::Java::debug("reporting on $classes") ;
+
+	my $data = join(" ", 
+		"report", 
+		$this->ValidateArgs([$classes]),
+	) ;
+
+	return $this->Send($data, 1) ;
+}
+
+
+sub ISA {
+	my $this = shift ;
+	my $proto = shift ;
+
+	Inline::Java::debug("checking if $this is a $proto") ;
+
+	my $id = $this->{obj_priv}->{id} ;
+	my $class = $this->{obj_priv}->{java_class} ;
+	my $data = join(" ", 
+		"isa", 
+		$id,
+		Inline::Java::Class::ValidateClass($class),
+		Inline::Java::Class::ValidateClass($proto),
+	) ;
+
+	return $this->Send($data, 1) ;
+}
+
+
 # Called to create a Java object
 sub CreateJavaObject {
 	my $this = shift ;
@@ -39,8 +88,6 @@ sub CreateJavaObject {
 		$this->CreateSignature($proto, ","),
 		$this->ValidateArgs($args),
 	) ;
-
-	Inline::Java::debug("  packet sent is $data") ;
 
 	return $this->Send($data, 1) ;
 }
@@ -63,8 +110,6 @@ sub CallStaticJavaMethod {
 		$this->CreateSignature($proto, ","),
 		$this->ValidateArgs($args),
 	) ;
-
-	Inline::Java::debug("  packet sent is $data") ;		
 
 	return $this->Send($data) ;
 }
@@ -90,8 +135,6 @@ sub CallJavaMethod {
 		$this->ValidateArgs($args),
 	) ;
 
-	Inline::Java::debug("  packet sent is $data") ;
-
 	return $this->Send($data) ;
 }
 
@@ -105,7 +148,7 @@ sub SetJavaMember {
 
 	my $id = $this->{obj_priv}->{id} ;
 	my $class = $this->{obj_priv}->{java_class} ;
-	Inline::Java::debug("setting object($id)->{$member} = $arg->[0]") ;
+	Inline::Java::debug("setting object($id)->{$member} = " . ($arg->[0] || '')) ;
 	my $data = join(" ", 
 		"set_member", 
 		$id,
@@ -114,8 +157,6 @@ sub SetJavaMember {
 		Inline::Java::Class::ValidateClass($proto->[0]),
 		$this->ValidateArgs($arg),
 	) ;
-
-	Inline::Java::debug("  packet sent is $data") ;
 
 	return $this->Send($data) ;
 }
@@ -140,8 +181,6 @@ sub GetJavaMember {
 		"undef:",
 	) ;
 
-	Inline::Java::debug("  packet sent is $data") ;
-
 	return $this->Send($data) ;
 }
 
@@ -161,8 +200,6 @@ sub DeleteJavaObject {
 			"delete_object", 
 			$id,
 		) ;
-
-		Inline::Java::debug("  packet sent is $data") ;		
 
 		$this->Send($data) ;
 	}
@@ -233,7 +270,9 @@ sub CreateSignature {
 	my $proto = shift ;
 	my $del = shift || ", " ;
 
-	return "(" . join($del, @{$proto}) . ")" ;
+	my @p = map {$_ || ''} @{$proto} ;
+
+	return "(" . join($del, @p) . ")" ;
 }
 
 
@@ -244,25 +283,9 @@ sub Send {
 	my $data = shift ;
 	my $const = shift ;
 
-	my $resp = undef ;
-	my $inline = $Inline::Java::INLINE->{$this->{module}} ;
-	if (! $inline->{Java}->{USE_JNI}){
-		my $sock = $inline->{Java}->{socket} ;
-		print $sock $data . "\n" or
-			croak "Can't send packet over socket: $!" ;
+	my $resp = Inline::Java::get_JVM()->process_command($data) ;
 
-		$resp = <$sock> ;
-	}
-	else{
-		$resp = $inline->{Java}->{JNI}->process_command($data) ;
-	}
-
-	Inline::Java::debug("  packet recv is $resp") ;
-
-	if (! $resp){
-		croak "Can't receive packet over socket: $!" ;
-	}
-	elsif ($resp =~ /^error scalar:([\d.]*)$/){
+	if ($resp =~ /^error scalar:([\d.]*)$/){
 		my $msg = pack("C*", split(/\./, $1)) ;
 		Inline::Java::debug("  packet recv error: $msg") ;
 		croak $msg ;
@@ -285,35 +308,15 @@ sub Send {
 			return undef ;
 		}
 		else{
-			my $perl_class = $class ;
-			$perl_class =~ s/[.\$]/::/g ;
-			my $pkg = $inline->{pkg} ;
-			$perl_class = $pkg . "::" . $perl_class ;
-			Inline::Java::debug($perl_class) ;
-
-			my $known = 0 ;
-			{
-				no strict 'refs' ;
-				if (defined(${$perl_class . "::" . "EXISTS"})){
-					Inline::Java::debug("  returned class exists!") ;
-					$known = 1 ;
-				}
-				else{
-					Inline::Java::debug("  returned class doesn't exist!") ;
-				}
-			}
-
 			my $obj = undef ;
-			if ($known){
-				Inline::Java::debug("creating stub for known object...") ;
+			my $inline = Inline::Java::get_INLINE($this->{module}) ;
+
+			my $perl_class = Inline::Java::known_to_perl($inline->{pkg}, $class) ;
+			if ($perl_class){
 				$obj = $perl_class->__new($class, $inline, $id) ;
-				Inline::Java::debug("stub created ($obj)...") ;
 			}
 			else{
-				Inline::Java::debug("creating stub for unknown object...") ;
 				$obj = Inline::Java::Object->__new($class, $inline, $id) ;
-				Inline::Java::debug("stub created ($obj)...") ;
-				$obj->__get_private()->{known_to_perl} = 0 ;
 			}
 
 			Inline::Java::debug("checking if stub is array...") ;
@@ -329,6 +332,14 @@ sub Send {
 		}
 	}
 }
+
+
+sub DESTROY {
+	my $this = shift ;
+
+	Inline::Java::debug("Destroying Inline::Java::Protocol") ;
+}
+
 
 
 1 ;
@@ -377,6 +388,15 @@ class InlineJavaProtocol {
 		else if (c.equals("get_member")){
 			GetJavaMember(st) ;
 		}		
+		else if (c.equals("report")){
+			Report(st) ;
+		}
+		else if (c.equals("isa")){
+			ISA(st) ;
+		}
+		else if (c.equals("set_classpath")){
+			SetClassPath(st) ;
+		}
 		else if (c.equals("create_object")){
 			CreateJavaObject(st) ;
 		}
@@ -390,6 +410,99 @@ class InlineJavaProtocol {
 		else {
 			throw new InlineJavaException("Unknown command " + c) ;
 		}
+	}
+
+	/*
+		Returns a report on the Java classes, listing all public methods
+		and members
+	*/
+	void Report(StringTokenizer st){
+		StringBuffer pw = new StringBuffer() ;
+
+		StringTokenizer st2 = new StringTokenizer(st.nextToken(), ":") ;
+		st2.nextToken() ;
+
+		StringTokenizer st3 = new StringTokenizer(pack(st2.nextToken()), " ") ;
+
+		ArrayList class_list = new ArrayList() ;
+		while (st3.hasMoreTokens()){
+			String c = st3.nextToken() ;
+			ijs.debug("reporting for " + c) ;
+			class_list.add(class_list.size(), c) ;
+		}
+
+		try {
+			for (int i = 0 ; i < class_list.size() ; i++){
+				String name = (String)class_list.get(i) ;
+				if (! name.startsWith("InlineJavaServer")){
+					Class c = Class.forName(name) ;
+															
+					pw.append("class " + c.getName() + "\n") ;
+					Constructor constructors[] = c.getConstructors() ;
+					Method methods[] = c.getMethods() ;
+					Field fields[] = c.getFields() ;
+
+					for (int j = 0 ; j < constructors.length ; j++){
+						Constructor x = constructors[j] ;
+						String sign = CreateSignature(x.getParameterTypes()) ;
+						Class decl = x.getDeclaringClass() ;
+						pw.append("constructor" + " " + sign + "\n") ;
+					}
+					for (int j = 0 ; j < methods.length ; j++){
+						Method x = methods[j] ;
+						String stat = (Modifier.isStatic(x.getModifiers()) ? " static " : " instance ") ;
+						String sign = CreateSignature(x.getParameterTypes()) ;
+						Class decl = x.getDeclaringClass() ;
+						pw.append("method" + stat + decl.getName() + " " + x.getName() + sign + "\n") ;
+					}
+					for (int j = 0 ; j < fields.length ; j++){
+						Field x = fields[j] ;
+						String stat = (Modifier.isStatic(x.getModifiers()) ? " static " : " instance ") ;
+						Class decl = x.getDeclaringClass() ;
+						Class type = x.getType() ;
+						pw.append("field" + stat + decl.getName() + " " + x.getName() + " " + type.getName() + "\n") ;
+					}
+				}
+			}
+		}
+		catch (ClassNotFoundException e){
+			System.err.println("Can't find class: " + e.getMessage()) ;
+			System.exit(1) ;
+		}
+
+		SetResponse(pw.toString()) ;
+	}
+
+
+	void SetClassPath(StringTokenizer st) throws InlineJavaException {
+		String classpath = st.nextToken() ;
+		StringTokenizer st2 = new StringTokenizer(classpath, ":") ;
+		st2.nextToken() ;
+
+		String prop = pack(st2.nextToken()) ;
+		System.out.println(prop) ;
+		System.setProperty("java.class.path", prop) ;
+
+		SetResponse(null) ;
+	}
+
+
+	void ISA(StringTokenizer st) throws InlineJavaException {
+		int id = Integer.parseInt(st.nextToken()) ;
+
+		String class_name = st.nextToken() ;
+		Class c = ijc.ValidateClass(class_name) ;
+
+		String is_it_a = st.nextToken() ;
+		Class d = ijc.ValidateClass(is_it_a) ;
+
+		Integer oid = new Integer(id) ;
+		Object o = ijs.objects.get(oid) ;
+		if (o == null){
+			throw new InlineJavaException("Object " + oid.toString() + " is not in HashMap!") ;
+		}
+
+		SetResponse(new Boolean(ijc.DoesExtend(c, d))) ;
 	}
 
 

@@ -61,7 +61,7 @@ new(CLASS, classpath, debug)
 	/* Create the Java VM */
 	res = JNI_CreateJavaVM(&(RETVAL->jvm), (void **)&(RETVAL->env), &vm_args) ;
 	if (res < 0) {
-		croak("Can't create Java interpreter using JNI\n") ;
+		croak("Can't create Java interpreter using JNI") ;
 	}
 
 	free(cp) ;

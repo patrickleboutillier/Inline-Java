@@ -6,5 +6,16 @@ use strict ;
 
 $Inline::Java::JNI::VERSION = '0.10' ;
 
-require DynaLoader ;
-Inline::Java::JNI->bootstrap($Inline::Java::JNI::VERSION) ;
+use Carp ;
+
+
+eval {
+	Inline::Java::JNI->bootstrap($Inline::Java::JNI::VERSION) ;
+} ;
+if ($@){
+	croak "Can't load JNI module: $@" ;
+}
+
+
+
+1 ;

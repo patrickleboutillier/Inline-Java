@@ -29,18 +29,26 @@ my $RANGE = {
 	},
 	'java.lang.Long' => {
 		REGEXP => $INT_RE,
-		MAX => 9223372036854775807,
-		MIN => -9223372036854775808,
+		MAX => 2147483647,
+		MIN => -2147483648,
+		# MAX => 9223372036854775807,
+		# MIN => -9223372036854775808,
 	},
 	'java.lang.Float' => {
 		REGEXP => $FLOAT_RE,
 		MAX => 3.4028235e38,
-		MIN => 1.4e-45,
+		MIN => -3.4028235e38,
+		POS_MIN	=> 1.4e-45,
+		NEG_MAX => -1.4e-45,
 	},
 	'java.lang.Double' => {
 		REGEXP => $FLOAT_RE,
-		MAX => 1.7976931348623157e308,
-		MIN => 4.9e-324,
+		MAX => 3.4028235e38,
+		MIN => -3.4028235e38,
+		# MAX => 1.7976931348623157e308,
+		# MIN => -1.7976931348623157e308,
+		POS_MIN => 4.9e-324,
+		NEG_MAX => -4.9e-324,
 	},
 } ;
 $RANGE->{byte} = $RANGE->{'java.lang.Byte'} ;
@@ -111,32 +119,34 @@ sub CastArgument {
 	if ((ClassIsReference($proto))&&(! UNIVERSAL::isa($arg, "Inline::Java::Object"))){
 		# Here we allow scalars to be passed in place of java.lang.Object
 		# They will wrapped on the Java side.
-		if (UNIVERSAL::isa($arg, "ARRAY")){
-			if (! UNIVERSAL::isa($arg, "Inline::Java::Array")){
-				my $an = new Inline::Java::Array::Normalizer($proto, $arg) ;
-				my $flat = $an->FlattenArray() ; 
-				my $inline = $Inline::Java::INLINE->{$module} ;
-				my $obj = Inline::Java::Object->__new($proto, $inline, -1, $flat->[0], $flat->[1]) ;
+		if (defined($arg)){
+			if (UNIVERSAL::isa($arg, "ARRAY")){
+				if (! UNIVERSAL::isa($arg, "Inline::Java::Array")){
+					my $an = new Inline::Java::Array::Normalizer($proto, $arg) ;
+					my $flat = $an->FlattenArray() ; 
+					my $inline = Inline::Java::get_INLINE($module) ;
+					my $obj = Inline::Java::Object->__new($proto, $inline, -1, $flat->[0], $flat->[1]) ;
 
-				# We need to create the array on the Java side, and then grab 
-				# the returned object.
-				$arg = new Inline::Java::Array($obj) ;
+					# We need to create the array on the Java side, and then grab 
+					# the returned object.
+					$arg = new Inline::Java::Array($obj) ;
+				}
+				else{
+					Inline::Java::debug("argument is already an Inline::Java array") ;
+				}
 			}
 			else{
-				Inline::Java::debug("argument is already an Inline::Java array") ;
-			}
-		}
-		else{
-			if (ref($arg)){
-				# We got some other type of ref...
-				croak "Can't convert $arg to object $proto" ;
-			}
-			else{
-				# Here we got a scalar
-				# Here we allow scalars to be passed in place of java.lang.Object
-				# They will wrapped on the Java side.
-				if ($proto ne "java.lang.Object"){
+				if (ref($arg)){
+					# We got some other type of ref...
 					croak "Can't convert $arg to object $proto" ;
+				}
+				else{
+					# Here we got a scalar
+					# Here we allow scalars to be passed in place of java.lang.Object
+					# They will wrapped on the Java side.
+					if ($proto ne "java.lang.Object"){
+						croak "Can't convert $arg to object $proto" ;
+					}
 				}
 			}
 		}
@@ -171,20 +181,33 @@ sub CastArgument {
 		croak "Can't convert $arg to $proto" ;
 	}
 	elsif (ClassIsBool($proto)){
-		if ($arg){
-			return (1, 0) ;
+		if ((! defined($arg))||(! $arg)){
+			return (0, 0) ;
 		}
 		else{
-			return (0, 0) ;
+			return (1, 0) ;
 		}
 	}
 	elsif (ClassIsString($proto)){
 		if (! defined($arg)){
-			return ("", 0) ;
+			return (undef, 0) ;
 		}
 		return ($arg, 0) ;
 	}
 	else{
+		if (! defined($arg)){
+			return ($arg, 0) ;
+		}
+		# Here the prototype calls for an object of type $proto
+		# We must ask Java if our object extends $proto		
+		if (ref($arg)){
+			my $msg = $arg->__isa($proto) ;
+			if ($msg){
+				croak $msg ;
+			}
+			Inline::Java::debug("$arg is a $proto") ;
+		}
+
 		return ($arg, 0) ;
 	}
 }
@@ -392,12 +415,14 @@ class InlineJavaClass {
 				if (num){
 					ijs.debug("  args is undef -> forcing to " + p.getName() + " 0") ;
 					ret = ijp.CreateObject(p, new Object [] {"0"}, new Class [] {String.class}) ;
+					ijs.debug("    result is " + ret.toString()) ;
 				}
 				else{
-					ijs.debug("  args is undef -> forcing to " + p.getName() + " ''") ;
-					ret = ijp.CreateObject(p, new Object [] {""}, new Class [] {String.class}) ;
+					ret = null ;
+					ijs.debug("  args is undef -> forcing to " + p.getName() + " " + ret) ;
+					ijs.debug("    result is " + ret) ;
+					// ijp.CreateObject(p, new Object [] {""}, new Class [] {String.class}) ;
 				}
-				ijs.debug("    result is " + ret.toString()) ;
 			}
 			else if (type.equals("scalar")){
 				String arg = ijp.pack((String)tokens.get(1)) ;
@@ -485,19 +510,8 @@ class InlineJavaClass {
 				String objid = (String)tokens.get(2) ;
 
 				Class c = ValidateClass(c_name) ;
-				// We need to check if c extends p
-				Class parent = c ;
-				boolean got_it = false ;
-				while (parent != null){
-					ijs.debug("    parent is " + parent.getName()) ;
-					if (parent == p){
-						got_it = true ;
-						break ;
-					}
-					parent = parent.getSuperclass() ;
-				}
 
-				if (got_it){
+				if (DoesExtend(c, p)){
 					ijs.debug("    " + c.getName() + " is a kind of " + p.getName()) ;
 					// get the object from the hash table
 					Integer oid = new Integer(objid) ;
@@ -516,6 +530,22 @@ class InlineJavaClass {
 		return ret ;
 	}
 
+
+	boolean DoesExtend(Class a, Class b){
+		// We need to check if a extends b
+		Class parent = a ;
+		boolean got_it = false ;
+		while (parent != null){
+			ijs.debug("    parent is " + parent.getName()) ;
+			if (parent == b){
+				got_it = true ;
+				break ;
+			}
+			parent = parent.getSuperclass() ;
+		}
+
+		return got_it ;
+	}
 
 
 	/*

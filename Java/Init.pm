@@ -71,41 +71,31 @@ public class InlineJavaServer {
 
 	// This constructor is used in server mode
 	InlineJavaServer(String[] argv) {
-		String mode = argv[0] ;
-		debug = new Boolean(argv[1]).booleanValue() ;
+		debug = new Boolean(argv[0]).booleanValue() ;
 
-		if (mode.equals("report")){
-			Report(argv, 2) ;
-		}
-		else if (mode.equals("run")){
-			int port = Integer.parseInt(argv[2]) ;
+		int port = Integer.parseInt(argv[1]) ;
 
-			try {
-				ss = new ServerSocket(port) ;
-				Socket client = ss.accept() ;
+		try {
+			ss = new ServerSocket(port) ;
+			Socket client = ss.accept() ;
 
-				BufferedReader br = new BufferedReader(
-					new InputStreamReader(client.getInputStream())) ;
-				BufferedWriter bw = new BufferedWriter(
-					new OutputStreamWriter(client.getOutputStream())) ;
+			BufferedReader br = new BufferedReader(
+				new InputStreamReader(client.getInputStream())) ;
+			BufferedWriter bw = new BufferedWriter(
+				new OutputStreamWriter(client.getOutputStream())) ;
 
-				while (true){
-					String cmd = br.readLine() ;
+			while (true){
+				String cmd = br.readLine() ;
 
-					String resp = ProcessCommand(cmd) ;
-					bw.write(resp) ;
-					bw.flush() ;
-				}
+				String resp = ProcessCommand(cmd) ;
+				bw.write(resp) ;
+				bw.flush() ;
 			}
-			catch (IOException e){
-				System.err.println("Can't open server socket on port " + String.valueOf(port)) ;
-			}
-			System.exit(1) ;
 		}
-		else{
-			System.err.println("Invalid startup mode " + mode) ;
-			System.exit(1) ;
+		catch (IOException e){
+			System.err.println("Can't open server socket on port " + String.valueOf(port)) ;
 		}
+		System.exit(1) ;
 	}
 
 
@@ -131,77 +121,6 @@ public class InlineJavaServer {
 		}
 
 		return resp ;
-	}
-
-
-	/*
-		Returns a report on the Java classes, listing all public methods
-		and members
-	*/
-	void Report(String [] class_list, int idx) {
-		String module = class_list[idx] ;
-		idx++ ;
-
-		// First we must open the file
-		try {
-			File dat = new File(module + ".jdat") ;
-			PrintWriter pw = new PrintWriter(new FileWriter(dat)) ;
-
-			String data = ProcessReport(class_list, idx) ;
-			pw.print(data) ; 
-			pw.close() ;
-		}
-		catch (IOException e){
-			System.err.println("Problems writing to " + module + ".jdat file: " + e.getMessage()) ;
-			System.exit(1) ;			
-		}
-	}
-
-
-	String ProcessReport(String [] class_list, int idx){
-		StringBuffer pw = new StringBuffer() ;
-
-		try {
-			for (int i = idx ; i < class_list.length ; i++){
-				if (! class_list[i].startsWith("InlineJavaServer")){
-					StringBuffer name = new StringBuffer(class_list[i]) ;
-					name.replace(name.length() - 6, name.length(), "") ;
-					Class c = Class.forName(name.toString()) ;
-															
-					pw.append("class " + c.getName() + "\n") ;
-					Constructor constructors[] = c.getConstructors() ;
-					Method methods[] = c.getMethods() ;
-					Field fields[] = c.getFields() ;
-
-					for (int j = 0 ; j < constructors.length ; j++){
-						Constructor x = constructors[j] ;
-						String sign = CreateSignature(x.getParameterTypes()) ;
-						Class decl = x.getDeclaringClass() ;
-						pw.append("constructor" + " " + sign + "\n") ;
-					}
-					for (int j = 0 ; j < methods.length ; j++){
-						Method x = methods[j] ;
-						String stat = (Modifier.isStatic(x.getModifiers()) ? " static " : " instance ") ;
-						String sign = CreateSignature(x.getParameterTypes()) ;
-						Class decl = x.getDeclaringClass() ;
-						pw.append("method" + stat + decl.getName() + " " + x.getName() + sign + "\n") ;
-					}
-					for (int j = 0 ; j < fields.length ; j++){
-						Field x = fields[j] ;
-						String stat = (Modifier.isStatic(x.getModifiers()) ? " static " : " instance ") ;
-						Class decl = x.getDeclaringClass() ;
-						Class type = x.getType() ;
-						pw.append("field" + stat + decl.getName() + " " + x.getName() + " " + type.getName() + "\n") ;
-					}
-				}
-			}
-		}
-		catch (ClassNotFoundException e){
-			System.err.println("Can't find class: " + e.getMessage()) ;
-			System.exit(1) ;
-		}
-
-		return pw.toString() ;
 	}
 
 
