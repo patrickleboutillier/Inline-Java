@@ -794,13 +794,6 @@ a few things to remember:
   - Even if you do not declare them, InlineJavaException and 
     InlineJavaPerlException exceptions (as well as others) may be thrown from
     within the native methods
-
-StopCallbackLoop method on any InlineJavaPerlCaller object that has been created
-by that same thread.
-
-Also, only threads that communicate with Perl through C<Inline::Java> are allowed
-to create InlineJavaPerlCaller objects and invoke their StartCallbackLoop /
-StopCallbackLoop methods.
    Z<>
 
 
