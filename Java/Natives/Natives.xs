@@ -242,7 +242,7 @@ void noop(){
 }
 
 #define XS(n)					void n()
-#define dXSARGS					noop()
+#define dXSARGS					int dummy_dxargs = 0
 #define XS_VERSION_BOOTCHECK	noop()
 #define XSRETURN_YES			noop()
 
