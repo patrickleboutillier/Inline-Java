@@ -6,6 +6,7 @@ use strict ;
 $Inline::Java::JVM::VERSION = '0.20' ;
 
 use Carp ;
+use IPC::Open3 ;
 
 
 sub new {
@@ -26,7 +27,7 @@ sub new {
 		require Inline::Java::JNI ;
 
 		my $jni = new Inline::Java::JNI(
-			$ENV{CLASSPATH} || "", 
+			$ENV{CLASSPATH} || "",
 			(Inline::Java::get_DEBUG() ? 1 : 0),
 		) ;
 		$jni->create_ijs() ;
@@ -49,15 +50,51 @@ sub new {
 			($cmd) = $cmd =~ /(.*)/ ;
 		}
 
-		open(JVM, "$cmd|") or croak "Can't exec JVM: $!" ;
-		
-		# Use JVM to shut up the 'possible typo' warning...
-		Inline::Java::debug(*JVM) ;
+		my $pid = 0 ;
+		eval {
+			my $in = '' ;
+			$pid = open3($in, ">&STDOUT", ">&STDERR", $cmd) ;
+			# We won't be sending anything to the child in this fashion...
+			close($in) ;
+		} ;
+		croak "Can't exec JVM: $@" if $@ ;
 
+		$this->{pid} = $pid ;
 		$this->{socket}	= $this->setup_socket($port, $o->{Java}->{STARTUP_DELAY}) ;
 	}
 
 	return $this ;
+}
+
+
+sub DESTROY {
+	my $this = shift ;
+
+	if ($this->{socket}){
+		# This asks the Java server to stop and die.
+		my $sock = $this->{socket} ;
+		if ($sock->connected()){
+			print $sock "die\n" ;
+		}
+		else{
+			carp "Lost connection with Java virtual machine" ;
+		}
+		close($sock) ;
+
+		if ($this->{pid}){
+			# Here we go ahead and send the signals anyway to be very 
+			# sure it's dead...
+			# Always be polite first, and then insist.
+			kill(15, $this->{pid}) ;
+			kill(9, $this->{pid}) ;
+
+			# Reap the child...
+			waitpid($this->{pid}, 0) ;
+		}
+	}
+
+	# For JNI we need to do nothing because the garbage collector will call
+	# the JNI destructor
 }
 
 
@@ -113,7 +150,7 @@ sub process_command {
 	my $this = shift ;
 	my $data = shift ;
 
-	Inline::Java::debug("  packet sent is $data") ;		
+	Inline::Java::debug("  packet sent is $data") ;
 
 	my $resp = undef ;
 	if ($this->{socket}){
@@ -134,24 +171,3 @@ sub process_command {
 
 	return $resp ;
 }
-
-
-sub DESTROY {
-	my $this = shift ;
-
-	if ($this->{socket}){
-		# This asks the Java server to stop and die.
-		my $sock = $this->{socket} ;
-		if ($sock->connected()){
-			print $sock "die\n" ;
-		}
-		else{
-			carp "Lost connection with Java virtual machine." ;
-		}
-		close($sock) ;
-	}
-
-	# For JNI we need to do nothing because the garbage collector will call
-	# the JNI destructor
-}
-

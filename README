@@ -85,8 +85,7 @@ Inline::Java version 0.20 includes:
   member variables.
 + Type casting is now available to force the selection of specific
   method signatures.
-+ Optional JNI (Java Native Interface) extension improves performance and stability
-  dramatically.
++ Optional JNI (Java Native Interface) extension improves performance.
 + Increased stability on Win32.
 
 Inline::Java version 0.01 includes:
