@@ -127,9 +127,11 @@ INFORMATION:
 = For information about Inline, see 'perldoc Inline'.
 = For information on using Java, visit http://java.sun.org
 
-The Inline::Java mailing list is inline@perl.org. 
-Send email to inline-subscribe@perl.org to subscribe.
+Inline::Java's mailing list is inline@perl.org. 
+To subscribe, send an email to inline-subscribe@perl.org
 
-Please send questions and comments to "Patrick LeBoutillier" <patl@cpan.org>
+Inline::Java's home page is http://inline.perl.org/java/
+
+Please send questions and comments to Patrick LeBoutillier <patl@cpan.org>
 
 Copyright (c) 2001-2002, Patrick LeBoutillier. All Rights Reserved.  

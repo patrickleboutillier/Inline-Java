@@ -917,10 +917,10 @@ For information about using C<Inline>, see L<Inline>.
 
 For information about other Inline languages, see L<Inline-Support>.
 
-Inline::Java's mailing list is inline@perl.org. To subscribe, send 
-an email to inline-subscribe@perl.org
+Inline::Java's mailing list is inline@perl.org. 
+To subscribe, send an email to inline-subscribe@perl.org
 
-Inline::Java's home page is http://inline-java.sourceforge.net
+Inline::Java's home page is http://inline.perl.org/java/
    Z<>
 
 
@@ -969,7 +969,7 @@ rebuilt to match the Perl code.
 
 Patrick LeBoutillier <patl@cpan.org>
 
-Brian Ingerson <INGY@cpan.org> is the author of Inline.
+Brian Ingerson <ingy@cpan.org> is the author of Inline.
    Z<>
 
 
