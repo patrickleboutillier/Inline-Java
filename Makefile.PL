@@ -138,7 +138,7 @@ sub expand_macros {
 	my $mm = shift ;
 	my $var = shift ;
 
-	my $val = $mm->{var} ;
+	my $val = $mm->{$var} ;
 	while ($val =~ s/\$\((.*?)\)/$mm->{$1}/){}
 	$val =~ s/\\/\\\\/g ;
 
