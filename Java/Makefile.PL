@@ -83,13 +83,17 @@ if (($build_jni || AskYN("Do you wish to build the JNI extension?"))){
 	if (! $done){
 		# We have all the required files selected.
 
+		CleanSoDirs() ;
+
 		print "Building with:\n" ;
 		foreach my $f (@files){
 			print File::Spec->catfile($files->{$f}->{selected}, $f) . "\n" ;
 		}
 		print "\n" ;
 
-		$done = WriteBSFile() ;
+		$done = 0 ;
+		# BS file used to be written here
+
 		if (! $done){
 			WriteMakefile(
 				NAME => 'Inline::Java::JNI',
@@ -102,6 +106,14 @@ if (($build_jni || AskYN("Do you wish to build the JNI extension?"))){
 				"\nNote: In order for Inline::Java to use the JNI extension, you\n" .
 				"will need to use the JNI configuration option or set the\n" .
 				"PERL_INLINE_JAVA_JNI environment variable to a true value.\n" .
+				"You will also need to add the following directories to your\n" .
+				Inline::Java::Portable::portable('SO_LIB_PATH_VAR') . " environment variable:\n" ;
+
+			foreach my $d (keys %so_dirs){
+				print "  $d\n" ;
+			}
+
+			print 
 				"See README.JNI for more information.\n" ;
 
 			print "\n" ;
@@ -128,7 +140,6 @@ sub search {
 	my $ext = Inline::Java::Portable::portable('SO_EXT') ;
 	if ($File::Find::dir =~ /jre/){
 		if ($file =~ /\.$ext$/){
-			print $File::Find::dir . "\n" ;
 			$so_dirs{$File::Find::dir} = 1 ;
 		}
 	}
@@ -143,6 +154,25 @@ sub search {
 		}
 	}
 }
+
+
+sub CleanSoDirs {
+	foreach my $d (keys %so_dirs){
+		if (-e File::Spec->catfile($d, $jvm_so)){
+			delete $so_dirs{$d} ;
+		}
+		elsif ($d =~ /plugin/){
+				delete $so_dirs{$d} ;
+		}
+		elsif ($d =~ /_threads/){
+			if ($d !~ /native_threads/){
+				delete $so_dirs{$d} ;
+			}
+		}
+	}
+	$so_dirs{$files->{$jvm_lib}->{selected}} = 1 ;
+}
+
 
 
 sub WriteBSFile {

@@ -23,7 +23,6 @@ if (! defined($Inline::Java::DEBUG)){
 require Inline ;
 use Carp ;
 use Config ;
-use FindBin ;
 use File::Copy ;
 use Cwd ;
 use Data::Dumper ;

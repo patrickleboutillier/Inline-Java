@@ -24,7 +24,7 @@ my $COMMAND_COM =
 				(defined($ENV{COMSPEC}))&&
 				($ENV{COMSPEC} =~ /(command|4dos)\.com/i)
 			)||
-			(`ver` =~ /win(dows )?(9[58]|m[ei])/i)
+			(`ver` =~ /win(dows )?((9[58])|(m[ei]))/i)
 		)
 	) || 0 ;
 
@@ -45,6 +45,7 @@ sub portable {
 		GOT_FORK			=>	$Config{d_fork},
 		ENV_VAR_PATH_SEP	=>	$Config{path_sep},
 		SO_EXT				=>	$Config{dlext},
+		SO_LIB_PATH_VAR		=>	'LD_LIBRARY_PATH',
 		ENV_VAR_PATH_SEP_CP	=>	':',
 		IO_REDIR			=>  '2>&1',
 		COMMAND_COM			=>  0,
@@ -59,6 +60,7 @@ sub portable {
 			# 2>&1 doesn't work under command.com
 			IO_REDIR			=>  ($COMMAND_COM ? '' : undef),
 			COMMAND_COM			=>	$COMMAND_COM,
+			SO_LIB_PATH_VAR		=>	'PATH',
 			JVM_LIB				=>	'jvm.lib',
 			JVM_SO				=>	'jvm.dll',
 		},
