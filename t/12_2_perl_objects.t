@@ -21,7 +21,7 @@ my $t = new t16() ;
 
 {
 	eval {
-		my $o = new Obj(name => 'toto') ;
+		my $o = new O::b::j(name => 'toto') ;
 		$t->set($o) ;
 		ok($t->get(), $o) ;
 		ok($t->get()->{name}, 'toto') ;
@@ -36,7 +36,7 @@ my $t = new t16() ;
 		ok($t->add_eval(5, 6), 11) ;
 		check_count(2) ; # po + 1 leaked object
 
-		eval {$t->method_call($o, 'bad', ['bad'])} ; ok($@, qr/Can't locate object method "bad" via package "Obj"/) ;
+		eval {$t->method_call($o, 'bad', ['bad'])} ; ok($@, qr/Can't locate object method "bad" via package "O::b::j"/) ;
 		check_count(3) ; # po + $o + 1 leaked object
 		eval {$t->round_trip({})} ; ok($@, qr/^Can't convert (.*?) to object org.perl.inline.java.InlineJavaPerlObject/) ;
 		eval {$t->error()} ; ok($@, qr/alone/) ;
@@ -45,7 +45,7 @@ my $t = new t16() ;
 		$t->dispose($o) ;
 		check_count(2) ; # 2 leaked objects
 
-		my $jo = $t->create("Obj", ['name', 'titi']) ;
+		my $jo = $t->create("O::b::j", ['name', 'titi']) ;
 		ok($jo->get("name"), 'titi') ;
 		$t->have_fun() ;
 		ok($jo->get('shirt'), qr/lousy t-shirt/) ;
@@ -79,7 +79,7 @@ sub debug_objects {
 }
 
 
-package Obj ;
+package O::b::j ;
 
 sub new {
 	my $class = shift ;

@@ -293,7 +293,10 @@ sub ValidateArgs {
 			}
 			elsif ($arg =~ /^(.*?)=/){
 				my $id = Inline::Java::Callback::PutObject($arg) ;
-				push @ret, "perl_object:$1:$id" ;
+				# Bug. The delimiter is :, so we need to escape the package separator (::)
+				my $pkg = $1 ;
+				$pkg =~ s/:/\//g ;
+				push @ret, "perl_object:$pkg:$id" ;
 			}
 			else {
 				if (! $callback){
