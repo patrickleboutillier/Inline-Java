@@ -1,6 +1,7 @@
-#!/usr/local/perl56/bin/perl
+use strict ;
 
-use lib "/home/patrick/perl/dev" ;
+use blib ;
+
 
 require "Inline/Java.pm" ;
 use Inline::Java::Array ;

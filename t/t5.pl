@@ -1,9 +1,6 @@
-#!/home/patrickl/bin/perl56
-
 use strict ;
 
-use lib "/home/patrickl/perl/dev" ;
-use lib "/home/patrickl/perl/dev/Inline/blib/arch/auto/Inline/Java/JNI" ;
+use blib ;
 
 
 BEGIN {
