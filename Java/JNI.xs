@@ -226,7 +226,6 @@ process_command(this, data)
 
 	CODE:
 	env = get_env(this) ;
-	printf(":%s:\n", data) ;
 	cmd = (*(env))->NewStringUTF(env, data) ;
 	check_exception(env, "Can't create java.lang.String") ;
 
