@@ -28,24 +28,24 @@ my $RANGE = {
 		MAX => 2147483647,
 		MIN => -2147483648,
 	},
-	'java.lang.Long' => {
-		REGEXP => $INT_RE,
-		MAX => 9223372036854775807,
-		MIN => -9223372036854775808,
-	},
 	'java.lang.Float' => {
 		REGEXP => $FLOAT_RE,
 		MAX => 3.4028235e38,
 		MIN => -3.4028235e38,
-		POS_MIN	=> 1.4e-45,
-		NEG_MAX => -1.4e-45,
+		# POS_MIN	=> 1.4e-45,
+		# NEG_MAX => -1.4e-45,
+	},
+	'java.lang.Long' => {
+		REGEXP => $INT_RE,
+		# MAX => 9223372036854775807,
+		# MIN => -9223372036854775808,
 	},
 	'java.lang.Double' => {
 		REGEXP => $FLOAT_RE,
 		# MAX => 1.79e308,
 		# MIN => -1.79e308,
-		POS_MIN => 4.9e-324,
-		NEG_MAX => -4.9e-324,
+		# POS_MIN => 4.9e-324,
+		# NEG_MAX => -4.9e-324,
 	},
 } ;
 $RANGE->{byte} = $RANGE->{'java.lang.Byte'} ;
