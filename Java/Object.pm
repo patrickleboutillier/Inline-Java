@@ -84,10 +84,10 @@ sub __validate_prototype {
 	my $inline = shift ;
 
 	my @matched = () ;
- 
-	my $nb_proto = scalar(values %{$protos}) ;
+
+	my @proto_values = values %{$protos} ; 
 	my @errors = () ;
-	foreach my $s (values %{$protos}){
+	foreach my $s (@proto_values){
 		my $proto = $s->{SIGNATURE} ;
 		my $stat = $s->{STATIC} ;
 		my $idx = $s->{IDX} ;
@@ -101,7 +101,7 @@ sub __validate_prototype {
 			($new_args, $score) = Inline::Java::Class::CastArguments($args, $proto, $inline) ;
 		} ;
 		if ($@){
-			if ($nb_proto == 1){
+			if (scalar(@proto_values) == 1){
 				# Here we have only 1 prototype, so we return the error.
 				croak $@ ;
 			}
@@ -141,7 +141,7 @@ sub __validate_prototype {
 		my $msg = "In method $method of class $name: Can't find any signature that matches " .
 			"the arguments passed $sa.\nAvailable signatures are:\n"  ;
 		my $i = 0 ;
-		foreach my $s (values %{$protos}){
+		foreach my $s (@proto_values){
 			my $proto = $s->{SIGNATURE} ;	
 			my $static = ($s->{STATIC} ? "static " : "") ;
 

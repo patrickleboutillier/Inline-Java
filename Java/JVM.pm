@@ -421,7 +421,7 @@ sub process_command {
 		Inline::Java::debug(3, "packet recv is $resp") ;
 
 		# We got an answer from the server. Is it a callback?
-		if ($resp =~ /^callback/){
+		if ($resp =~ /^callback/o){
 			($data, $Inline::Java::Callback::OBJECT_HOOK) = Inline::Java::Callback::InterceptCallback($inline, $resp) ;
 			next ;
 		}
