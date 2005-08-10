@@ -31,6 +31,7 @@ use Inline::Java::Portable ;
 use Inline::Java::Class ;
 use Inline::Java::Object ;
 use Inline::Java::Array ;
+use Inline::Java::Handle ;
 use Inline::Java::Protocol ;
 use Inline::Java::Callback ;
 # Must be last.
@@ -341,8 +342,8 @@ sub build {
 	$pcode =~ s/\"(.*?)\"//g ;
 	$pcode =~ s/\/\*(.*?)\*\///gs ;
 	$pcode =~ s/\/\/(.*)$//gm ;
-	if ($pcode =~ /public\s+class\s+(\w+)/){
-		$source = "$1.java" ;
+	if ($pcode =~ /public\s+(abstract\s+)?class\s+(\w+)/){
+		$source = "$2.java" ;
 	}
 
 	my $install_dir = File::Spec->catdir($o->get_api('install_lib'), 
