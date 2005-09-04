@@ -1,5 +1,8 @@
 Revision history for Perl extension Inline::Java
 ------------------------------------------------
+0.51
+    - Other minor bug fixes
+
 0.50  Mon Jan 31 20:14:43 EST 2005
     - Added HOST configuration option to access JVM server remotely
     - Fixed bug with paths in Cygwin
