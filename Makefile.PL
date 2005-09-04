@@ -157,6 +157,8 @@ WriteMakefile(
 	PREREQ_PM => {
 		Inline	=> 0.44,
 		Test => 1.13,
+		Encode => 0,
+		'MIME::Base64' => 0,
 	},
 	PM => {
 		'Java.pm' => File::Spec->catfile('$(INST_LIBDIR)', 'Java.pm'),
