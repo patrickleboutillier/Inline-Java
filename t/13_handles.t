@@ -14,20 +14,29 @@ use Inline::Java qw(caught) ;
 BEGIN {
 	# Leave previous server enough time to die...
 	sleep(1) ;
-	plan(tests => 2) ;
+	plan(tests => 13) ;
 }
 
 
 my $t = new t13() ;
 
 {
-	my $o = t13->getWriter(File::Spec->catfile("t", "t13.txt")) ;
+	my $f = File::Spec->catfile("t", "t13.txt") ;
+	my $o = t13->getWriter($f) ;
 	my $h = new Inline::Java::Handle($o) ;
 	for (my $i = 1 ; $i <= 10 ; $i++){
 	 	print $h "$i\n" ;
 	}
-	# close($h) ;	
+	close($h) ;	
 	ok(1) ;
+
+	$o = t13->getReader($f) ;
+	$h = new Inline::Java::Handle($o) ;
+	for (my $i = 1 ; $i <= 10 ; $i++){
+		my $l = <$h> ;
+		ok($l, $i) ;
+	}
+	ok(! defined(<$h>)) ;
 }
 
 ok($t->__get_private()->{proto}->ObjectCount(), 1) ;

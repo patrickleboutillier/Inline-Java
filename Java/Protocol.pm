@@ -245,7 +245,6 @@ sub MakeJavaHandleBuffered {
 	my $this = shift ;
 
 	my $id = $this->{obj_priv}->{id} ;
-	my $class = $this->{obj_priv}->{java_class} ;
 	Inline::Java::debug(3, "making handle object($id) buffered") ;
 
 	my $data = join(" ", 
@@ -262,10 +261,10 @@ sub ReadLineFromJavaHandle {
 
 	my $id = undef ;
 	if (! defined($this->{obj_priv}->{buffered})){
-		$this->{obj_priv}->{buffered} = $this->MakeJavaHandleBuffered() ;
+		my $nid = $this->MakeJavaHandleBuffered() ;
+		$this->{obj_priv}->{buffered} = Inline::Java::Object->__new('<buffer>', $this->{inline}, $nid) ;
 	}
-	$id = $this->{obj_priv}->{buffered} ;
-	my $class = $this->{obj_priv}->{java_class} ;
+	$id = $this->{obj_priv}->{buffered}->__get_private()->{id} ;
 	Inline::Java::debug(3, "reading line from handle object($id)") ;
 
 	my $data = join(" ", 
@@ -282,7 +281,6 @@ sub WriteToJavaHandle {
 	my $str = shift ;
 
 	my $id = $this->{obj_priv}->{id} ;
-	my $class = $this->{obj_priv}->{java_class} ;
 	Inline::Java::debug(3, "writing to handle object($id)") ;
 
 	my $data = join(" ", 
