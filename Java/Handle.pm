@@ -144,18 +144,19 @@ sub AUTOLOAD {
 sub DESTROY {
 	my $this = shift ;
 
-	my $obj = $this->__get_object() ;
-	if (! $obj->__get_private()->{closed}){
-		$this->__close() ;	
-	}
 
 	my $knot = tied *{$this} ;
 	if (! $knot){
 		Inline::Java::debug(4, "destroying Inline::Java::Handle::Tie") ;
 
+		my $obj = $this->__get_object() ;
+		if (! $obj->__get_private()->{closed}){
+		 	$this->__close() ;	
+		}
+
 		$OBJECTS->{$this} = undef ;
 	}
-	else{
+	else {
 		Inline::Java::debug(4, "destroying Inline::Java::Handle") ;
 	}
 }

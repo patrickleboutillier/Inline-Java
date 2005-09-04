@@ -14,6 +14,7 @@ Java/Callback.pm
 Java/Callback.pod
 Java/Portable.pm
 Java/Array.pm
+Java/Handle.pm
 Java/Makefile.PL
 Java/JVM.pm
 Java/Server.pm
@@ -39,6 +40,7 @@ Java/sources/org/perl/inline/java/InlineJavaCallbackQueue.java
 Java/sources/org/perl/inline/java/InlineJavaPerlNatives.java
 Java/sources/org/perl/inline/java/InlineJavaPerlInterpreter.java
 Java/sources/org/perl/inline/java/InlineJavaPerlObject.java
+Java/sources/org/perl/inline/java/InlineJavaHandle.java
 Java/PerlNatives/Makefile.PL
 Java/PerlNatives/PerlNatives.pm
 Java/PerlNatives/PerlNatives.xs

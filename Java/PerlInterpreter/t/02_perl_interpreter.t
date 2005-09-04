@@ -4,7 +4,7 @@ use Test ;
 use File::Spec ;
 
 BEGIN {
-    plan(tests => 7) ;
+    plan(tests => 12) ;
 }
 
 
@@ -42,7 +42,8 @@ sub run_java {
 
 	my $java = File::Spec->catfile(
 		Inline::Java::get_default_j2sdk(),
-		'bin', 'java' . Inline::Java::Portable::portable("EXE_EXTENSION")) ;
+		Inline::Java::Portable::portable("J2SDK_BIN"), 
+		'java' . Inline::Java::Portable::portable("EXE_EXTENSION")) ;
 
 	my $debug = $ENV{PERL_INLINE_JAVA_DEBUG} || 0 ;
 	my $cmd = Inline::Java::Portable::portable("SUB_FIX_CMD_QUOTES", "\"$java\" " . 
@@ -69,7 +70,7 @@ class InlineJavaPerlInterpreterTests implements Runnable {
 	private InlineJavaPerlInterpreterTests() throws InlineJavaException, InlineJavaPerlException {
 	}
 
-	private static void ok(Object o1, Object o2){
+	private synchronized static void ok(Object o1, Object o2){
 		if (o1.equals(o2)){
 			String comment = " # " + o1 + " == " + o2 ;
 			System.out.println("ok " + cnt + comment) ;

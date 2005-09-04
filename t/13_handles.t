@@ -24,9 +24,9 @@ my $t = new t13() ;
 	my $o = t13->getWriter(File::Spec->catfile("t", "t13.txt")) ;
 	my $h = new Inline::Java::Handle($o) ;
 	for (my $i = 1 ; $i <= 10 ; $i++){
-		print $h "$i\n" ;
+	 	print $h "$i\n" ;
 	}
-	close($h) ;	
+	# close($h) ;	
 	ok(1) ;
 }
 

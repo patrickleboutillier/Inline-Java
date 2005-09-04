@@ -358,8 +358,9 @@ sub build {
 		close(Inline::Java::JAVA) ;
 
 		# ... and compile it.
-		my $javac = File::Spec->catfile($o->get_java_config('J2SDK'), 'bin', 
-		"javac" . Inline::Java::Portable::portable("EXE_EXTENSION")) ;
+		my $javac = File::Spec->catfile($o->get_java_config('J2SDK'), 
+			Inline::Java::Portable::portable("J2SDK_BIN"), 
+			"javac" . Inline::Java::Portable::portable("EXE_EXTENSION")) ;
 		my $redir = Inline::Java::Portable::portable("IO_REDIR") ;
 
 		my $args = "-deprecation " . $o->get_java_config('EXTRA_JAVAC_ARGS') ;

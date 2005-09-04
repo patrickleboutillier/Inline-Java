@@ -8,7 +8,7 @@ use IPC::Open3 ;
 use IO::Socket ;
 use Inline::Java::Portable ;
 
-$Inline::Java::JVM::VERSION = '0.50' ;
+$Inline::Java::JVM::VERSION = '0.50_90' ;
 
 my %SIGS = () ;
 
@@ -109,7 +109,8 @@ sub new {
 			}
 		}
 
-		my $java = File::Spec->catfile($o->get_java_config('J2SDK'), 'bin',
+		my $java = File::Spec->catfile($o->get_java_config('J2SDK'), 
+			Inline::Java::Portable::portable("J2SDK_BIN"),
 			($this->{debugger} ? "jdb" : "java") . 
 			Inline::Java::Portable::portable("EXE_EXTENSION")) ;
 
