@@ -140,11 +140,13 @@ new(CLASS, classpath, args, embedded, debug)
 
 	PREINIT:
 	JavaVMInitArgs vm_args ;
-	JavaVMOption options[8] ;
+	JavaVMOption options[128] ;
 	JNIEnv *env ;
 	JNINativeMethod nm ;
 	jint res ;
 	char *cp ;
+	char *al ;
+	char *alsep ;
 
     CODE:
 	RETVAL = (InlineJavaJNIVM *)safemalloc(sizeof(InlineJavaJNIVM)) ;
@@ -158,16 +160,24 @@ new(CLASS, classpath, args, embedded, debug)
 
 	vm_args.version = JNI_VERSION_1_2 ;
 	vm_args.options = options ;
-	vm_args.nOptions = 2 ;
+	vm_args.nOptions = 0 ;
 	vm_args.ignoreUnrecognized = JNI_FALSE ;
 
-	options[0].optionString = ((RETVAL->debug > 5) ? "-verbose" : "-verbose:") ;
-	cp = (char *)malloc((strlen(classpath) + 128) * sizeof(char)) ;
-	sprintf(cp, "-Djava.class.path=%s", classpath, args) ;
-	options[1].optionString = cp ;
+	options[vm_args.nOptions++].optionString = 
+		((RETVAL->debug > 5) ? "-verbose" : "-verbose:") ;
+	cp = (char *)malloc((strlen(classpath) + 32) * sizeof(char)) ;
+	sprintf(cp, "-Djava.class.path=%s", classpath) ;
+	options[vm_args.nOptions++].optionString = cp ;
+
+	al = NULL ;
 	if (strlen(args) > 0){
-		options[2].optionString = args ;
-		vm_args.nOptions++ ;
+		al = (char *)malloc((strlen(args) + 1) * sizeof(char)) ;
+		strcpy(al, args) ;
+		alsep = strtok(al, " ") ;
+		while (alsep != NULL){
+			options[vm_args.nOptions++].optionString = alsep ;
+    		alsep = strtok(NULL, " ") ;
+		}	
 	}
 
 	/* Embedded patch and idea by Doug MacEachern */
@@ -195,6 +205,9 @@ new(CLASS, classpath, args, embedded, debug)
 	}
 
 	free(cp) ;
+	if (al != NULL){
+		free(al) ;
+	}
 
 
 	/* Load the classes that we will use */
