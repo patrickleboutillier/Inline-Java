@@ -147,6 +147,7 @@ new(CLASS, classpath, args, embedded, debug)
 	char *cp ;
 	char *al ;
 	char *alsep ;
+	char *tmp ;
 
     CODE:
 	RETVAL = (InlineJavaJNIVM *)safemalloc(sizeof(InlineJavaJNIVM)) ;
@@ -171,8 +172,17 @@ new(CLASS, classpath, args, embedded, debug)
 
 	al = NULL ;
 	if (strlen(args) > 0){
-		al = (char *)malloc((strlen(args) + 1) * sizeof(char)) ;
-		strcpy(al, args) ;
+		tmp = (char *)malloc((strlen(args) + 1) * sizeof(char)) ;
+		strcpy(tmp, args) ;
+		al = (char *)malloc((strlen(tmp) + 1) * sizeof(char)) ;
+		strcpy(al, "") ;
+		alsep = strtok(tmp, "\"'") ;
+		while (alsep != NULL){
+			strcat(al, alsep) ;
+    		alsep = strtok(NULL, "\"'") ;
+		}
+		free(tmp) ;
+
 		alsep = strtok(al, " ") ;
 		while (alsep != NULL){
 			options[vm_args.nOptions++].optionString = alsep ;

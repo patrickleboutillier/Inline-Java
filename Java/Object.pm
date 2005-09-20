@@ -44,10 +44,16 @@ sub __new {
 	$PRIVATES->{$knot} = $priv ;
 
 	if ($objid <= -1){
+		my $obj = undef ;
 		eval {
-			$this->__get_private()->{proto}->CreateJavaObject($java_class, $proto, $args) ;
+			$obj = $this->__get_private()->{proto}->CreateJavaObject($java_class, $proto, $args) ;
 		} ;		
 		croak $@ if $@ ;
+
+		if (! defined($this->__get_private()->{id})){
+			# Use created a java::lang::String or something...
+			return $obj ;
+		}
 	}
 	else{
 		$this->__get_private()->{id} = $objid ;

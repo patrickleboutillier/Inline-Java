@@ -27,7 +27,7 @@ use Inline(
 		}
 	|,
 	NAME => 't09::p1',
-	EXTRA_JAVA_ARGS => '-Dprop1=a -Dprop2=b',
+	EXTRA_JAVA_ARGS => '-Dprop1="a:"  -Dprop2=b',
 ) ;
 
 
@@ -61,7 +61,7 @@ my $t = new t09::p1::t09p1() ;
 
 {
 	ok($t->{name}, "p1") ;
-	ok($t->get_prop(1), 'a') ;
+	ok($t->get_prop(1), 'a:') ;
 	ok($t->get_prop(2), 'b') ;
 	ok($t09::p2::t09p2::name . $t09::p3::t09p3::name, "p2p3") ;
 	ok($t09::p2::t09p2::name . $t09::p3::t09p3::name, "p2p3") ;
