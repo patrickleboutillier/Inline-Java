@@ -23,6 +23,8 @@ public class InlineJavaServer {
 	private boolean jni = false ;
 	private Thread creator = null ;
 	private int thread_count = 0 ;
+	private String file_encoding = null ;
+	private String socket_encodings = null ;
 
 
 	// This constructor is used in JNI mode
@@ -60,6 +62,10 @@ public class InlineJavaServer {
 				String name = "IJST-#" + thread_count++ ;
 				InlineJavaServerThread ijt = new InlineJavaServerThread(name, this, server_socket.accept(),
 					(priv ? new InlineJavaUserClassLoader() : ijucl)) ;
+				if (socket_encodings == null){
+					file_encoding = System.getProperty("file.encoding") ;
+					socket_encodings = ijt.GetEncodings() ;
+				}
 				ijt.start() ;
 				if (! shared_jvm){
 					try {
@@ -110,7 +116,9 @@ public class InlineJavaServer {
 
 
 	String GetType(){
-		return (shared_jvm ? "shared" : "private") ;
+		return (shared_jvm ? "shared" : "private") + 
+			"\n" + file_encoding +
+			"\n" + socket_encodings ;
 	}
 
 

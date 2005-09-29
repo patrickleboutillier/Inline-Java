@@ -7,7 +7,7 @@ use Carp ;
 use MIME::Base64 ;
 use Encode qw(encode_utf8 decode_utf8) ;
 
-$Inline::Java::Protocol::VERSION = '0.50_90' ;
+$Inline::Java::Protocol::VERSION = '0.50_91' ;
 
 my %CLASSPATH_ENTRIES = () ;
 
@@ -54,8 +54,9 @@ sub ServerType {
 	Inline::Java::debug(3, "getting server type") ;
 
 	my $data = "server_type" ;
+	my $info = $this->Send($data) ;
 
-	return $this->Send($data) ;
+	return split("\n", $info) ;
 }
 
 

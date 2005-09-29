@@ -134,20 +134,21 @@ InlineJavaJNIVM *
 new(CLASS, classpath, args, embedded, debug)
 	char * CLASS
 	char * classpath
-	char * args
+	AV * args
 	int	embedded
 	int	debug
 
 	PREINIT:
 	JavaVMInitArgs vm_args ;
-	JavaVMOption options[128] ;
+	JavaVMOption *options ;
 	JNIEnv *env ;
 	JNINativeMethod nm ;
 	jint res ;
 	char *cp ;
-	char *al ;
-	char *alsep ;
-	char *tmp ;
+	int args_len ;
+	int i ;
+	SV ** val = NULL ;
+	STRLEN n_a ;
 
     CODE:
 	RETVAL = (InlineJavaJNIVM *)safemalloc(sizeof(InlineJavaJNIVM)) ;
@@ -159,7 +160,11 @@ new(CLASS, classpath, args, embedded, debug)
 	RETVAL->debug = debug ;
 	RETVAL->destroyed = 0 ;
 
+	/* Figure out the length of the  args array */
+	args_len = av_len(args) + 1 ;
 	vm_args.version = JNI_VERSION_1_2 ;
+	
+	options = (JavaVMOption *)malloc((2 + args_len) * sizeof(JavaVMOption)) ;
 	vm_args.options = options ;
 	vm_args.nOptions = 0 ;
 	vm_args.ignoreUnrecognized = JNI_FALSE ;
@@ -170,24 +175,11 @@ new(CLASS, classpath, args, embedded, debug)
 	sprintf(cp, "-Djava.class.path=%s", classpath) ;
 	options[vm_args.nOptions++].optionString = cp ;
 
-	al = NULL ;
-	if (strlen(args) > 0){
-		tmp = (char *)malloc((strlen(args) + 1) * sizeof(char)) ;
-		strcpy(tmp, args) ;
-		al = (char *)malloc((strlen(tmp) + 1) * sizeof(char)) ;
-		strcpy(al, "") ;
-		alsep = strtok(tmp, "\"'") ;
-		while (alsep != NULL){
-			strcat(al, alsep) ;
-    		alsep = strtok(NULL, "\"'") ;
+	for (i = 0 ; i < args_len ; i++){
+		val = av_fetch(args, i, 0) ;
+		if (val != NULL){
+			options[vm_args.nOptions++].optionString = SvPV(*val, n_a) ;
 		}
-		free(tmp) ;
-
-		alsep = strtok(al, " ") ;
-		while (alsep != NULL){
-			options[vm_args.nOptions++].optionString = alsep ;
-    		alsep = strtok(NULL, " ") ;
-		}	
 	}
 
 	/* Embedded patch and idea by Doug MacEachern */
@@ -214,10 +206,8 @@ new(CLASS, classpath, args, embedded, debug)
 		}
 	}
 
+	free(options) ;
 	free(cp) ;
-	if (al != NULL){
-		free(al) ;
-	}
 
 
 	/* Load the classes that we will use */

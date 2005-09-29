@@ -6,9 +6,10 @@ use Carp ;
 use IO::File ;
 use IPC::Open3 ;
 use IO::Socket ;
+use Text::ParseWords ;
 use Inline::Java::Portable ;
 
-$Inline::Java::JVM::VERSION = '0.50_90' ;
+$Inline::Java::JVM::VERSION = '0.50_91' ;
 
 my %SIGS = () ;
 
@@ -47,9 +48,12 @@ sub new {
 	if ($o->get_java_config('JNI')){
 		Inline::Java::debug(1, "JNI mode") ;
 
+		# Split args and remove quotes
+		my @args = map {s/(['"])(.*)\1/$2/ ; $_}
+			parse_line('\s+', 1, $args) ;
 		my $jni = new Inline::Java::JNI(
 			$ENV{CLASSPATH} || '',
-			$args || '',
+			\@args,
 			$this->{embedded},
 			Inline::Java::get_DEBUG(),
 		) ;

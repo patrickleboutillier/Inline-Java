@@ -15,6 +15,8 @@ class InlineJavaProtocol {
 	private InlineJavaArray ija ;
 	private String cmd ;
 	private String response = null ;
+	// For later use maybe...
+	private String encoding = "UTF-8" ;
 
 	static private HashMap member_cache = new HashMap() ;
 	static private String report_version = "V2" ;
@@ -795,12 +797,24 @@ class InlineJavaProtocol {
 
 
 	String Decode(String s){
-		return new String(InlineJavaUtils.DecodeBase64(s.toCharArray())) ;
+		// try {
+			return new String(InlineJavaUtils.DecodeBase64(s.toCharArray())) ;
+		// }
+		// catch (UnsupportedEncodingException e){
+		// 	e.printStackTrace() ;
+		// 	return null ;
+		// }
 	}
 
 
 	String Encode(String s){
-		return new String(InlineJavaUtils.EncodeBase64(s.getBytes())) ;
+		// try {
+			return new String(InlineJavaUtils.EncodeBase64(s.getBytes())) ;
+		// }
+		// catch (UnsupportedEncodingException e){
+		// 	e.printStackTrace() ;
+		// 	return null ;
+		// }
 	}
 
 
