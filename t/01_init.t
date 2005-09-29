@@ -18,11 +18,15 @@ my $ij = $types1::INLINE ;
 $ij = $types1::INLINE ; # Stupid warning...
 my $jdk = $ij->get_java_config("J2SDK") ;
 my $ver = types1->version() ;
+
+my $pc = new Inline::Java::Protocol(undef, $ij) ;
+my ($st, $file_enc, $sock_encs) = $pc->ServerType() ;
 print STDERR "\nPerl version is $]\n" ;
 print STDERR "Inline version is $Inline::VERSION\n" ;
 print STDERR "Inline::Java version is $Inline::Java::VERSION\n" ;
 
 print STDERR "J2SDK version is $ver, from $jdk\n" ;
+print STDERR "Java encodings are file: $file_enc, stream: $sock_encs\n" ;
 print STDERR "CLASSPATH is $main::cp\n" ;
 
 if ($ENV{PERL_INLINE_JAVA_EMBEDDED_JNI}){

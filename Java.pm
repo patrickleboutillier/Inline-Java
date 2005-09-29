@@ -8,7 +8,7 @@ package Inline::Java ;
 use strict ;
 require 5.006 ;
 
-$Inline::Java::VERSION = '0.50_90' ;
+$Inline::Java::VERSION = '0.50_91' ;
 
 
 # DEBUG is set via the DEBUG config
@@ -486,7 +486,7 @@ sub load {
 		my $pc = new Inline::Java::Protocol(undef, $o) ;
 		$pc->AddClassPath(Inline::Java::Portable::portable("SUB_FIX_JAVA_PATH", Inline::Java::Portable::get_user_jar())) ;
 
-		my $st = $pc->ServerType() ;
+		my ($st, $file_enc, $sock_encs) = $pc->ServerType() ;
 		if ((($st eq "shared")&&(! $o->get_java_config('SHARED_JVM')))||
 			(($st eq "private")&&($o->get_java_config('SHARED_JVM')))){
 			croak "JVM type mismatch on port " . $JVM->{port} ;
