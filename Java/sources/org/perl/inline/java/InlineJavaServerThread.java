@@ -11,8 +11,6 @@ class InlineJavaServerThread extends Thread {
 	private BufferedReader br ;
 	private BufferedWriter bw ;
 	private InlineJavaUserClassLoader ijucl ;
-	private String encoding_in = null ;
-	private String encoding_out = null ;
 
 
 	InlineJavaServerThread(String name, InlineJavaServer _ijs, Socket _client, InlineJavaUserClassLoader _ijucl) throws IOException {
@@ -23,9 +21,6 @@ class InlineJavaServerThread extends Thread {
 
 		InputStreamReader ir = new InputStreamReader(client.getInputStream()) ;
 		OutputStreamWriter or = new OutputStreamWriter(client.getOutputStream()) ;
-		encoding_in = ir.getEncoding() ;
-		encoding_out = or.getEncoding() ;
-
 		br = new BufferedReader(ir) ;
 		bw = new BufferedWriter(or) ;
 	}
@@ -41,11 +36,6 @@ class InlineJavaServerThread extends Thread {
 	}
 
 	
-	String GetEncodings(){
-		return encoding_in + "/" + encoding_out ;
-	}
-
-
 	InlineJavaUserClassLoader GetUserClassLoader(){
 		return ijucl ;
 	}

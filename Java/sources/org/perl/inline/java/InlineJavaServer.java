@@ -23,8 +23,6 @@ public class InlineJavaServer {
 	private boolean jni = false ;
 	private Thread creator = null ;
 	private int thread_count = 0 ;
-	private String file_encoding = null ;
-	private String socket_encodings = null ;
 
 
 	// This constructor is used in JNI mode
@@ -62,10 +60,6 @@ public class InlineJavaServer {
 				String name = "IJST-#" + thread_count++ ;
 				InlineJavaServerThread ijt = new InlineJavaServerThread(name, this, server_socket.accept(),
 					(priv ? new InlineJavaUserClassLoader() : ijucl)) ;
-				if (socket_encodings == null){
-					file_encoding = System.getProperty("file.encoding") ;
-					socket_encodings = ijt.GetEncodings() ;
-				}
 				ijt.start() ;
 				if (! shared_jvm){
 					try {
@@ -116,9 +110,7 @@ public class InlineJavaServer {
 
 
 	String GetType(){
-		return (shared_jvm ? "shared" : "private") + 
-			"\n" + file_encoding +
-			"\n" + socket_encodings ;
+		return (shared_jvm ? "shared" : "private") ; 
 	}
 
 
@@ -148,7 +140,9 @@ public class InlineJavaServer {
 				resp = ijp.GetResponse() ;
 			}
 			catch (InlineJavaException e){
-				String err = "error scalar:" + ijp.Encode(e.getMessage()) ;
+				// Encode the error in default encoding since we don't want any
+				// Exceptions thrown here...
+				String err = "error scalar:" + ijp.EncodeFromByteArray(e.getMessage().getBytes()) ;
 				InlineJavaUtils.debug(3, "packet sent is " + err) ;
 				resp = err ;
 			}
@@ -310,7 +304,7 @@ public class InlineJavaServer {
 
 
 	/*
-		With PerlInterpreter this is called twisce, but we don't want to create
+		With PerlInterpreter this is called twice, but we don't want to create
 		a new object the second time.
 	*/
 	public static InlineJavaServer jni_main(int debug){

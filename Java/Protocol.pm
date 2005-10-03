@@ -54,9 +54,8 @@ sub ServerType {
 	Inline::Java::debug(3, "getting server type") ;
 
 	my $data = "server_type" ;
-	my $info = $this->Send($data) ;
 
-	return split("\n", $info) ;
+	return $this->Send($data) ;
 }
 
 

@@ -15,7 +15,7 @@ class InlineJavaProtocol {
 	private InlineJavaArray ija ;
 	private String cmd ;
 	private String response = null ;
-	// For later use maybe...
+
 	private String encoding = "UTF-8" ;
 
 	static private HashMap member_cache = new HashMap() ;
@@ -796,25 +796,43 @@ class InlineJavaProtocol {
 	}
 
 
-	String Decode(String s){
-		// try {
-			return new String(InlineJavaUtils.DecodeBase64(s.toCharArray())) ;
-		// }
-		// catch (UnsupportedEncodingException e){
-		// 	e.printStackTrace() ;
-		// 	return null ;
-		// }
+	byte[] DecodeToByteArray(String s){
+		return InlineJavaUtils.DecodeBase64(s.toCharArray()) ;
 	}
 
 
-	String Encode(String s){
-		// try {
-			return new String(InlineJavaUtils.EncodeBase64(s.getBytes())) ;
-		// }
-		// catch (UnsupportedEncodingException e){
-		// 	e.printStackTrace() ;
-		// 	return null ;
-		// }
+	String Decode(String s) throws InlineJavaException {
+		try {
+			if (encoding != null){
+				return new String(DecodeToByteArray(s), encoding) ;
+			}
+			else {
+				return new String(DecodeToByteArray(s)) ;
+			}
+		}
+		catch (UnsupportedEncodingException e){
+			throw new InlineJavaException("Unsupported encoding: " + e.getMessage()) ;
+		}
+	}
+
+
+	String EncodeFromByteArray(byte bytes[]){
+		return new String(InlineJavaUtils.EncodeBase64(bytes)) ;
+	}
+
+
+	String Encode(String s) throws InlineJavaException {
+		try {
+			if (encoding != null){
+				return EncodeFromByteArray(s.getBytes(encoding)) ;
+			}
+			else {
+				return EncodeFromByteArray(s.getBytes()) ;
+			}
+		}
+		catch (UnsupportedEncodingException e){
+			throw new InlineJavaException("Unsupported encoding: " + e.getMessage()) ;
+		}
 	}
 
 
