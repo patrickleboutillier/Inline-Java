@@ -41,7 +41,7 @@ my $t = new t13() ;
 
 
 # It seems that filehandle destruction leaks on certain version
-# of Perl. We will change this test top a warning.
+# of Perl. We will change this test to a warning.
 if ($t->__get_private()->{proto}->ObjectCount() != 1){
 	warn "\nWARNING: Your Perl version ($]) seems to leak tied filehandles. Using\n" .
 		"Inline::Java::Handle objects will result in memory leaks both in Perl\n" .
