@@ -6,7 +6,7 @@ package Inline::Java ;
 
 
 use strict ;
-require 5.006 ;
+require 5.008 ;
 
 $Inline::Java::VERSION = '0.50_91' ;
 
