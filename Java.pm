@@ -144,6 +144,7 @@ sub validate {
 	$o->set_option('START_JVM',				1,				'b', 1, \%opts) ;
 	$o->set_option('JNI',					0,				'b', 1, \%opts) ;
 	$o->set_option('EMBEDDED_JNI',			0,				'b', 1, \%opts) ;
+	$o->set_option('NATIVE_DOUBLES',		0,				'b', 1, \%opts) ;
 
 	$o->set_option('WARN_METHOD_SELECT',	0,				'b', 1, \%opts) ;
 	$o->set_option('STUDY',					undef,			'a', 0, \%opts) ;
@@ -486,7 +487,7 @@ sub load {
 		my $pc = new Inline::Java::Protocol(undef, $o) ;
 		$pc->AddClassPath(Inline::Java::Portable::portable("SUB_FIX_JAVA_PATH", Inline::Java::Portable::get_user_jar())) ;
 
-		my ($st, $file_enc, $sock_encs) = $pc->ServerType() ;
+		my $st = $pc->ServerType() ;
 		if ((($st eq "shared")&&(! $o->get_java_config('SHARED_JVM')))||
 			(($st eq "private")&&($o->get_java_config('SHARED_JVM')))){
 			croak "JVM type mismatch on port " . $JVM->{port} ;

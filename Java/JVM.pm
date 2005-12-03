@@ -56,12 +56,13 @@ sub new {
 			\@args,
 			$this->{embedded},
 			Inline::Java::get_DEBUG(),
+			$o->get_java_config('NATIVE_DOUBLES'),
 		) ;
 		$jni->create_ijs() ;
 
 		$this->{JNI} = $jni ;
 	}
-	else{
+	else {
 		Inline::Java::debug(1, "client/server mode") ;
 
 		my $debug = Inline::Java::get_DEBUG() ;
@@ -120,7 +121,8 @@ sub new {
 
 		my $shared = ($this->{shared} ? "true" : "false") ;
 		my $priv = ($this->{private} ? "true" : "false") ;
-		my $cmd = Inline::Java::Portable::portable("SUB_FIX_CMD_QUOTES", "\"$java\" $args org.perl.inline.java.InlineJavaServer $debug $this->{port} $shared $priv") ;
+		my $native_doubles = ($o->get_java_config('NATIVE_DOUBLES') ? "true" : "false") ;
+		my $cmd = Inline::Java::Portable::portable("SUB_FIX_CMD_QUOTES", "\"$java\" $args org.perl.inline.java.InlineJavaServer $debug $this->{port} $shared $priv $native_doubles") ;
 		Inline::Java::debug(2, $cmd) ;
 		if ($o->get_config('UNTAINT')){
 			($cmd) = $cmd =~ /(.*)/ ;

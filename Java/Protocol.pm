@@ -5,7 +5,9 @@ use Inline::Java::Object ;
 use Inline::Java::Array ;
 use Carp ;
 use MIME::Base64 ;
-use Encode qw(encode_utf8 decode_utf8) ;
+BEGIN {
+	eval "require Encode" ;
+}
 
 $Inline::Java::Protocol::VERSION = '0.50_91' ;
 
@@ -379,6 +381,9 @@ sub ValidateArgs {
 				my $id = $obj->__get_private()->{id} ;
 				push @ret, "java_object:$class:$id" ;
 			}
+			elsif (UNIVERSAL::isa($arg, 'Inline::Java::double')){
+				push @ret, "double:" . encode(${$arg}) ;
+			}
 			elsif ($arg =~ /^(.*?)=/){
 				my $id = Inline::Java::Callback::PutObject($arg) ;
 				# Bug. The delimiter is :, so we need to escape the package separator (::)
@@ -395,7 +400,7 @@ sub ValidateArgs {
 				}
 			}
 		}
-		else{
+		else {
 			push @ret, "scalar:" . encode($arg) ;
 		}
 	}
@@ -444,6 +449,11 @@ sub DeserializeObject {
 	if ($resp =~ /^scalar:([\w+\/=+]*)$/){
 		return decode($1) ; 
 	}
+	elsif ($resp =~ /^double:(.*)$/){
+		my $bytes = decode($1) ;
+		my $d = unpack('d', $bytes) ;
+		return $d ;
+	}
 	elsif ($resp =~ /^undef:$/){
 		return undef ;
 	}
@@ -466,7 +476,7 @@ sub DeserializeObject {
 
 			return undef ;
 		}
-		else{
+		else {
 			my $pkg = $this->{inline}->get_api('pkg') ;
 
 			my $obj = undef ;
@@ -550,14 +560,44 @@ sub DeserializeObject {
 sub encode {
 	my $s = shift ;
 
-	return encode_base64(encode_utf8($s), '') ;
+	# Get UTF-8 byte representation of the data.
+	my $bytes = undef ;
+	if ($INC{'Encode.pm'}){
+		$bytes = Encode::encode_utf8($s) ;
+	}
+	else {
+		$bytes = $s ;
+		$bytes =~ s/([\x80-\xFF])/chr(0xC0|ord($1)>>6).chr(0x80|ord($1)&0x3F)/eg ;
+	}
+
+	# Base-64 encode it.
+	my $base64 = encode_base64($bytes, '') ;
+	
+	return $base64 ;
 }
 
 
 sub decode {
 	my $s = shift ;
 
-	return decode_utf8(decode_base64($s)) ;
+	# Decode the Base-64 data into bytes (UTF-8 representation of the data).
+	my $bytes = decode_base64($s) ;
+
+	# Take the UTF-8 encoding and convert it back to logical characters.
+	my $string = undef ;
+	if ($INC{'Encode.pm'}){
+		$string = Encode::decode_utf8($bytes) ;
+	}
+	else {
+		$string = $bytes ;
+		$bytes =~ s/([\xC2\xC3])([\x80-\xBF])/chr(ord($1)<<6&0xC0|ord($2)&0x3F)/eg ;
+	}
+
+	if (utf8->can('downgrade')){
+		utf8::downgrade($string, 1) ;
+	}
+
+	return $string ;
 }
 
 

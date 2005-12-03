@@ -760,7 +760,18 @@ class InlineJavaProtocol {
 			return "undef:" ;
 		}
 		else if ((ijc.ClassIsNumeric(c))||(ijc.ClassIsChar(c))||(ijc.ClassIsString(c))){
-			return "scalar:" + Encode(o.toString()) ;
+			if ((ijs.GetNativeDoubles())&&(ijc.ClassIsDouble(c))){
+				Double d = (Double)o ;
+				long l = Double.doubleToLongBits(d.doubleValue()) ;
+				char ca[] = new char[8] ;
+				for (int i = 0 ; i < 8 ; i++){
+					ca[i] = (char)((l >> (8 * i)) & 0xFF) ;
+				}
+				return "double:" + Encode(new String(ca)) ;
+			}
+			else {
+				return "scalar:" + Encode(o.toString()) ;
+			}
 		}
 		else if (ijc.ClassIsBool(c)){
 			String b = o.toString() ;

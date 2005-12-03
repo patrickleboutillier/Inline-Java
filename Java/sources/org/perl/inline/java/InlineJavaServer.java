@@ -14,6 +14,7 @@ public class InlineJavaServer {
 	private int port = 0 ;
 	private boolean shared_jvm = false ;
 	private boolean priv = false ;
+	private boolean native_doubles = false ;
 
 	private boolean finished = false ;
 	private ServerSocket server_socket = null ;
@@ -26,8 +27,8 @@ public class InlineJavaServer {
 
 
 	// This constructor is used in JNI mode
-	private InlineJavaServer(int debug){
-		init(debug) ;
+	private InlineJavaServer(int debug, boolean _native_doubles){
+		init(debug, _native_doubles) ;
 
 		jni = true ; 
 		AddThread(creator) ;
@@ -36,8 +37,8 @@ public class InlineJavaServer {
 
 	// This constructor is used in server mode
 	// Normally one would then call RunMainLoop()
-	public InlineJavaServer(int debug, int _port, boolean _shared_jvm, boolean _priv){
-		init(debug) ;
+	public InlineJavaServer(int debug, int _port, boolean _shared_jvm, boolean _priv, boolean _native_doubles){
+		init(debug, _native_doubles) ;
 
 		jni = false ;
 		port = _port ;
@@ -80,10 +81,11 @@ public class InlineJavaServer {
 	}
 
 
-	private void init(int debug){
+	private void init(int debug, boolean _native_doubles){
 		instance = this ;
 		creator = Thread.currentThread() ;
 		InlineJavaUtils.debug = debug ;
+		native_doubles = _native_doubles ;
 
 		ijucl = new InlineJavaUserClassLoader() ;
 	}
@@ -103,7 +105,7 @@ public class InlineJavaServer {
 		if (t instanceof InlineJavaServerThread){
 			return ((InlineJavaServerThread)t).GetUserClassLoader() ;
 		}
-		else{
+		else {
 			return ijucl ;
 		}
 	}
@@ -111,6 +113,11 @@ public class InlineJavaServer {
 
 	String GetType(){
 		return (shared_jvm ? "shared" : "private") ; 
+	}
+
+
+	boolean GetNativeDoubles(){
+		return native_doubles ; 
 	}
 
 
@@ -296,8 +303,9 @@ public class InlineJavaServer {
 		int port = Integer.parseInt(argv[1]) ;
 		boolean shared_jvm = new Boolean(argv[2]).booleanValue() ;
 		boolean priv = new Boolean(argv[3]).booleanValue() ;
+		boolean native_doubles = new Boolean(argv[4]).booleanValue() ;
 
-		InlineJavaServer ijs = new InlineJavaServer(debug, port, shared_jvm, priv) ;
+		InlineJavaServer ijs = new InlineJavaServer(debug, port, shared_jvm, priv, native_doubles) ;
 		ijs.RunMainLoop() ;
 		System.exit(0) ;
 	}
@@ -307,14 +315,14 @@ public class InlineJavaServer {
 		With PerlInterpreter this is called twice, but we don't want to create
 		a new object the second time.
 	*/
-	public static InlineJavaServer jni_main(int debug){
+	public static InlineJavaServer jni_main(int debug, boolean native_doubles){
 		if (instance != null){
 			InlineJavaUtils.debug = debug ;
 			InlineJavaUtils.debug(1, "recycling InlineJavaServer created by PerlInterpreter") ;
 			return instance ;
 		}
-		else{
-			return new InlineJavaServer(debug) ;
+		else {
+			return new InlineJavaServer(debug, native_doubles) ;
 		}
 	}
 }

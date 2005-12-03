@@ -11,7 +11,7 @@ use Inline (
 
 
 BEGIN {
-	plan(tests => 1) ;
+	plan(tests => 2) ;
 }
 
 

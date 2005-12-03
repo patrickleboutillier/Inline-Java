@@ -16,6 +16,7 @@ typedef struct {
 	jmethodID process_command_mid ;
 	jint debug ;
 	int embedded ;
+	int native_doubles ;
 	int destroyed ;
 } InlineJavaJNIVM ;
 
@@ -131,12 +132,13 @@ PROTOTYPES: DISABLE
 
 
 InlineJavaJNIVM *
-new(CLASS, classpath, args, embedded, debug)
+new(CLASS, classpath, args, embedded, debug, native_doubles)
 	char * CLASS
 	char * classpath
 	AV * args
 	int	embedded
 	int	debug
+	int	native_doubles
 
 	PREINIT:
 	JavaVMInitArgs vm_args ;
@@ -156,8 +158,9 @@ new(CLASS, classpath, args, embedded, debug)
 		croak("Can't create InlineJavaJNIVM") ;
 	}
 	RETVAL->ijs = NULL ;
-	RETVAL->embedded = embedded ;
 	RETVAL->debug = debug ;
+	RETVAL->embedded = embedded ;
+	RETVAL->native_doubles = native_doubles ;
 	RETVAL->destroyed = 0 ;
 
 	/* Figure out the length of the  args array */
@@ -217,7 +220,7 @@ new(CLASS, classpath, args, embedded, debug)
 
 	/* Get the method ids that are needed later */
 	RETVAL->jni_main_mid = (*(env))->GetStaticMethodID(env, RETVAL->ijs_class, "jni_main",
-		"(I)Lorg/perl/inline/java/InlineJavaServer;") ;
+		"(IZ)Lorg/perl/inline/java/InlineJavaServer;") ;
 	check_exception_from_perl(env, "Can't find method jni_main in class InlineJavaServer") ;
 	RETVAL->process_command_mid = (*(env))->GetMethodID(env, RETVAL->ijs_class, "ProcessCommand",
 		"(Ljava/lang/String;)Ljava/lang/String;") ;
@@ -263,7 +266,7 @@ create_ijs(this)
 
 	CODE:
 	env = get_env(this) ;
-	this->ijs = (*(env))->CallStaticObjectMethod(env, this->ijs_class, this->jni_main_mid, this->debug) ;
+	this->ijs = (*(env))->CallStaticObjectMethod(env, this->ijs_class, this->jni_main_mid, this->debug, this->native_doubles) ;
 	check_exception_from_perl(env, "Can't call jni_main in class InlineJavaServer") ;
 	this->ijs = (*(env))->NewGlobalRef(env, this->ijs) ;
 
