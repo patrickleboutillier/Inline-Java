@@ -16,9 +16,14 @@ print "loop done\n" ;
 sub button_pressed {
   $cnt++ ;
   print "Button Pressed $cnt times (from perl)\n" ;
-  if ($cnt >= 10){
-	 $greeter->StopCallbackLoop() ;
+  if ($cnt > 10){
+	 print "sleep starting\n" ;
+	 sleep(10) ;
+	 print "sleep stopping\n" ;
+	 # $greeter->StopCallbackLoop() ;
   }
+ 
+  return $cnt ;
 }
 
 __DATA__
@@ -32,6 +37,8 @@ import java.awt.event.*;
 public class MyButton extends    InlineJavaPerlCaller
                       implements ActionListener
 {
+  private String cnt = "0" ;
+
   public MyButton() throws InlineJavaException
   {
     // create frame
@@ -54,7 +61,11 @@ public class MyButton extends    InlineJavaPerlCaller
   {
     try
     {
-      CallPerlSub("main::button_pressed", new Object [] {});
+      if (cnt.equals("10")){
+        InterruptWaitForCallback() ;
+      }
+      cnt = (String)CallPerlSub("main::button_pressed", new Object [] {});
+      System.out.println("Button Pressed " + cnt + " times (from java)") ;
     }
     catch (InlineJavaPerlException pe)  { }
     catch (InlineJavaException pe) { pe.printStackTrace() ;}
