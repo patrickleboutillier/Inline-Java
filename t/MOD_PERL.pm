@@ -13,10 +13,10 @@ use Inline (
 	SHARED_JVM => 1,
 ) ;
 
-use Apache::RequestRec ();
-use Apache::RequestIO ();
-  
-use Apache::Const -compile => qw(OK);
+
+use Apache2::RequestRec ;
+use Apache2::RequestIO ;
+use Apache2::Const qw(:common) ;
 
 
 my $cnt = new t::MOD_PERL::counter() ;
@@ -38,7 +38,7 @@ sub handler {
 		"Inline-Java says this MOD_PERL ($$) served $nb of those hits." .
 		$q->end_html() ;
 
-	return Apache::OK ;
+	return OK ;
 }
 
 
