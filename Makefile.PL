@@ -20,12 +20,19 @@ for (my $i = 0 ; $i < scalar(@ARGV) ; $i++){
 }
 
 if (! $jdk_dir){
+	my $try = $ENV{PERL_INLINE_JAVA_J2SDK} || $ENV{JAVA_HOME} 
+		|| Inline::Java::Portable::portable('DEFAULT_J2SDK_DIR') ;
+	print "Using $try as J2SDK directory.\n\n" if $try ;
+	$jdk_dir = $try ;
+}
+
+if (! $jdk_dir){
 	my $def_pl = File::Spec->catfile('Java', 'default_j2sdk.pl') ;
 	if (-e $def_pl){
 		require File::Spec->catfile('Java', 'default_j2sdk.pl') ;
 		$jdk_dir = Inline::Java::get_default_j2sdk() ;
 	}
-	else{
+	else {
 		print <<NO_J2SDK;
 A Java 2 SDK is required to install and use Inline::Java. Please 
 specify your Java 2 SDK installation directory using the J2SDK 
