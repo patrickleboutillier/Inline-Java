@@ -81,10 +81,10 @@ public class InlineJavaServer {
 	}
 
 
-	private void init(int debug, boolean _native_doubles){
+	private synchronized void init(int debug, boolean _native_doubles){
 		instance = this ;
 		creator = Thread.currentThread() ;
-		InlineJavaUtils.debug = debug ;
+		InlineJavaUtils.set_debug(debug) ;
 		native_doubles = _native_doubles ;
 
 		ijucl = new InlineJavaUserClassLoader() ;
@@ -317,7 +317,7 @@ public class InlineJavaServer {
 	*/
 	public static InlineJavaServer jni_main(int debug, boolean native_doubles){
 		if (instance != null){
-			InlineJavaUtils.debug = debug ;
+			InlineJavaUtils.set_debug(debug) ;
 			InlineJavaUtils.debug(1, "recycling InlineJavaServer created by PerlInterpreter") ;
 			return instance ;
 		}
