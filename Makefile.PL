@@ -12,8 +12,28 @@ print "\nWelcome to the Inline::Java installation procedure.\n\n" ;
 # Grab the J2SDK argument
 my $jdk_dir = '' ;
 for (my $i = 0 ; $i < scalar(@ARGV) ; $i++){
+	my $remove = 0 ;
 	if ($ARGV[$i] =~ /^J2SDK=(.+)$/){
 		$jdk_dir = $1 ;
+		$remove = 1 ;
+	}
+	elsif ($ARGV[$i] =~ /^BUILD_JNI=(.+)$/){
+		$main::build_jni = $1 ;
+		$remove = 1 ;
+	}
+	elsif ($ARGV[$i] =~ /^BUILD_PERL_NATIVES=(.+)$/){
+		$main::build_perl_natives = $1 ;
+		$remove = 1 ;
+	}
+	elsif ($ARGV[$i] =~ /^BUILD_PERL_INTERPRETER=(.+)$/){
+		$main::build_perl_interpreter = $1 ;
+		$remove = 1 ;
+	}
+	elsif ($ARGV[$i] =~ /^JVM_LIB_TYPE=(.+)$/){
+		$main::jvm_lib_type = $1 ;
+		$remove = 1 ;
+	}
+	if ($remove){
 		splice(@ARGV, $i, 1) ;
 		$i-- ;
 	}

@@ -11,6 +11,7 @@ import java.util.* ;
 */
 public class InlineJavaServer {
 	private static InlineJavaServer instance = null ;
+	private String host = null ;
 	private int port = 0 ;
 	private boolean shared_jvm = false ;
 	private boolean priv = false ;
@@ -37,16 +38,22 @@ public class InlineJavaServer {
 
 	// This constructor is used in server mode
 	// Normally one would then call RunMainLoop()
-	public InlineJavaServer(int debug, int _port, boolean _shared_jvm, boolean _priv, boolean _native_doubles){
+	public InlineJavaServer(int debug, String _host, int _port, boolean _shared_jvm, boolean _priv, boolean _native_doubles){
 		init(debug, _native_doubles) ;
 
 		jni = false ;
+		host = _host ;
 		port = _port ;
 		shared_jvm = _shared_jvm ;
 		priv = _priv ;
 
 		try {
-			server_socket = new ServerSocket(port) ;	
+			if ((host == null)||(host.equals(""))||(host.equals("ANY"))){
+				server_socket = new ServerSocket(port) ;
+			}
+			else {
+				server_socket = new ServerSocket(port, 0, InetAddress.getByName(host)) ;
+			}
 		}
 		catch (IOException e){
 			InlineJavaUtils.Fatal("Can't open server socket on port " + String.valueOf(port) +
@@ -300,12 +307,13 @@ public class InlineJavaServer {
 	*/
 	public static void main(String[] argv){
 		int debug = Integer.parseInt(argv[0]) ;
-		int port = Integer.parseInt(argv[1]) ;
-		boolean shared_jvm = new Boolean(argv[2]).booleanValue() ;
-		boolean priv = new Boolean(argv[3]).booleanValue() ;
-		boolean native_doubles = new Boolean(argv[4]).booleanValue() ;
+		String host = argv[1] ;
+		int port = Integer.parseInt(argv[2]) ;
+		boolean shared_jvm = new Boolean(argv[3]).booleanValue() ;
+		boolean priv = new Boolean(argv[4]).booleanValue() ;
+		boolean native_doubles = new Boolean(argv[5]).booleanValue() ;
 
-		InlineJavaServer ijs = new InlineJavaServer(debug, port, shared_jvm, priv, native_doubles) ;
+		InlineJavaServer ijs = new InlineJavaServer(debug, host, port, shared_jvm, priv, native_doubles) ;
 		ijs.RunMainLoop() ;
 		System.exit(0) ;
 	}
