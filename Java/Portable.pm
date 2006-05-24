@@ -9,7 +9,7 @@ use Config ;
 use File::Find ;
 use File::Spec ;
 
-$Inline::Java::Portable::VERSION = '0.50_93' ;
+$Inline::Java::Portable::VERSION = '0.51' ;
 
 # Here is some code to figure out if we are running on command.com
 # shell under Windows.
