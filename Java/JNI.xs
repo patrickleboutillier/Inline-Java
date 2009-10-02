@@ -96,7 +96,7 @@ jstring JNICALL jni_callback(JNIEnv *env, jobject obj, jstring cmd){
 	}
 	else{
 		if (count != 2){
-			sprintf(msg, "%s", "Invalid return value from Inline::Java::Callback::InterceptCallback: %d",
+			sprintf(msg, "Invalid return value from Inline::Java::Callback::InterceptCallback: %d",
 				count) ;
 			throw_ije(env, msg) ;
 		}
@@ -257,7 +257,7 @@ DESTROY(this)
 
 	CODE:
 	shutdown_JVM(this) ;
-	free(this) ;
+	safefree(this) ;
 
 
 
