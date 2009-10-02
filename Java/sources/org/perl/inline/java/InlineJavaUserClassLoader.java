@@ -33,7 +33,7 @@ class InlineJavaUserClassLoader extends URLClassLoader {
     public void AddClassPath(String path) throws InlineJavaException {
 		try {
 			File p = new File(path) ;
-			URL u = p.toURL() ;
+			URL u = p.toURI().toURL() ;
 			if (urls.get(u) == null){
 	            urls.put(u, "1") ;
 	            addURL(u) ;

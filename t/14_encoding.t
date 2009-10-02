@@ -41,6 +41,7 @@ my $t = new t14() ;
 
 	# Mix it up
 	ok($t->_String("$bin\x{E9}\x{263A}"), "$bin\x{E9}\x{263A}") ;
+
 }
 
 ok($t->__get_private()->{proto}->ObjectCount(), 1) ;

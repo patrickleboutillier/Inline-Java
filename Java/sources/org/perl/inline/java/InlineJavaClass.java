@@ -82,6 +82,20 @@ class InlineJavaClass {
 	}
 
 
+	/*
+ 		Remove L...; from a class name if it has been extracted from an Array class name.
+	*/
+	static String CleanClassName(String name){
+		if (name != null){
+			int l = name.length() ;
+			if ((l > 2)&&(name.charAt(0) == 'L')&&(name.charAt(l - 1) == ';')){
+				name = name.substring(1, l - 1) ; 
+			}
+		}
+		return name ;
+	}
+
+
 	static private Class ValidateClassQuiet(String name){
 		try {
 			return ValidateClass(name) ;

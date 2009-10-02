@@ -85,13 +85,13 @@ public class InlineJavaPerlCaller {
 	
 	
 	/* New interface */
-	Object CallPerlMethod(InlineJavaPerlObject obj, String method, Object args[]) throws InlineJavaException, InlineJavaPerlException {
+	public Object CallPerlMethod(InlineJavaPerlObject obj, String method, Object args[]) throws InlineJavaException, InlineJavaPerlException {
 		return CallPerlMethod(obj, method, args, null) ;
 	}
 	
 	
 	/* New interface */	
-	Object CallPerlMethod(InlineJavaPerlObject obj, String method, Object args[], Class cast) throws InlineJavaException, InlineJavaPerlException {
+	public Object CallPerlMethod(InlineJavaPerlObject obj, String method, Object args[], Class cast) throws InlineJavaException, InlineJavaPerlException {
 		InlineJavaCallback ijc = new InlineJavaCallback(
 			obj, method, args, cast) ; 
 		return CallPerl(ijc) ;
