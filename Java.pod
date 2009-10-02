@@ -135,10 +135,8 @@ make use of the same JVM.
 
 =item PORT
 
-Specifies the starting port number for the server. If many
-C<Inline::Java> blocks are declared, the port number is
-incremented each time. Default is 0 (next available port number),
-default for SHARED_JVM mode is 7891.
+Specifies the port number for the server. Default is -1 (next
+available port number), default for SHARED_JVM mode is 7891.
 
    Ex: PORT => 4567
 
@@ -1046,7 +1044,28 @@ code in a package with a unpredictable name.
 
 See the BUGS AND DEFICIENCIES section if you have problems starting 
 the SHARED_JVM server under MOD_PERL.
-   Z<>
+
+=head2 Preloading and PerlChildInitHandler
+
+If you are loading C<Inline::Java> during your server startup (common practice to 
+increase shared memory and reduce run time) and you are using C<SHARED_JVM>, then 
+your Apache processes will all share the same socktd connection to that JVM.
+This will result in garbled communication and strange errors (like "Can't receive packet from JVM", "Broken pipe", etc).
+
+To fix this you need to tell Apache that after each child process has forked they
+each need to create their own connections to the JVM. This is done during the 
+C<ChildInit> stage.
+
+For Apache 1.3.x this could look like:
+
+   # in httpd.conf
+   PerlChildInitHandler MyProject::JavaReconnect
+
+And C<MyProject::JavaReconnect> could be as simple as this:
+
+   package MyProject::JavaReconnect;
+   sub handler($$) { Inline::Java::reconnect_JVM() }
+   1;
 
 
 =head1 BUGS AND DEFICIENCIES
@@ -1120,8 +1139,6 @@ For information about other Inline languages, see L<Inline-Support>.
 
 C<Inline::Java>'s mailing list is <inline@perl.org>.
 To subscribe, send an email to <inline-subscribe@perl.org>
-
-C<Inline::Java>'s home page is http://inline.perl.org/java/
    Z<>
 
 

@@ -267,8 +267,9 @@ in Perl. Here's an example:
 
 =for comment
 
-The StartCallbackLoop method can be called on any InlineJavaPerlCaller object
-and will block the current thread and allow the reception of callbacks through
+The StartCallbackLoop method can be called on any 
+C<org.perl.inline.java.InlineJavaPerlCaller> object and will block the 
+current thread and allow the reception of callbacks through
 any InlineJavaPerlCaller that has been created by the same (current) thread.
 The only way to interrupt such a StartCallbackLoop method is to call the
 StopCallbackLoop method on any C<org.perl.inline.java.InlineJavaPerlCaller> 
