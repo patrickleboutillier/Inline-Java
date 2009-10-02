@@ -1,30 +1,42 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
+use blib ;
 
-use Inline Java => "DATA";
-
-my $cnt = 0 ;
-my $greeter = MyButton->new();
-$greeter->StartCallbackLoop() ;
-print "loop done\n" ;
+use Inline Java => "DATA" ;
 
 
-###########################################
+package EventHandler ;
+
+sub new {
+	my $class = shift ;
+	my $max = shift ;
+
+	return bless({max => $max, nb => 0}, $class) ;
+}
 
 
 sub button_pressed {
-  $cnt++ ;
-  print "Button Pressed $cnt times (from perl)\n" ;
-  if ($cnt > 10){
-	 print "sleep starting\n" ;
-	 sleep(10) ;
-	 print "sleep stopping\n" ;
-	 # $greeter->StopCallbackLoop() ;
-  }
+	my $this = shift ;
+	my $button = shift ;
+
+	$this->{nb}++ ;
+	print "Button Pressed $this->{nb} times (from perl)\n" ;
+	if ($this->{nb} > $this->{max}){
+		$button->StopCallbackLoop() ;
+	}
  
-  return $cnt ;
+	return $this->{nb} ;
 }
+
+
+my $button = MyButton->new(new EventHandler(10));
+$button->StartCallbackLoop() ;
+print "loop done\n" ;
+
+
+
+package main ;
 
 __DATA__
 __Java__
@@ -37,10 +49,11 @@ import java.awt.event.*;
 public class MyButton extends    InlineJavaPerlCaller
                       implements ActionListener
 {
-  private String cnt = "0" ;
+  InlineJavaPerlObject po = null ;
 
-  public MyButton() throws InlineJavaException
+  public MyButton(InlineJavaPerlObject _po) throws InlineJavaException
   {
+    po = _po ;
     // create frame
     JFrame frame = new JFrame("MyButton");
     frame.setSize(200,200);
@@ -61,10 +74,7 @@ public class MyButton extends    InlineJavaPerlCaller
   {
     try
     {
-      if (cnt.equals("10")){
-        InterruptWaitForCallback() ;
-      }
-      cnt = (String)CallPerlSub("main::button_pressed", new Object [] {});
+      String cnt = (String)CallPerlMethod(po, "button_pressed", new Object [] {this});
       System.out.println("Button Pressed " + cnt + " times (from java)") ;
     }
     catch (InlineJavaPerlException pe)  { }
