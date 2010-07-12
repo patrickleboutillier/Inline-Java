@@ -8,7 +8,7 @@ package Inline::Java ;
 use strict ;
 require 5.006 ;
 
-$Inline::Java::VERSION = '0.52' ;
+$Inline::Java::VERSION = '0.52_90' ;
 
 
 # DEBUG is set via the DEBUG config
@@ -203,7 +203,7 @@ sub validate {
 		$o->set_java_config('EXTRA_JAVA_ARGS', $o->get_java_config('EXTRA_JAVA_ARGS') .
 			" -sourcepath " . $o->get_api('build_dir') .
 			Inline::Java::Portable::portable("ENV_VAR_PATH_SEP_CP") .
-			get_source_dir()
+			Inline::Java::Portable::get_source_dir()
 		) ;
 	}	
 

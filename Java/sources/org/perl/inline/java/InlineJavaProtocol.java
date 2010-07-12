@@ -281,7 +281,7 @@ class InlineJavaProtocol {
 
 			try {
 				Object ret = InlineJavaServer.GetInstance().GetUserClassLoader().invoke(m, o, p) ;
-				SetResponse(ret) ;
+				SetResponse(ret, AutoCast(ret, m.getReturnType())) ;
 			}
 			catch (IllegalAccessException e){
 				throw new InlineJavaException("You are not allowed to invoke method " + name + " in class " + class_name + ": " + e.getMessage()) ;
@@ -300,6 +300,31 @@ class InlineJavaProtocol {
 				}
 				else{
 					SetResponse(new InlineJavaThrown(t)) ;
+				}
+			}
+		}
+	}
+
+
+	/*
+	*/  
+	Class AutoCast(Object o, Class want){
+		if (o == null){
+			return null ;
+		}
+		else {
+			Class got = o.getClass() ;
+			if (got.equals(want)){
+				return null ;
+			}
+			else {
+				boolean _public = (got.getModifiers() & Modifier.PUBLIC) != 0 ;
+				if ((_public)||(got.getPackage() == null)){
+					return null ;
+				}
+				else {
+					InlineJavaUtils.debug(3, "AutoCast: " + got.getName() + " -> " + want.getName()) ;
+					return want ;
 				}
 			}
 		}
@@ -489,7 +514,8 @@ class InlineJavaProtocol {
 		if (ijc.ClassIsArray(c)){
 			int idx = Integer.parseInt(member) ;
 			Object ret = InlineJavaServer.GetInstance().GetUserClassLoader().array_get(o, idx) ;
-			SetResponse(ret) ;
+			Class eclass = ijc.ValidateClass(ijc.CleanClassName(class_name.substring(1))) ;
+			SetResponse(ret, AutoCast(ret, eclass)) ;
 		}
 		else{
 			ArrayList fl = ValidateMember(c, member, st) ;
@@ -498,7 +524,7 @@ class InlineJavaProtocol {
 			String name = f.getName() ;
 			try {
 				Object ret = InlineJavaServer.GetInstance().GetUserClassLoader().get(f, o) ;
-				SetResponse(ret) ;
+				SetResponse(ret, AutoCast(ret, f.getType())) ;
 			}
 			catch (IllegalAccessException e){
 				throw new InlineJavaException("You are not allowed to set member " + name + " in class " + class_name + ": " + e.getMessage()) ;

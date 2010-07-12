@@ -1,7 +1,12 @@
+#include "EXTERN.h"
+#include "perl.h"
+#include "XSUB.h"
+/*
 #include "stdlib.h"
 #include "string.h"
 #include "stdio.h"
 #include "stdarg.h"
+*/
 
 #ifdef __CYGWIN__
 	#include "w32api/basetyps.h"

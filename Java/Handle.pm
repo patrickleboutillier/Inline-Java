@@ -5,7 +5,7 @@ use strict ;
 use Symbol ;
 use Carp ;
 
-$Inline::Java::Handle::VERSION = '0.52' ;
+$Inline::Java::Handle::VERSION = '0.52_90' ;
 
 
 # Here we store as keys the knots and as values our blessed objects

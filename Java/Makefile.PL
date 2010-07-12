@@ -58,9 +58,9 @@ if (! defined($build_jni)){
 		"process. The use of this extension is optional, and building it still\n" .
 		"allows Inline::Java to run the JVM in the default (separate process)\n" .
 		"fashion.\n" .
-		"Note: You need a C compiler to build the extension.\n" .
-		"Note: You must build the extension if you wish to use PerlNatives or\n" .
-		"      PerlInterpreter.\n" ;
+		"Note: You need a C compiler to build the extension.\n" ;
+#		"Note: You must build the extension if you wish to use PerlNatives or\n" .
+#		"      PerlInterpreter.\n" ;
 	if (AskYN("Do you wish to build the JNI extension?", 
 		($build_jni_by_dflt ? 'y' : 'n'))){
 		$build_jni = 1 ;
@@ -153,6 +153,22 @@ if ($build_jni){
 				($files->{$jvm_lib}->{selected}) ;
 
 			my $DIR = [] ;
+			if (! defined($build_perl_interpreter)){
+				print <<TXT;
+The PerlInterpreter extension allows Inline::Java to be loaded directly from
+Java using an embedded Perl interpreter. It is still EXPERIMENTAL and 
+may not build or work properly on all platforms. See documentation for 
+more details.
+TXT
+				if (AskYN("Do you wish to build the PerlInterpreter extension?", 'n')){
+					$build_perl_interpreter = 1 ;
+				}
+				print "\n" ;
+			}
+			if ($build_perl_interpreter){
+				push @{$DIR}, 'PerlInterpreter' ;
+			}
+
 			if (! defined($build_perl_natives)){
 				print <<TXT;
 The PerlNatives extension allows for callbacks to be defined as native
@@ -169,21 +185,6 @@ TXT
 				push @{$DIR}, 'PerlNatives' ;
 			}
 
-			if (! defined($build_perl_interpreter)){
-				print <<TXT;
-The PerlInterpreter extension allows Inline::Java to be loaded directly from
-Java using an embedded Perl interpreter. It is still EXPERIMENTAL and 
-may not build or work properly on all platforms. See documentation for 
-more details.
-TXT
-				if (AskYN("Do you wish to build the PerlInterpreter extension?", 'n')){
-					$build_perl_interpreter = 1 ;
-				}
-				print "\n" ;
-			}
-			if ($build_perl_interpreter){
-				push @{$DIR}, 'PerlInterpreter' ;
-			}
 
 			WriteMakefile(
 				NAME => 'Inline::Java::JNI',

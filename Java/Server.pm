@@ -13,7 +13,7 @@ require Inline::Java ;
 use File::Spec ;
 
 
-$Inline::Java::Server::VERSION = '0.52' ;
+$Inline::Java::Server::VERSION = '0.52_90' ;
 
 
 # Create a dummy Inline::Java object in order to 

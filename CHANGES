@@ -1,5 +1,13 @@
 Revision history for Perl extension Inline::Java
 ------------------------------------------------
+0.53  Fri Oct  2 10:22:26 EDT 2009
+    - Removed PerlNatives extension from the build because it is unmaintained and broken.
+      It can still be enabled manually using the BUILD_PERL_NATIVES build configuration 
+      option.
+    - Improved automatic casting.
+    - Fix with get_source_dir() using the DEBUGGER option. Thanks to Paul Frantz for the fix.
+    - Other minor bug and doc fixes.
+
 0.52  Sun Dec 17 20:46:51 EST 2006
     - Fixed JNI on cygwin (many thanks to Eric Rybski for the patch)
     - Improved installation. 'make java' is now performed automatically.

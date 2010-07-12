@@ -66,9 +66,6 @@ t/07_polymorph.t
 t/08_study.t
 t/09_usages.t
 t/10_1_shared_alone.t
-t/10_2_shared_start.t
-t/10_3_shared_use.t
-t/10_4_shared_stop.t
 t/10_5_shared_fork.t
 t/10_6_shared_sim.t
 t/11_exceptions.t

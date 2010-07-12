@@ -40,11 +40,11 @@ void throw_ijp(JNIEnv *env, char *msg){
 
 JNIEXPORT void JNICALL Java_org_perl_inline_java_InlineJavaPerlInterpreter_construct(JNIEnv *env, jclass cls){
 	char *args[] = {"inline-java", "-e1"} ;
-	int envl = 0 ;
-	int i = 0 ;
 	char **envdup = NULL ;
 
 #ifdef PERL_PARSE_ENV_DUP
+	int envl = 0 ;
+	int i = 0 ;
 	/* This will leak, but it's a one shot... */
 	for (i = 0 ; environ[i] != NULL ; i++){
 		envl++ ;

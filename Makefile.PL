@@ -9,6 +9,9 @@ require "Java/Portable.pm" ;
 
 print "\nWelcome to the Inline::Java installation procedure.\n\n" ;
 
+# Hide PerlNatives by default...
+$main::build_perl_natives = 0 ;
+
 # Grab the J2SDK argument
 my $jdk_dir = '' ;
 for (my $i = 0 ; $i < scalar(@ARGV) ; $i++){
