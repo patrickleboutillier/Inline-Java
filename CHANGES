@@ -1,6 +1,6 @@
 Revision history for Perl extension Inline::Java
 ------------------------------------------------
-0.53  Fri Oct  2 10:22:26 EDT 2009
+0.53  Sun Jan  9 08:15:06 EST 2011
     - Removed PerlNatives extension from the build because it is unmaintained and broken.
       It can still be enabled manually using the BUILD_PERL_NATIVES build configuration 
       option.
