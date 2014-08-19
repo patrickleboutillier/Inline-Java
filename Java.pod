@@ -524,7 +524,7 @@ be known to Perl:
    $obj->{i} = 2 ;
    print($obj->{i} . "\n") ; # prints 2
    my $hm1 = $obj->{hm} ; # instance way
-   my $hm2 = $Pod_4::hm ; # static way   
+   my $hm2 = $Pod_5::hm ; # static way   
 
 =for comment
 

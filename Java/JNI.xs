@@ -307,5 +307,5 @@ process_command(this, data)
 	RETVAL
 
 	CLEANUP:
-	(*(env))->DeleteLocalRef(env, resp) ;
 	(*(env))->ReleaseStringUTFChars(env, resp, RETVAL) ;
+	(*(env))->DeleteLocalRef(env, resp) ;
